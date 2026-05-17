@@ -1,0 +1,288 @@
+---
+title: Email
+description: Learn how to set up and use email functionality with Resend and React Email templates
+icon: Mail
+---
+
+AeloKit uses [Resend](https://resend.com) for email sending and [React Email](https://react.email) to create beautiful email templates.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Create a Resend Account
+
+    Create a Resend account at [resend.com](https://resend.com).
+  </Step>
+
+  <Step>
+    ### Get API Key
+
+    In the Resend console, click `API Keys` > `Create API Key`, and set the permission to `Send emails` or `Full access`. Get the API key and add it to your environment file:
+
+    ```bash title=".env"
+    RESEND_API_KEY=YOUR-RESEND-API-KEY
+    ```
+  </Step>
+
+  <Step>
+    ### Update Website Configuration
+
+    Update the `packages/config/src/website.ts` file. Note that `fromEmail` is the email address used for sending emails, and `supportEmail` is the email address for receiving emails:
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...other config
+      mail: {
+        enable: true,
+        provider: 'resend',
+        fromEmail: 'AeloKit <support@example.com>',
+        supportEmail: 'AeloKit <support@example.com>',
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up your environment, you can now return to the **Environment Configuration** documentation and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#email">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Usage
+
+```tsx
+import { sendEmail } from '@/mail';
+
+// Send email based on template
+await sendEmail({
+  to: 'user@example.com',
+  template: 'verifyEmail',
+  context: {
+    name: 'John Doe',
+    url: 'https://example.com/verify?token=abc123',
+  },
+  locale: 'en', // optional, defaults to configured default language
+});
+
+// Send raw content email
+await sendEmail({
+  to: 'user@example.com',
+  subject: 'Welcome to Our Platform',
+  html: '<h1>Hello!</h1><p>Welcome to our platform.</p>',
+  text: 'Hello! Welcome to our platform.', // optional
+});
+```
+
+## Email Templates
+
+AeloKit includes several pre-built email templates:
+
+<Accordions>
+  <Accordion title="verify-email.tsx">
+    Used for email verification during user registration.
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'verifyEmail',
+      context: {
+        name: 'John Doe',
+        url: 'https://example.com/verify?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="forgot-password.tsx">
+    Used for password reset requests.
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'forgotPassword',
+      context: {
+        name: 'John Doe',
+        resetUrl: 'https://example.com/reset?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="subscribe-newsletter.tsx">
+    Used for mailing list subscription confirmation.
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'subscribeNewsletter',
+      context: {
+        name: 'John Doe',
+        unsubscribeUrl: 'https://example.com/unsubscribe?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="contact-message.tsx">
+    Used for contact form submissions.
+
+    ```tsx
+    await sendEmail({
+      to: 'admin@example.com',
+      template: 'contactMessage',
+      context: {
+        name: 'John Doe',
+        email: 'user@example.com',
+        message: 'I have a question about your service.',
+      },
+    });
+    ```
+  </Accordion>
+</Accordions>
+
+## Preview Emails
+
+Preview emails before sending:
+
+```bash
+pnpm email
+```
+
+This will start a local server that allows you to preview emails in your browser.
+
+## Creating Custom Templates
+
+1. Create an email template in the `packages/mail/src/templates` directory:
+
+```tsx title="packages/mail/src/templates/my-custom-email.tsx"
+import { BaseEmailProps } from '../types';
+import { EmailLayout } from '../components/email-layout';
+import { EmailButton } from '../components/email-button';
+
+interface MyCustomEmailProps extends BaseEmailProps {
+  username: string;
+  actionUrl: string;
+}
+
+export function MyCustomEmail({
+  username,
+  actionUrl,
+  messages,
+  locale
+}: MyCustomEmailProps) {
+  return (
+    <EmailLayout>
+      <p>Hello {username}!</p>
+      <p>Thank you for joining our platform. Click the button below to get started.</p>
+      <EmailButton href={actionUrl}>Get Started</EmailButton>
+    </EmailLayout>
+  );
+}
+```
+
+2. Update the `EmailTemplates` interface in `types.ts`:
+
+```tsx title="packages/mail/src/types.ts"
+export interface EmailTemplates {
+  // ... existing templates
+  myCustomEmail: MyCustomEmail;
+}
+```
+
+3. Use the template:
+
+```tsx
+await sendEmail({
+  to: 'user@example.com',
+  template: 'myCustomEmail',
+  context: {
+    username: 'John',
+    actionUrl: 'https://example.com/start',
+  },
+});
+```
+
+## Extending New Email Providers
+
+AeloKit supports extending new email service providers:
+
+1. Create a new file in the `packages/mail/src` directory
+2. Implement the `MailProvider` interface from `types.ts`
+3. Update the email provider selection logic in `index.ts`
+
+Example implementation:
+
+```tsx title="packages/mail/src/my-provider.ts"
+import { MailProvider, SendEmailResult, SendRawEmailParams, SendTemplateParams } from './types';
+
+export class MyProvider implements MailProvider {
+  constructor() {
+    // Initialize your email service provider
+  }
+
+  public async sendTemplate(params: SendTemplateParams): Promise<SendEmailResult> {
+    // Implementation for sending template emails
+  }
+
+  public async sendRawEmail(params: SendRawEmailParams): Promise<SendEmailResult> {
+    // Implementation for sending raw emails
+  }
+
+  public getProviderName(): string {
+    return 'my-provider';
+  }
+}
+```
+
+## Email System Architecture
+
+<Files>
+  <Folder name="packages/mail/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <File name="email-button.tsx" />
+      <File name="email-layout.tsx" />
+    </Folder>
+    <Folder name="templates" defaultOpen>
+      <File name="verify-email.tsx" />
+      <File name="forgot-password.tsx" />
+      <File name="subscribe-newsletter.tsx" />
+      <File name="contact-message.tsx" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="resend.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## References
+
+* [Resend Documentation](https://resend.com/docs)
+* [React Email Documentation](https://react.email/docs)
+* [Resend | Send Emails](https://resend.com/docs/send)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Database className="text-blue-500" />} title="Database" href="/docs/database">
+    Configure database
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure authentication
+  </Card>
+
+  <Card icon={<Mailbox className="text-amber-500" />} title="Newsletter" href="/docs/newsletter">
+    Configure mailing list subscription
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

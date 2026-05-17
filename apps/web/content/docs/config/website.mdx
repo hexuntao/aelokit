@@ -1,0 +1,632 @@
+---
+title: Website Configuration
+description: Core configuration for AeloKit website
+icon: Globe
+---
+
+The main configuration file containing core website controls.
+
+AeloKit template has already set up default core settings for you. The configuration is located in `packages/config/src/website.ts`.
+
+<Callout type="info">
+  The configuration package is `@repo/config`, and the application layer uses it via `import { websiteConfig } from '@repo/config'`.
+</Callout>
+
+```tsx title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  ui: {
+    // UI settings
+  },
+  metadata: {
+    // Metadata settings
+  },
+  features: {
+    // Feature settings
+  },
+  analytics: {
+    // Analytics settings
+  },
+  auth: {
+    // Authentication settings
+  },
+  i18n: {
+    // Internationalization settings
+  },
+  blog: {
+    // Blog settings
+  },
+  docs: {
+    // Documentation settings
+  },
+  mail: {
+    // Email settings
+  },
+  newsletter: {
+    // Newsletter settings
+  },
+  storage: {
+    // Storage settings
+  },
+  payment: {
+    // Payment settings
+  },
+  price: {
+    // Price settings
+  },
+  credits: {
+    // Credits settings
+  },
+};
+```
+
+### UI
+
+Controls the appearance of your website.
+
+#### Mode
+
+Controls light/dark mode settings:
+
+| Property        | Type                             | Description               |
+| --------------- | -------------------------------- | ------------------------- |
+| `defaultMode`   | `'light' \| 'dark' \| 'system'`  | Sets the default display mode |
+| `enableSwitch`  | `boolean`                        | When true, allows users to switch between light/dark modes |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  mode: {
+    defaultMode: 'system', // Options: light, dark, system
+    enableSwitch: true,    // Allow users to switch light/dark mode
+  },
+  // ...
+}
+```
+
+### Metadata
+
+Controls your website's metadata. The metadata configuration consists of several subsections:
+
+#### Images
+
+Defines images used for branding and social sharing:
+
+| Property     | Type     | Description                          |
+| ----------- | -------- | ------------------------------------ |
+| `ogImage`   | `string` | Open Graph image URL for social media previews |
+| `logoLight` | `string` | Logo image URL in light mode          |
+| `logoDark`  | `string` | Logo image URL in dark mode           |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  images: {
+    ogImage: '/og.png',      // Open Graph image for social sharing
+    logoLight: '/logo.png',  // Logo displayed in light mode
+    logoDark: '/logo-dark.png', // Logo displayed in dark mode
+  },
+  // ...
+}
+```
+
+You can learn more about customizing images in the [Images](/docs/images) documentation.
+
+#### Social Media
+
+Configures social media profile links:
+
+| Property     | Type     | Description                 |
+| ----------- | -------- | ------------------ |
+| `twitter`   | `string` | Twitter/X profile URL   |
+| `github`    | `string` | GitHub profile or repository URL   |
+| `discord`   | `string` | Discord server URL    |
+| `blueSky`   | `string` | BlueSky profile URL     |
+| `youtube`   | `string` | YouTube channel URL     |
+| `linkedin`  | `string` | LinkedIn profile or page URL |
+| `facebook`  | `string` | Facebook page URL    |
+| `instagram` | `string` | Instagram profile URL   |
+| `tiktok`    | `string` | TikTok profile URL      |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  social: {
+    github: 'https://github.com/YourOrganization',
+    twitter: 'https://twitter.com/YourHandle',
+    discord: 'https://discord.gg/your-invitation-code',
+    youtube: 'https://youtube.com/@YourChannel',
+    // Add other social platforms as needed
+  },
+  // ...
+}
+```
+
+These social media links are used by the [Social Media Configuration](/docs/config/social) to generate appropriate links throughout the website where applicable.
+
+### Features
+
+Configures features for certain situations, such as whether to show upgrade cards, etc.:
+
+| Property                     | Type        | Description                                                         |
+| ---------------------------- | --------- | ---------------------------------------------------------- |
+| `enableUpgradeCard`          | `boolean` | Whether to show the user upgrade card in the admin dashboard, defaults to `true` |
+| `enableUpdateAvatar`         | `boolean` | Whether to enable avatar updates, defaults to `true` |
+| `enableDatafastRevenueTrack` | `boolean` | Whether to enable [Datafast revenue tracking](/docs/analytics), defaults to `false` |
+| `enableCrispChat`            | `boolean` | Whether to enable [Crisp chat](/docs/chatbox), defaults to `true` |
+| `enableTurnstileCaptcha`     | `boolean` | Whether to enable [Cloudflare Turnstile captcha](/docs/captcha), defaults to `false` |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+features: {
+  enableUpgradeCard: true,
+  enableUpdateAvatar: true,
+  enableDatafastRevenueTrack: false,
+  enableCrispChat: process.env.NEXT_PUBLIC_DEMO_WEBSITE === 'true',
+  enableTurnstileCaptcha: process.env.NEXT_PUBLIC_DEMO_WEBSITE === 'true',
+}
+```
+
+You can learn more about feature configuration in the [Affiliates](/docs/affiliates), [Captcha](/docs/captcha), and [Chatbox](/docs/chatbox) documentation.
+
+### Affiliates
+
+Configures affiliate marketing settings:
+
+| Property   | Type                          | Description                     |
+| ---------- | --------------------------- | ---------------------- |
+| `enable`   | `boolean`                   | Whether to enable affiliate marketing, defaults to `false` |
+| `provider` | `'affonso' \| 'promotekit'` | The affiliate marketing provider to use |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+affiliates: {
+  enable: true,
+  provider: 'affonso', // or 'promotekit'
+}
+```
+
+You can learn more about affiliate marketing configuration in the [Affiliates](/docs/affiliates) documentation.
+
+### Analytics
+
+Configures analytics services for the website:
+
+| Property                  | Type        | Description                                  |
+| ----------------------- | --------- | ----------------------------------- |
+| `enableVercelAnalytics` | `boolean` | When set to true, enables Vercel Web Analytics |
+| `enableSpeedInsights`   | `boolean` | When set to true, enables Vercel Speed Insights |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+analytics: {
+  enableVercelAnalytics: true,  // Enable Vercel Web Analytics
+  enableSpeedInsights: true,    // Enable Vercel Speed Insights
+}
+```
+
+You can learn more about analytics services in the [Analytics](/docs/analytics) documentation.
+
+### Authentication
+
+Configures authentication options for the website:
+
+| Property                  | Type        | Description                      |
+| ----------------------- | --------- | ----------------------- |
+| `enableGoogleLogin`     | `boolean` | When set to true, enables Google login |
+| `enableGithubLogin`     | `boolean` | When set to true, enables GitHub login |
+| `enableCredentialLogin` | `boolean` | When set to true, enables email/password login |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+auth: {
+  enableGoogleLogin: true,  // Allow Google login
+  enableGithubLogin: true,  // Allow GitHub login
+  enableCredentialLogin: true,  // Allow email/password login
+}
+```
+
+AeloKit supports multiple authentication services by default. You can use these configuration options to selectively disable specific authentication services:
+
+* Set `enableGoogleLogin` to `false` to remove the Google login option
+* Set `enableGithubLogin` to `false` to remove the GitHub login option
+* Set `enableCredentialLogin` to `false` to remove the email/password login option
+
+<Callout type="warning">
+  **Note:** Please ensure at least one login method is enabled, otherwise users will not be able to log in.
+</Callout>
+
+You can learn more about authentication options in the [Authentication](/docs/auth) documentation.
+
+### Internationalization (i18n)
+
+Configures language support for the website:
+
+| Property        | Type                                                                   | Description                |
+| --------------- | -------------------------------------------------------------------- | ----------------- |
+| `defaultLocale` | `string`                                                             | Default locale setting (e.g., 'en') |
+| `locales`       | `Record<string, { flag?: string; name: string; hreflang?: string }>` | Available languages with their flags and display names |
+
+AeloKit supports multiple languages through its i18n system. Here's how to configure it:
+
+```tsx title="packages/config/src/website.ts"
+i18n: {
+  defaultLocale: 'en',
+  locales: {
+    en: {
+      flag: '🇺🇸',
+      name: 'English',
+      hreflang: 'en',
+    },
+    zh: {
+      flag: '🇨🇳',
+      name: '中文',
+      hreflang: 'zh-CN',
+    },
+    // Add more languages as needed
+  },
+}
+```
+
+For each supported language:
+
+* The key is the locale code (e.g., `en`, `es`, `fr`)
+* `flag` is an optional emoji to visually represent the language; it can be left empty if not needed
+* `name` is the localized display name of the language
+* `hreflang` is the hreflang value for SEO; for more details, see [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+
+You can learn more about internationalization settings in the [Internationalization](/docs/i18n) documentation.
+
+### Blog
+
+Configures the blog feature:
+
+| Property            | Type        | Description                |
+| ------------------ | --------- | ----------------- |
+| `enable`           | `boolean` | Whether to enable the blog, defaults to `true` |
+| `paginationSize`   | `number`  | Number of articles displayed per page |
+| `relatedPostsSize` | `number`  | Number of related articles to display |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+blog: {
+  enable: true,
+  paginationSize: 6,
+  relatedPostsSize: 3,
+}
+```
+
+<Callout type="info">
+  If you don't need the blog feature, you can set `enable` to `false`. When the blog feature is disabled, the blog menu will not appear in the navigation bar and footer, and blog-related pages will not be included in the sitemap. However, access to the `/blog` route will not be blocked.
+</Callout>
+
+You can learn more about blog configuration in the [Blog](/docs/blog) documentation.
+
+### Documentation
+
+Configures the documentation feature:
+
+| Property   | Type        | Description                |
+| -------- | --------- | ----------------- |
+| `enable` | `boolean` | Whether to enable documentation, defaults to `true` |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+docs: {
+  enable: true,
+}
+```
+
+<Callout type="info">
+  If you don't need the documentation feature, you can set `enable` to `false`. When the documentation feature is disabled, the documentation menu will not appear in the navigation bar and footer, and documentation-related pages will not be included in the sitemap. However, access to the `/docs` route will not be blocked.
+</Callout>
+
+You can learn more about documentation configuration in the [Documentation](/docs/docs) documentation.
+
+### Email
+
+Configures email service:
+
+| Property        | Type         | Description                        |
+| -------------- | ---------- | ------------------------- |
+| `enable`       | `boolean`  | Whether to enable email functionality, defaults to `true` |
+| `provider`     | `'resend'` | Email service provider (**currently only Resend is supported**) |
+| `fromEmail`    | `string`   | Contact email used for sending emails |
+| `supportEmail` | `string`   | Contact email used for receiving emails |
+
+Example:
+
+```tsx
+mail: {
+  enable: true,
+  provider: 'resend',
+  fromEmail: 'contact@example.com',
+  supportEmail: 'support@example.com',
+}
+```
+
+You can learn more about email configuration in the [Email](/docs/email) documentation.
+
+### Newsletter
+
+Configures newsletter service:
+
+| Property                    | Type                    | Description                                |
+| -------------------------- | --------------------- | --------------------------------- |
+| `enable`                   | `boolean`             | Whether to enable newsletter, defaults to `true` |
+| `provider`                 | `'resend' \| 'beehiiv'` | Newsletter service provider (supports Resend and Beehiiv) |
+| `autoSubscribeAfterSignUp` | `boolean`             | Whether to automatically subscribe after user registration |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+newsletter: {
+  enable: true,
+  provider: 'resend', // or 'beehiiv'
+  autoSubscribeAfterSignUp: true,
+}
+```
+
+<Callout type="info">
+  If you don't need the newsletter feature, you can set `enable` to `false`. When the newsletter feature is disabled, the subscription form will not appear on the homepage and blog pages, and the subscription status will not be shown in the admin notification settings page.
+</Callout>
+
+You can learn more about newsletter configuration in the [Newsletter](/docs/newsletter) documentation.
+
+### Storage
+
+Configures file storage:
+
+| Property   | Type        | Description                  |
+| ---------- | --------- | ------------------- |
+| `enable`   | `boolean` | Whether to enable storage, defaults to `true` |
+| `provider` | `'s3'`    | Storage provider (**currently only S3 is supported**) |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+storage: {
+  enable: true,
+  provider: 's3',
+}
+```
+
+<Callout type="info">
+  If you don't need the storage feature, you can set `enable` to `false`. When storage is disabled, the update user avatar feature in the admin settings interface will be unavailable.
+</Callout>
+
+You can learn more about storage configuration in the [Storage](/docs/storage) documentation.
+
+### Payment
+
+Configures payment processing service:
+
+| Property   | Type                  | Description                            |
+| ---------- | ------------------- | ----------------------------- |
+| `provider` | `'stripe' \| 'creem'` | Payment processor (supports Stripe and Creem) |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+payment: {
+  provider: 'stripe', // or 'creem'
+}
+```
+
+You can learn more about payment configuration in the [Payment](/docs/payment) documentation.
+
+### Price
+
+Configures pricing plans:
+
+| Property  | Type                          | Description     |
+| ------- | --------------------------- | ------ |
+| `plans` | `Record<string, PricePlan>` | Pricing plan configuration |
+
+Each pricing plan in the `plans` object can have the following properties:
+
+| Property       | Type          | Description                      |
+| ------------- | ----------- | ----------------------- |
+| `id`          | `string`    | Unique identifier for the pricing plan |
+| `name`        | `string?`   | Display name of the pricing plan |
+| `description` | `string?`   | Description of the pricing plan |
+| `features`    | `string[]?` | List of features included in the plan |
+| `limits`      | `string[]?` | List of limits included in the plan |
+| `prices`      | `Price[]`   | List of price options for the plan (monthly, yearly, one-time, etc.) |
+| `isFree`      | `boolean`   | Whether this is a free pricing plan |
+| `isLifetime`  | `boolean`   | Whether this is a lifetime (one-time payment) plan |
+| `popular`     | `boolean?`  | Whether to highlight this plan as recommended |
+| `credits`     | `object?`   | Credits configuration included in the plan |
+| `disabled`    | `boolean?`  | Whether to disable the plan in the UI |
+
+The `prices` array contains objects with the following structure:
+
+| Property              | Type                             | Description                    |
+| -------------------- | ------------------------------ | --------------------- |
+| `type`               | `'subscription' \| 'one_time'` | Payment type (subscription or one-time) |
+| `priceId`            | `string`                       | Stripe price ID (not product ID) |
+| `amount`             | `number`                       | Price amount in currency units (USD, EUR, etc.) |
+| `currency`           | `string`                       | Currency code (e.g., USD) |
+| `interval`           | `'month' \| 'year'?`           | Billing interval for recurring payments |
+| `trialPeriodDays`    | `number?`                      | Free trial period in days |
+| `allowPromotionCode` | `boolean?`                     | Whether to allow promotion codes for this price |
+| `disabled`           | `boolean?`                     | Whether to disable this price in the UI |
+
+Structure of the `credits` object:
+
+| Property     | Type        | Description            |
+| ------------ | --------- | ------------- |
+| `enable`     | `boolean` | Whether credits are enabled |
+| `amount`     | `number`  | Number of credits |
+| `expireDays` | `number?` | Credit expiration period (days), optional |
+
+AeloKit template uses three pricing plans by default: Free plan, Pro subscription plan (monthly/yearly), and Lifetime plan (one-time payment):
+
+```tsx title="packages/config/src/website.ts"
+price: {
+  plans: {
+    free: {
+      id: 'free',
+      prices: [],
+      isFree: true,
+      isLifetime: false,
+      credits: {
+        enable: true,
+        amount: 50,
+        expireDays: 30,
+      },
+    },
+    pro: {
+      id: 'pro',
+      prices: [
+        {
+          type: PaymentTypes.SUBSCRIPTION,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!,
+          amount: 990,
+          currency: 'USD',
+          interval: PlanIntervals.MONTH,
+        },
+        {
+          type: PaymentTypes.SUBSCRIPTION,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY!,
+          amount: 9900,
+          currency: 'USD',
+          interval: PlanIntervals.YEAR,
+        },
+      ],
+      isFree: false,
+      isLifetime: false,
+      popular: true,
+      credits: {
+        enable: true,
+        amount: 1000,
+        expireDays: 30,
+      },
+    },
+    lifetime: {
+      id: 'lifetime',
+      prices: [
+        {
+          type: PaymentTypes.ONE_TIME,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_LIFETIME!,
+          amount: 19900,
+          currency: 'USD',
+          allowPromotionCode: true,
+        },
+      ],
+      isFree: false,
+      isLifetime: true,
+      credits: {
+        enable: true,
+        amount: 1000,
+        expireDays: 30,
+      },
+    },
+  },
+},
+```
+
+<Callout type="warning">
+  **When to set a pricing plan or price as disabled?**
+
+  * Set a **pricing plan** to `disabled: true` when the plan is no longer available to new customers, but you need to keep it for existing users who have already purchased it.
+
+  * Set a **specific price** to `disabled: true` when the price is no longer available, but existing subscribers of that price should still be able to see it on the billing page.
+</Callout>
+
+When displaying pricing plans to users, the [Price Configuration](/docs/config/price) displays these plans through translated content (such as names, descriptions, and feature lists).
+
+You can learn more about pricing configuration in the [Payment](/docs/payment) documentation.
+
+### Credits
+
+Configures the credits system for the website:
+
+| Property                    | Type                              | Description                                      |
+| --------------------------- | ------------------------------- | --------------------------------------- |
+| `enableCredits`             | `boolean`                       | Whether to enable the credits system |
+| `enablePackagesForFreePlan` | `boolean`                       | Whether free plan users can purchase credits (by default, only paid users can purchase additional credit packages) |
+| `registerGiftCredits`       | `object`                        | Configuration for registration gift credits |
+| `packages`                  | `Record<string, CreditPackage>` | Purchasable credit packages |
+
+Structure of the `registerGiftCredits` object:
+
+| Property     | Type        | Description               |
+| ------------ | --------- | ---------------- |
+| `enable`     | `boolean` | Whether to enable registration gift credits |
+| `credits`    | `number`  | Number of credits gifted upon registration |
+| `expireDays` | `number?` | Expiration period for gift credits (days), optional |
+
+Structure of each credit package in `packages`:
+
+| Property       | Type         | Description                               |
+| ------------- | ---------- | -------------------------------- |
+| `id`          | `string`   | Unique identifier for the package |
+| `name`        | `string?`  | Display name of the package |
+| `description` | `string?`  | Description of the package |
+| `popular`     | `boolean?` | Whether to highlight this package as recommended |
+| `credits`     | `number`   | Number of credits included in the package |
+| `price`       | `object`   | Price information including priceId, amount, currency, and whether promotion codes are allowed |
+| `expireDays`  | `number?`  | Validity period for credits (days), optional; undefined means no expiration |
+| `disabled`    | `boolean?` | Whether to disable this package in the UI, optional |
+
+Example:
+
+```tsx title="packages/config/src/website.ts"
+credits: {
+  enableCredits: false,
+  enablePackagesForFreePlan: false,
+  registerGiftCredits: {
+    enable: true,
+    credits: 50,
+    expireDays: 30,
+  },
+  packages: {
+    basic: {
+      id: 'basic',
+      popular: false,
+      credits: 100,
+      expireDays: 30,
+      price: {
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+        amount: 990,
+        currency: 'USD',
+        allowPromotionCode: true,
+      },
+    },
+    // ... other credit packages ...
+  },
+},
+```
+
+You can learn more about credits configuration in the [Credits](/docs/credits) documentation.
+
+## Next Steps
+
+Now that you understand website configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Navbar Configuration" href="/docs/config/navbar">
+    Configure header navigation menu
+  </Card>
+
+  <Card icon={<Footprints className="text-green-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure website footer links
+  </Card>
+
+  <Card icon={<CreditCard className="text-amber-500" />} title="Payment Integration" href="/docs/payment">
+    Configure website payment features
+  </Card>
+
+  <Card icon={<CogIcon className="text-purple-500" />} title="Price Configuration" href="/docs/config/price">
+    Configure subscription plans and pricing
+  </Card>
+</Cards>

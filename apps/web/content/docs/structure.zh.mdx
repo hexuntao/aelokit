@@ -1,0 +1,310 @@
+---
+title: 项目结构
+description: AeloKit 模板文件和文件夹组织概述
+icon: FolderTree
+---
+
+AeloKit 遵循基于 Next.js App Router 的模块化架构，专注于可扩展性和可维护性。本文档解释了模板中的关键目录和文件，帮助您更有效地导航代码库。
+
+## 根目录结构
+
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="web">
+      主 Web 应用程序
+    </Folder>
+  </Folder>
+
+  <Folder name="packages" defaultOpen>
+    <Folder name="config">
+      共享配置和配置类型
+    </Folder>
+
+    <Folder name="shared">
+      共享工具函数、常量、类型
+    </Folder>
+
+    <Folder name="env">
+      环境变量验证
+    </Folder>
+
+    <Folder name="i18n">
+      国际化路由和消息
+    </Folder>
+
+    <Folder name="db">
+      Drizzle 数据库层
+    </Folder>
+
+    <Folder name="auth">
+      认证核心层
+    </Folder>
+
+    <Folder name="payment">
+      支付领域包
+    </Folder>
+
+    <Folder name="credits">
+      积分领域包
+    </Folder>
+
+    <Folder name="mail">
+      事务邮件领域包
+    </Folder>
+
+    <Folder name="newsletter">
+      邮件订阅领域包
+    </Folder>
+
+    <Folder name="notification">
+      系统通知领域包
+    </Folder>
+
+    <Folder name="storage">
+      对象存储领域包
+    </Folder>
+
+    <Folder name="analytics">
+      统计分析领域包
+    </Folder>
+  </Folder>
+
+  <File name="pnpm-workspace.yaml">
+    pnpm workspace 配置
+  </File>
+
+  <File name="turbo.json">
+    Turborepo 配置
+  </File>
+</Files>
+
+## apps/web 目录结构
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="actions">
+      用于表单处理和数据变更的 Server Action
+    </Folder>
+
+    <Folder name="app">
+      Next.js App Router 页面和路由
+    </Folder>
+
+    <Folder name="assets">
+      应用程序中使用的静态资源
+    </Folder>
+
+    <Folder name="components">
+      按功能组织的 UI 组件
+    </Folder>
+
+    <Folder name="config">
+      应用程序的配置文件
+    </Folder>
+
+    <Folder name="hooks">
+      自定义 React 钩子
+    </Folder>
+
+    <Folder name="lib">
+      核心应用程序逻辑和实用程序模块
+    </Folder>
+
+    <Folder name="styles">
+      全局样式和 CSS 模块
+    </Folder>
+
+    <Folder name="types">
+      TypeScript 类型定义
+    </Folder>
+
+    <File name="middleware.ts">
+      用于身份验证和路由的 Next.js 中间件
+    </File>
+
+    <File name="routes.ts">
+      应用程序路由定义
+    </File>
+  </Folder>
+
+  <Folder name="content">
+    <Folder name="docs">
+      MDX 格式的文档
+    </Folder>
+
+    <Folder name="blog">
+      MDX 格式的博客文章
+    </Folder>
+
+    <Folder name="pages">
+      MDX 格式的自定义页面
+    </Folder>
+  </Folder>
+
+  <Folder name="public">
+    从根目录提供的静态资源
+  </Folder>
+
+  <Folder name="messages">
+    国际化消息
+  </Folder>
+</Files>
+
+## 关键文件
+
+* **`apps/web/src/middleware.ts`**：包含路由保护逻辑和重定向
+* **`apps/web/src/routes.ts`**：定义核心路由以实现一致的导航
+* **`packages/db/src/schema.ts`**：数据库 schema 定义
+* **`apps/web/next.config.ts`**：Next.js 配置
+* **`source.config.ts`**：Fumadocs 配置
+* **`env.example`**：环境变量模板
+
+## 关键目录
+
+### `/apps/web/src/app` 目录
+
+app 目录遵循 Next.js App Router 约定：
+
+<Files>
+  <Folder name="[locale]" defaultOpen>
+    <Folder name="(marketing)">
+      公共营销页面
+    </Folder>
+
+    <Folder name="(protected)">
+      受保护的页面
+    </Folder>
+
+    <Folder name="auth">
+      身份验证页面
+    </Folder>
+
+    <Folder name="docs">
+      文档页面
+    </Folder>
+  </Folder>
+
+  <Folder name="api">
+    API 路由
+  </Folder>
+
+  <File name="layout.tsx">
+    根布局
+  </File>
+
+  <File name="not-found.tsx">
+    404 页面
+  </File>
+
+  <File name="robots.ts">
+    Robots.txt 配置
+  </File>
+
+  <File name="sitemap.ts">
+    站点地图生成
+  </File>
+
+  <File name="manifest.ts">
+    PWA 清单配置
+  </File>
+</Files>
+
+### `/apps/web/src/lib` 目录
+
+核心应用程序逻辑和实用程序：
+
+<Files>
+  <File name="auth.ts">
+    Better Auth 配置和实用程序
+  </File>
+
+  <File name="auth-client.ts">
+    Better Auth 客户端配置和实用程序
+  </File>
+
+  <File name="source.ts">
+    Fumadocs 配置和实用程序
+  </File>
+
+  <File name="metadata.ts">
+    SEO 元数据实用程序
+  </File>
+
+  <File name="constants.ts">
+    应用程序常量
+  </File>
+
+  <File name="formatter.ts">
+    数据格式化实用程序
+  </File>
+
+  <File name="utils.ts">
+    通用实用程序
+  </File>
+
+  <Folder name="urls">
+    URL 相关实用程序
+  </Folder>
+
+  <Folder name="docs">
+    文档相关实用程序
+  </Folder>
+</Files>
+
+## 代码组织最佳实践
+
+在使用 AeloKit 时，请遵循这些代码组织最佳实践：
+
+<Steps>
+  <Step>
+    ### 按功能分组，而不是按类型
+
+    将相关文件保持在一起，无论其类型如何。
+  </Step>
+
+  <Step>
+    ### 保持组件专注和小巧
+
+    每个组件应该有单一职责。
+  </Step>
+
+  <Step>
+    ### 巧妙使用统一导出
+
+    创建 `index.ts` 文件从目录重新导出组件，使导入更简洁。
+
+    ```tsx
+    // components/ui/index.ts
+    export * from './Button';
+    export * from './Card';
+    export * from './Input';
+
+    // 使用
+    import { Button, Card, Input } from '@/components/ui';
+    ```
+  </Step>
+
+  <Step>
+    ### 分离客户端和服务器组件
+
+    在客户端组件顶部使用 `'use client'` 指令，并将服务器组件保持为默认。
+  </Step>
+</Steps>
+
+## 下一步
+
+现在您了解了项目结构，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Code className="text-blue-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<FileKey className="text-green-500" />} title="代码检查" href="/docs/lint">
+    代码格式化和检查
+  </Card>
+
+  <Card icon={<Rocket className="text-amber-500" />} title="开始使用" href="/docs/start">
+    AeloKit 模板入门文档
+  </Card>
+</Cards>

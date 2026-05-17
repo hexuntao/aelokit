@@ -1,0 +1,216 @@
+---
+title: 支付
+description: 学习如何在 AeloKit 中设置和使用支付
+icon: CreditCard
+---
+
+AeloKit 支持多种支付提供商，您可以根据需要选择合适的支付方案。
+
+## 支付提供商
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Stripe" description="全球最流行的支付平台，支持一次性支付和订阅" href="/docs/payment/stripe" />
+
+  <Card icon={<CreditCard className="text-green-500" />} title="Creem" description="面向独立开发者的支付平台，内置税务合规和订阅管理" href="/docs/payment/creem" />
+</Cards>
+
+## 设置支付提供商
+
+通过环境变量选择支付提供商：
+
+```bash title=".env"
+NEXT_PUBLIC_PAYMENT_PROVIDER="stripe" # 'stripe' 或 'creem'
+```
+
+## 支付系统架构
+
+<Files>
+  <Folder name="packages/payment/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="stripe.ts" />
+      <File name="creem.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="types.ts" />
+    <File name="helpers.ts" />
+  </Folder>
+</Files>
+
+### 核心功能
+
+* **创建结账会话** - 创建支付结账链接
+* **管理订阅** - 创建、更新、取消订阅
+* **客户门户** - 让用户管理自己的订阅
+* **Webhook 处理** - 处理支付事件通知
+* **一次性支付** - 支持终身会员等一次性付款
+
+## 使用方法
+
+### 创建结账会话
+
+```tsx
+import { createCheckout } from '@/payment';
+
+const result = await createCheckout({
+  priceId: 'price_pro_monthly',
+  successUrl: 'https://example.com/success',
+  cancelUrl: 'https://example.com/cancel',
+});
+```
+
+### 创建客户门户
+
+```tsx
+import { createCustomerPortal } from '@/payment';
+
+const result = await createCustomerPortal({
+  customerId: 'cus_xxx',
+  returnUrl: 'https://example.com/account',
+});
+```
+
+## 自定义支付提供商
+
+AeloKit 支持扩展新的支付提供商：
+
+1. 在 `packages/payment/src/providers` 目录中创建新的文件
+2. 从 `types.ts` 实现 `PaymentProvider` 接口
+3. 在 `registry.ts` 中注册新的提供商
+
+示例实现：
+
+```tsx title="packages/payment/src/providers/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  GetSubscriptionsParams
+} from '../types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // 初始化您的支付服务提供商
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // 创建结账会话的实现
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // 创建客户门户的实现
+  }
+
+  public async getSubscriptions(params: GetSubscriptionsParams): Promise<Subscription[]> {
+    // 获取订阅列表的实现
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // 处理 webhook 事件的实现
+  }
+}
+```
+
+然后在 `registry.ts` 中注册：
+
+```tsx title="packages/payment/src/registry.ts"
+import { MyProvider } from './providers/my-provider';
+
+export function getPaymentProvider(): PaymentProvider {
+  const provider = websiteConfig.payment.provider;
+  
+  switch (provider) {
+    case 'stripe':
+      return new StripeProvider();
+    case 'creem':
+      return new CreemProvider();
+    case 'my-provider':
+      return new MyProvider();
+    default:
+      throw new Error(`不支持的支付提供商: ${provider}`);
+  }
+}
+```
+
+## 价格计划配置
+
+在 `packages/config/src/website.ts` 中配置价格计划：
+
+```ts title="packages/config/src/website.ts"
+export const websiteConfig = {
+  price: {
+    plans: {
+      free: {
+        id: 'free',
+        isFree: true,
+        credits: {
+          enable: true,
+          amount: 50,
+          expireDays: 30,
+        },
+      },
+      pro: {
+        id: 'pro',
+        prices: [
+          {
+            type: PaymentTypes.SUBSCRIPTION,
+            priceId: PRICE_IDS.PRO_MONTHLY,
+            amount: 990,
+            currency: 'USD',
+            interval: PlanIntervals.MONTH,
+          },
+          {
+            type: PaymentTypes.SUBSCRIPTION,
+            priceId: PRICE_IDS.PRO_YEARLY,
+            amount: 9900,
+            currency: 'USD',
+            interval: PlanIntervals.YEAR,
+          },
+        ],
+        popular: true,
+      },
+      lifetime: {
+        id: 'lifetime',
+        prices: [
+          {
+            type: PaymentTypes.ONE_TIME,
+            priceId: PRICE_IDS.LIFETIME,
+            amount: 19900,
+            currency: 'USD',
+          },
+        ],
+        isLifetime: true,
+      },
+    },
+  },
+};
+```
+
+## 参考资料
+
+* [Stripe 文档](https://stripe.com/docs)
+* [Creem 文档](https://docs.creem.io/)
+* [Stripe | 订阅](https://stripe.com/docs/billing/subscriptions/build)
+* [Stripe | Webhook](https://stripe.com/docs/webhooks)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Coins className="text-blue-500" />} title="积分" href="/docs/credits">
+    配置积分系统
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

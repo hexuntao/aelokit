@@ -1,0 +1,79 @@
+---
+title: 支付
+description: 学习如何在 AeloKit 中设置和使用支付
+icon: CreditCard
+---
+
+AeloKit 支持多种支付提供商，您可以根据需要选择合适的支付方案。
+
+## 支付提供商
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Stripe" description="全球最流行的支付平台，支持一次性支付和订阅" href="/docs/payment/stripe" />
+
+  <Card icon={<CreditCard className="text-green-500" />} title="Creem" description="面向独立开发者的支付平台，内置税务合规和订阅管理" href="/docs/payment/creem" />
+</Cards>
+
+## 自定义支付提供商
+
+AeloKit 支持扩展新的支付提供商：
+
+1. 在 `src/payment/provider` 目录中创建新的文件
+2. 从 `types.ts` 实现 `PaymentProvider` 接口
+3. 在 `index.ts` 中更新支付服务提供商选择逻辑
+
+示例实现：
+
+```tsx title="src/payment/provider/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  getSubscriptionsParams
+} from '@/payment/types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // 初始化您的支付服务提供商
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // 创建结账会话的实现
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // 创建客户门户的实现
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // 处理 webhook 事件的实现
+  }
+}
+```
+
+然后在 `index.ts` 中更新支付服务提供商选择：
+
+```tsx title="src/payment/index.ts"
+import { MyProvider } from './provider/my-provider';
+
+export const initializePaymentProvider = (): PaymentProvider => {
+  if (!paymentProvider) {
+    if (websiteConfig.payment.provider === 'stripe') {
+      paymentProvider = new StripeProvider();
+    } else if (websiteConfig.payment.provider === 'creem') {
+      paymentProvider = new CreemProvider();
+    } else if (websiteConfig.payment.provider === 'my-provider') {
+      paymentProvider = new MyProvider();
+    } else {
+      throw new Error(
+        `不支持的支付提供商: ${websiteConfig.payment.provider}`
+      );
+    }
+  }
+
+  return paymentProvider;
+};
+```

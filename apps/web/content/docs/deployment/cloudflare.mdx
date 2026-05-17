@@ -1,0 +1,155 @@
+---
+title: Cloudflare Deployment
+description: Learn how to deploy your project to Cloudflare Workers platform
+icon: Cloud
+---
+
+This document will help you deploy your AeloKit project to Cloudflare Workers platform. Cloudflare Workers provides edge computing capabilities, allowing your application to respond quickly worldwide.
+
+## Prerequisites
+
+Before deploying your project, make sure you have:
+
+1. A Git repository containing your project code (such as [GitHub](https://github.com))
+2. A [Cloudflare](https://dash.cloudflare.com) account
+3. [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed: `npm install -g wrangler`
+4. [Environment variables](/docs/env) configured for your production environment
+
+## Deployment Steps
+
+<Steps>
+  <Step>
+    Login to Cloudflare
+
+    ```bash
+    wrangler login
+    ```
+
+    This will open a browser window for you to authorize Wrangler to access your Cloudflare account.
+  </Step>
+
+  <Step>
+    Configure wrangler.toml
+
+    The project root directory already contains a `wrangler.toml` configuration file. Modify the configuration according to your needs:
+
+    ```toml title="wrangler.toml"
+    name = "your-app-name"
+    compatibility_date = "2024-01-01"
+    compatibility_flags = ["nodejs_compat"]
+    
+    [site]
+    bucket = ".open-next"
+    ```
+
+    Change `name` to your application name.
+  </Step>
+
+  <Step>
+    Configure Environment Variables
+
+    Use Wrangler to set environment variables:
+
+    ```bash
+    wrangler secret put NEXT_PUBLIC_BASE_URL
+    wrangler secret put DATABASE_URL
+    wrangler secret put BETTER_AUTH_SECRET
+    wrangler secret put RESEND_API_KEY
+    ```
+
+    Alternatively, add environment variables directly in the Cloudflare Dashboard Workers settings.
+  </Step>
+
+  <Step>
+    Build the Project
+
+    ```bash
+    pnpm build
+    ```
+
+    This will use OpenNext to build the output adapted for Cloudflare Workers.
+  </Step>
+
+  <Step>
+    Deploy the Project
+
+    ```bash
+    pnpm deploy
+    ```
+
+    Or deploy directly using Wrangler:
+
+    ```bash
+    wrangler deploy
+    ```
+  </Step>
+</Steps>
+
+## Custom Domain
+
+If you want to add a custom domain to your project:
+
+1. Go to your Workers settings in the Cloudflare Dashboard
+2. Click the `Triggers` tab
+3. Add a custom domain in the `Custom Domains` section
+4. Follow the instructions to configure DNS records
+
+## Database Options
+
+AeloKit supports multiple database options for Cloudflare deployment:
+
+### Cloudflare D1
+
+Cloudflare D1 is an edge SQLite database provided by Cloudflare:
+
+```toml title="wrangler.toml"
+[[d1_databases]]
+binding = "DB"
+database_name = "your-database-name"
+database_id = "your-database-id"
+```
+
+### External Databases
+
+You can also use Neon, Supabase, or other database services that support HTTP connections.
+
+## Troubleshooting
+
+### Build Failure
+
+If the build process fails:
+
+* Check the build logs for detailed error information
+* Ensure all dependencies are correctly installed
+* Verify that `wrangler.toml` configuration is correct
+
+### Runtime Errors
+
+* Confirm all environment variables are correctly set
+* Check if the database connection is working properly
+* View Cloudflare Workers logs to diagnose issues
+
+### Cold Start Issues
+
+Cloudflare Workers may have cold start latency:
+
+* Using Cloudflare D1 can reduce latency
+* Consider using Workers KV to cache frequently accessed data
+
+## Next Steps
+
+Now that you understand how to deploy an AeloKit website to Cloudflare, explore other related topics:
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Vercel Deployment" href="/docs/deployment/vercel">
+    Deploy the website to Vercel
+  </Card>
+
+  <Card icon={<Database className="text-green-500" />} title="Database" href="/docs/database">
+    Configure the database
+  </Card>
+
+  <Card icon={<FileKey className="text-amber-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

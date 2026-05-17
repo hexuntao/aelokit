@@ -1,0 +1,255 @@
+---
+title: 数据库
+description: 了解数据库选项以及如何为项目配置数据库
+icon: Database
+---
+
+本文档涵盖了数据库的创建、初始化、迁移和连接到数据库，以及如何使用 Drizzle ORM。
+
+<Callout type="warn">
+  本文主要介绍的是 Postgres 类型数据库的创建和配置，即如果你使用的是 main 分支或者 cloudflare 分支，请参考本文档。
+
+  如果你使用的是 cloudflare-d1 分支，即使用 Cloudflare D1 数据库，请参考 [Cloudflare 部署（使用 D1 数据库）](/docs/deployment/cloudflare-d1)。
+</Callout>
+
+## 设置
+
+项目使用 PostgreSQL 作为数据库系统，使用 Drizzle ORM 进行数据库访问和管理。
+
+<Steps>
+  <Step>
+    ### 创建数据库
+
+    推荐使用托管的 PostgreSQL 数据库服务，它们提供简单的设置和管理，并且通常包含足够入门的免费套餐。
+
+    <Tabs items={['Neon（推荐）', 'Supabase']}>
+      <Tab value="Neon（推荐）">
+        [Neon](https://neon.tech) 是一个具有出色的开发者体验的 PostgreSQL 数据库服务，它是小型项目的绝佳选择。
+
+        1. 在 [neon.tech](https://neon.tech) 创建账户
+        2. 创建新项目
+        3. 创建数据库
+        4. 从仪表盘获取连接字符串
+        5. 将连接字符串作为 `DATABASE_URL` 添加到环境变量文件中
+
+        ```bash
+        # Neon 连接字符串示例
+        DATABASE_URL="postgres://user:password@ep-something.us-east-2.aws.neon.tech/database?sslmode=require"
+        ```
+
+        您可以在[此文档](https://orm.drizzle.team/docs/tutorials/drizzle-with-neon)中找到有关如何设置 Neon 的更多信息。
+      </Tab>
+
+      <Tab value="Supabase">
+        [Supabase](https://supabase.com) 提供具有身份验证和存储等附加功能的 PostgreSQL 数据库，它是中大型项目的绝佳选择。
+
+        1. 在 [supabase.com](https://supabase.com) 创建账户
+        2. 创建新项目
+        3. 点击 `Connect` 按钮
+        4. 在 `Transaction pooler` 部分获取连接字符串
+        5. 将连接字符串作为 `DATABASE_URL` 添加到环境变量文件中
+
+        ```bash
+        # Supabase 连接字符串示例
+        DATABASE_URL="postgres://postgres:your-password@db.something.supabase.co:6543/postgres"
+        ```
+
+        您可以在[此文档](https://orm.drizzle.team/docs/tutorials/drizzle-with-supabase)中找到有关如何设置 Supabase 的更多信息，或查看 Supabase 上的连接文档。
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### 初始化数据库
+
+    AeloKit 使用 Drizzle ORM 与数据库交互。运行以下命令初始化数据库：
+
+    ```bash
+    pnpm db:generate # 生成 Drizzle 迁移文件
+    pnpm db:migrate # 迁移数据库
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在您可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#database">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 创建数据库（其他选项）
+
+### 其他数据库托管服务
+
+您可以在 [Drizzle ORM 文档](https://orm.drizzle.team/docs/connect-vercel-postgres)中找到有关其他数据库选项的更多信息。
+
+* [Vercel Postgres](https://orm.drizzle.team/docs/connect-vercel-postgres)
+* [Prisma Postgres](https://www.prisma.io/postgres)
+* [AWS RDS](https://aws.amazon.com/rds/)（PostgreSQL）
+* [Google Cloud SQL](https://cloud.google.com/sql)（PostgreSQL）
+* [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
+
+### 自托管 PostgreSQL
+
+#### Docker
+
+您可以在 Docker 容器中运行 PostgreSQL 进行本地开发：
+
+```bash
+docker run --name drizzle-postgres -e POSTGRES_PASSWORD=mypassword -d -p 5432:5432 postgres
+```
+
+然后使用此连接字符串：
+
+```bash
+DATABASE_URL="postgres://postgres:mypassword@localhost:5432/postgres"
+```
+
+您可以在[此文档](https://orm.drizzle.team/docs/guides/postgresql-local-setup)中找到有关如何在本地设置 PostgreSQL 的更多信息。
+
+#### 本地安装
+
+直接在您的机器上安装 PostgreSQL：
+
+1. 从 [postgres.org](https://www.postgresql.org/download/) 下载或使用包管理器
+2. 安装并设置密码
+3. 创建数据库
+
+然后使用此连接字符串：
+
+```bash
+DATABASE_URL="postgres://your-username:your-password@localhost:5432/database-name"
+```
+
+## 数据库架构
+
+数据库架构在 `packages/db/src/schema.ts` 中，使用 Drizzle 的架构定义语法：
+
+```typescript title="packages/db/src/schema.ts"
+import * as authSchema from './auth.schema';
+import * as appSchema from './app.schema';
+
+export * from './auth.schema';
+export * from './app.schema';
+
+export const schema = {
+  ...authSchema,
+  ...appSchema,
+} as const;
+```
+
+### 应用 Schema
+
+应用相关的表定义在 `packages/db/src/app.schema.ts` 中：
+
+* **payment** - 支付记录表，存储订阅、一次性付款和积分购买信息
+* **userCredit** - 用户积分余额表
+* **creditTransaction** - 积分交易记录表
+
+## 使用其他数据库提供商
+
+Drizzle ORM 支持多个数据库提供商。如果您想使用不同的提供商：
+
+1. 安装适当的 Drizzle 适配器包
+2. 更新 `packages/db/src/index.ts` 以使用正确的驱动程序
+3. 如有必要，调整 `packages/db/src/schema.ts` 中的架构
+
+#### 示例：使用 MySQL
+
+```typescript title="packages/db/src/index.ts"
+// 1. 安装：pnpm add drizzle-orm mysql2
+// 2. 更新 packages/db/src/index.ts
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+
+const connection = await mysql.createConnection(process.env.DATABASE_URL!);
+const db = drizzle(connection);
+
+export default db;
+```
+
+#### 示例：使用 SQLite
+
+```typescript title="packages/db/src/index.ts"
+// 1. 安装：pnpm add drizzle-orm better-sqlite3
+// 2. 更新 packages/db/src/index.ts
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+
+const sqlite = new Database('sqlite.db');
+const db = drizzle(sqlite);
+
+export default db;
+```
+
+有关 Drizzle ORM 及其适配器的更多信息，请参考 [Drizzle ORM 文档](https://orm.drizzle.team/docs/overview)。
+
+<Callout type="warn">
+  如果您使用不同的数据库类型，您需要更新 `packages/auth/src/server.ts` 文件以使用正确的驱动程序，具体参考 [Better Auth 文档](https://www.better-auth.com/docs/installation#configure-database)。
+
+  如果您使用的是 Cloudflare D1 数据库，请参考文档 [Cloudflare 部署（使用 D1 数据库）](/docs/deployment/cloudflare-d1)。
+</Callout>
+
+## 连接到数据库
+
+您可以运行 `pnpm db:studio` 打开数据库工作台，在开发环境中查看和管理数据库数据。
+
+## 常见问题
+
+### 连接问题
+
+如果您在连接数据库时遇到问题：
+
+1. 检查您的 `DATABASE_URL` 格式是否正确
+2. 确保您的 IP 在数据库防火墙设置中被允许
+3. 验证数据库用户具有正确的权限
+4. 检查是否有任何网络限制
+
+### 架构迁移问题
+
+如果您在数据库迁移时遇到问题：
+
+1. 检查您的架构定义是否有错误
+2. 确保您的迁移脚本格式正确
+3. 尝试手动运行迁移以查看详细错误
+
+### 数据库成本问题
+
+如果你使用的是 Neon 数据库服务，你可能需要注意设置 AutoScaling，以避免产生过多的费用账单。
+
+## 参考资料
+
+* [Neon](https://neon.tech/docs)
+* [Supabase](https://supabase.com/docs)
+* [Drizzle ORM](https://orm.drizzle.team/docs/overview)
+* [Supabase | 使用 Drizzle 连接](https://supabase.com/docs/guides/database/drizzle)
+* [使用 Drizzle 的数据库连接](https://orm.drizzle.team/docs/connect-overview)
+* [Drizzle 与 Neon Postgres](https://orm.drizzle.team/docs/tutorials/drizzle-with-neon)
+* [Drizzle 与 Supabase Postgres](https://orm.drizzle.team/docs/tutorials/drizzle-with-supabase)
+* [Drizzle 与 Vercel Edge Functions](https://orm.drizzle.team/docs/tutorials/drizzle-with-vercel-edge-functions)
+* [Drizzle | 如何在本地设置 PostgreSQL](https://orm.drizzle.team/docs/guides/postgresql-local-setup)
+* [在 Cloudflare Workers 中使用 Neon](https://neon.com/docs/guides/cloudflare-workers)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<Mail className="text-blue-500" />} title="电子邮件" href="/docs/email">
+    配置电子邮件服务
+  </Card>
+
+  <Card icon={<Mailbox className="text-amber-500" />} title="邮件订阅" href="/docs/newsletter">
+    配置邮件列表订阅
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

@@ -1,0 +1,90 @@
+---
+title: Codebase
+description: AeloKit project codebase overview
+icon: Github
+---
+
+## Overview
+
+AeloKit is a modern SaaS starter template built on Next.js, TypeScript, and Tailwind CSS. The project uses pnpm workspace + Turborepo for management, adopting a Monorepo architecture.
+
+## Project Features
+
+* **Modern Tech Stack**: Next.js 16, React 19, TypeScript, Tailwind CSS
+* **Monorepo Architecture**: pnpm workspace + Turborepo for multi-package management
+* **Complete SaaS Features**: Authentication, payment, credits, email, notifications, etc.
+* **Internationalization Support**: Multi-language support based on next-intl
+* **Documentation System**: Documentation and blog system based on Fumadocs
+* **Rich UI Components**: shadcn/ui, Magic UI, Tailark, etc.
+
+## Core Packages
+
+### Domain Packages
+
+| Package Name | Description |
+| --- | --- |
+| `@repo/config` | Cross-app shared core SaaS static configuration and configuration types |
+| `@repo/shared` | Cross-app/package shared pure utility functions, constants, types |
+| `@repo/env` | Cross-app/package shared environment variable validation |
+| `@repo/i18n` | Cross-app/package shared internationalization routes and messages |
+| `@repo/db` | Cross-app/package shared Drizzle database layer |
+| `@repo/auth` | Cross-app/package shared authentication core layer |
+| `@repo/payment` | Cross-app/package shared payment domain package |
+| `@repo/credits` | Cross-app/package shared credits domain package |
+| `@repo/mail` | Cross-app/package shared transactional email domain package |
+| `@repo/newsletter` | Cross-app/package shared email newsletter domain package |
+| `@repo/notification` | Cross-app/package shared system notification domain package |
+| `@repo/storage` | Cross-app/package shared object storage domain package |
+| `@repo/analytics` | Cross-app/package shared analytics domain package |
+
+### Applications
+
+| Application | Description |
+| --- | --- |
+| `apps/web` | Current complete SaaS monolithic application |
+
+## Common Commands
+
+```bash
+# Install dependencies
+pnpm install
+
+# Development
+pnpm dev
+
+# Build
+pnpm build
+
+# Lint
+pnpm lint
+
+# Format
+pnpm format
+
+# Type check
+pnpm typecheck
+
+# Database operations
+pnpm --filter @repo/db db:generate
+pnpm --filter @repo/db db:migrate
+pnpm --filter @repo/db db:push
+pnpm --filter @repo/db db:studio
+```
+
+## Next Steps
+
+Now that you understand the AeloKit codebase structure, explore these related topics:
+
+<Cards>
+  <Card icon={<FolderTree className="text-blue-500" />} title="Project Structure" href="/docs/structure">
+    Learn about the template project structure
+  </Card>
+
+  <Card icon={<FileKey className="text-green-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<Rocket className="text-amber-500" />} title="Getting Started" href="/docs/start">
+    AeloKit template getting started guide
+  </Card>
+</Cards>

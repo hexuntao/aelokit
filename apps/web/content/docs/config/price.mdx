@@ -1,0 +1,82 @@
+---
+title: Price Configuration
+description: Define subscription plans and pricing options
+icon: DollarSign
+---
+Extend the price plans defined in `website.tsx` by adding translated content.
+
+```tsx title="src/config/price-config.tsx"
+// Returns price plans with translated content
+export function getPricePlans(): Record<string, PricePlan> {
+  const t = useTranslations('PricePlans');
+  const priceConfig = websiteConfig.price;
+  const plans: Record<string, PricePlan> = {};
+
+  // Add translated content for each plan
+  if (priceConfig.plans.free) {
+    plans.free = {
+      ...priceConfig.plans.free,
+      name: t('free.name'),
+      description: t('free.description'),
+      features: [
+        t('free.features.feature-1'),
+        t('free.features.feature-2'),
+        t('free.features.feature-3'),
+        t('free.features.feature-4'),
+      ],
+      limits: [
+        t('free.limits.limit-1'),
+        t('free.limits.limit-2'),
+        t('free.limits.limit-3'),
+      ],
+    };
+  }
+  ...
+}
+```
+
+Each price plan in the `plans` object can have the following properties:
+
+| Property       | Type        | Description                                  |
+| -------------- | ----------- | -------------------------------------------- |
+| `id`           | `string`    | Unique identifier for the price plan         |
+| `name`         | `string?`   | Display name of the price plan               |
+| `description`  | `string?`   | Description of the price plan                |
+| `features`     | `string[]?` | List of features included in the price plan  |
+| `limits`       | `string[]?` | List of limits included in the price plan    |
+| `prices`       | `Price[]`   | List of price options (monthly, yearly, one-time, etc.) |
+| `isFree`       | `boolean`   | Whether this is a free price plan            |
+| `isLifetime`   | `boolean`   | Whether this is a lifetime (one-time payment) price plan |
+| `popular`      | `boolean?`  | Whether to highlight the price plan as recommended |
+| `credits`      | `object?`   | Credits configuration included in the price plan |
+| `disabled`     | `boolean?`  | Whether to disable the price plan in the UI  |
+
+<Callout type="warning">
+  Q: What's the difference between the **price configuration** in `website.tsx` and the **price plans** in `price-config.tsx`?
+
+  A: The `website.tsx` file defines the basic information of price plans, excluding locale-specific information, while the `price-config.tsx` file displays these price plans by adding translated content.
+
+  The reason for separating them is that `price-config.tsx` can only be used in client components, while `website.tsx` can be used in both server and client components.
+</Callout>
+
+## Next Steps
+
+Now that you understand pricing configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Coins className="text-green-500" />} title="Credits Packages" href="/docs/config/credits">
+    Configure credits packages
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure links in the website footer
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-amber-500" />} title="Sidebar Configuration" href="/docs/config/sidebar">
+    Configure the dashboard navigation menu
+  </Card>
+</Cards>

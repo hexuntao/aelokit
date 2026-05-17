@@ -1,0 +1,116 @@
+---
+title: User Management
+description: Learn how to manage users in the AeloKit template
+icon: Users
+---
+
+This document covers the user management system in the AeloKit template, including user roles, permissions, and management operations.
+
+## Core Features
+
+The AeloKit template provides a user management system with the following features:
+
+* Advanced user search and filtering
+* Pagination with customizable page size
+* Sortable columns and column visibility control
+* User role and account status management
+* Stripe customer page integration
+* User ban/unban functionality
+* Responsive design for mobile devices
+* Internationalization (i18n) support
+
+## User Management Interface
+
+The user management interface is accessible through the dashboard (**by default, only accessible to admins**), displaying information about all users in the system.
+
+The user table includes the following features:
+
+* **Search and Filter**: Use the search bar to find users by name or email
+* **Pagination**: Browse user records with customizable page sizes (10, 20, 30, 40, 50)
+* **Column Sorting**: Click column headers to sort by that field
+* **Column Visibility**: Use the column dropdown menu to toggle which columns are displayed
+* **Responsive Design**: The table adapts to different screen sizes
+* **Dark Mode**: Automatically adjusts to system theme preference
+
+## User Roles and Permissions
+
+The AeloKit template supports two user roles by default: `admin` and `user`.
+
+You can create new roles following the instructions in [Roles | BetterAuth Documentation](https://www.better-auth.com/docs/plugins/admin#roles).
+
+You can also add permissions to roles following the instructions in [Permissions | BetterAuth Documentation](https://www.better-auth.com/docs/plugins/admin#permissions) to control what actions users can perform.
+
+## Setting Up Admin Users
+
+To set up an admin user:
+
+1. Access your database using Drizzle Studio:
+   ```bash
+   pnpm db:studio
+   ```
+
+2. Navigate to the `user` table
+
+3. Find the user you want to set as admin
+
+4. Update the `role` field to `admin`
+
+5. Save the changes, and the user will have admin privileges.
+
+## User Ban Management
+
+### Banning Users
+
+To ban a user:
+
+1. Click on the user's name in the user table to open their details
+2. In the ban section:
+   * Enter a ban reason
+   * Optionally set an expiration date
+   * Click the `Ban User` button
+
+The user will be immediately banned and unable to log in.
+
+### Unbanning Users
+
+To unban a user:
+
+1. Click on the user's name in the user table
+2. In the user details, click the `Unban User` button
+
+The user's ban will be immediately lifted.
+
+### Ban Features
+
+* **Permanent Ban**: Leave the expiration date empty
+* **Temporary Ban**: Use the calendar picker to set an expiration date
+* **Ban Reason**: A required field explaining why the user is banned
+
+## Stripe Customer Page Integration
+
+For users with Stripe customer accounts:
+
+* Click on the user's customer ID to open the Stripe dashboard
+* View customer details and payment history
+
+## Next Steps
+
+Now that you understand user management in the AeloKit template, explore these related topics:
+
+<Cards>
+  <Card icon={<Shield className="text-blue-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Settings className="text-green-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure the database
+  </Card>
+
+  <Card icon={<Globe className="text-purple-500" />} title="Internationalization" href="/docs/i18n">
+    Configure multi-language features
+  </Card>
+</Cards>

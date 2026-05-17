@@ -1,0 +1,216 @@
+---
+title: Payment
+description: Learn how to set up and use payments in AeloKit
+icon: CreditCard
+---
+
+AeloKit supports multiple payment providers, you can choose the appropriate payment solution based on your needs.
+
+## Payment Providers
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Stripe" description="The most popular global payment platform, supporting one-time payments and subscriptions" href="/docs/payment/stripe" />
+
+  <Card icon={<CreditCard className="text-green-500" />} title="Creem" description="Payment platform for indie developers, with built-in tax compliance and subscription management" href="/docs/payment/creem" />
+</Cards>
+
+## Setting Up Payment Provider
+
+Select the payment provider via environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_PAYMENT_PROVIDER="stripe" # 'stripe' or 'creem'
+```
+
+## Payment System Architecture
+
+<Files>
+  <Folder name="packages/payment/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="stripe.ts" />
+      <File name="creem.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="types.ts" />
+    <File name="helpers.ts" />
+  </Folder>
+</Files>
+
+### Core Features
+
+* **Create checkout session** - Create payment checkout link
+* **Manage subscriptions** - Create, update, cancel subscriptions
+* **Customer portal** - Let users manage their own subscriptions
+* **Webhook handling** - Handle payment event notifications
+* **One-time payment** - Support one-time payments like lifetime membership
+
+## Usage
+
+### Create Checkout Session
+
+```tsx
+import { createCheckout } from '@/payment';
+
+const result = await createCheckout({
+  priceId: 'price_pro_monthly',
+  successUrl: 'https://example.com/success',
+  cancelUrl: 'https://example.com/cancel',
+});
+```
+
+### Create Customer Portal
+
+```tsx
+import { createCustomerPortal } from '@/payment';
+
+const result = await createCustomerPortal({
+  customerId: 'cus_xxx',
+  returnUrl: 'https://example.com/account',
+});
+```
+
+## Custom Payment Provider
+
+AeloKit supports extending new payment providers:
+
+1. Create a new file in the `packages/payment/src/providers` directory
+2. Implement the `PaymentProvider` interface from `types.ts`
+3. Register the new provider in `registry.ts`
+
+Example implementation:
+
+```tsx title="packages/payment/src/providers/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  GetSubscriptionsParams
+} from '../types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // Initialize your payment service provider
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // Implementation for creating checkout session
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // Implementation for creating customer portal
+  }
+
+  public async getSubscriptions(params: GetSubscriptionsParams): Promise<Subscription[]> {
+    // Implementation for getting subscription list
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // Implementation for handling webhook events
+  }
+}
+```
+
+Then register it in `registry.ts`:
+
+```tsx title="packages/payment/src/registry.ts"
+import { MyProvider } from './providers/my-provider';
+
+export function getPaymentProvider(): PaymentProvider {
+  const provider = websiteConfig.payment.provider;
+  
+  switch (provider) {
+    case 'stripe':
+      return new StripeProvider();
+    case 'creem':
+      return new CreemProvider();
+    case 'my-provider':
+      return new MyProvider();
+    default:
+      throw new Error(`Unsupported payment provider: ${provider}`);
+  }
+}
+```
+
+## Price Plan Configuration
+
+Configure price plans in `packages/config/src/website.ts`:
+
+```ts title="packages/config/src/website.ts"
+export const websiteConfig = {
+  price: {
+    plans: {
+      free: {
+        id: 'free',
+        isFree: true,
+        credits: {
+          enable: true,
+          amount: 50,
+          expireDays: 30,
+        },
+      },
+      pro: {
+        id: 'pro',
+        prices: [
+          {
+            type: PaymentTypes.SUBSCRIPTION,
+            priceId: PRICE_IDS.PRO_MONTHLY,
+            amount: 990,
+            currency: 'USD',
+            interval: PlanIntervals.MONTH,
+          },
+          {
+            type: PaymentTypes.SUBSCRIPTION,
+            priceId: PRICE_IDS.PRO_YEARLY,
+            amount: 9900,
+            currency: 'USD',
+            interval: PlanIntervals.YEAR,
+          },
+        ],
+        popular: true,
+      },
+      lifetime: {
+        id: 'lifetime',
+        prices: [
+          {
+            type: PaymentTypes.ONE_TIME,
+            priceId: PRICE_IDS.LIFETIME,
+            amount: 19900,
+            currency: 'USD',
+          },
+        ],
+        isLifetime: true,
+      },
+    },
+  },
+};
+```
+
+## References
+
+* [Stripe Documentation](https://stripe.com/docs)
+* [Creem Documentation](https://docs.creem.io/)
+* [Stripe | Subscriptions](https://stripe.com/docs/billing/subscriptions/build)
+* [Stripe | Webhooks](https://stripe.com/docs/webhooks)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Coins className="text-blue-500" />} title="Credits" href="/docs/credits">
+    Configure credits system
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure database
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

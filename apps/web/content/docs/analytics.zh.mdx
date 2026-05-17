@@ -1,0 +1,244 @@
+---
+title: 统计分析
+description: 学习如何在 AeloKit 模板中设置和使用各种统计分析工具
+icon: BarChart
+---
+
+AeloKit 支持多种统计分析工具来跟踪网站流量和用户行为。
+
+## 设置
+
+### Vercel Analytics
+
+[Vercel Analytics](https://vercel.com/analytics) 提供对您网站访问者的详细统计分析，而不会损害用户隐私。
+
+1. 在 Vercel 项目仪表盘 > `Analytics` 选项卡 > `Web Analytics` 部分启用
+2. 在网站配置中开启：
+
+```ts title="packages/config/src/website.ts"
+analytics: {
+  enableVercelAnalytics: true,
+}
+```
+
+### Vercel Speed Insights
+
+[Speed Insights](https://vercel.com/docs/speed-insights) 帮助您监控和改善网站性能。
+
+1. 在 Vercel 项目仪表盘 > `Analytics` 选项卡 > `Speed Insights` 部分启用
+2. 在网站配置中开启：
+
+```ts title="packages/config/src/website.ts"
+analytics: {
+  enableSpeedInsights: true,
+}
+```
+
+### Google Analytics
+
+[Google Analytics](https://analytics.google.com/) 提供网站跟踪和统计分析功能。
+
+1. 创建 Google Analytics 账户并添加新网站
+2. 获取测量 ID（以"G-"开头）
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
+```
+
+### Umami
+
+[Umami](https://umami.is/) 是 Google Analytics 的注重隐私的替代方案。
+
+1. 在 [umami.is](https://umami.is/) 创建账户或自行部署
+2. 创建新网站并获取网站 ID 和脚本 URL
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_UMAMI_WEBSITE_ID="YOUR-WEBSITE-ID"
+NEXT_PUBLIC_UMAMI_SCRIPT="https://cloud.umami.is/script.js"
+```
+
+<Callout type="warn">
+  对于自托管的 Umami 实例，使用您的自定义脚本 URL 而不是默认的。
+</Callout>
+
+### Plausible
+
+[Plausible](https://plausible.io/) 是一个轻量级、开源且注重隐私的统计分析工具。
+
+1. 在 [plausible.io](https://plausible.io/) 创建账户或自行部署
+2. 添加网站并获取域名
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN="YOUR-DOMAIN"
+NEXT_PUBLIC_PLAUSIBLE_SCRIPT="https://plausible.io/js/script.js"
+```
+
+<Callout type="warn">
+  对于自托管的 Plausible 实例，使用您的自定义脚本 URL 而不是默认的。
+</Callout>
+
+### PostHog
+
+[PostHog](https://posthog.com/) 提供对网站流量和用户行为的详细洞察。
+
+1. 创建 PostHog 账户和新项目
+2. 获取项目 API 密钥和服务器域名
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_POSTHOG_KEY="YOUR-PROJECT-KEY"
+NEXT_PUBLIC_POSTHOG_HOST="YOUR-HOST"
+```
+
+### Ahrefs
+
+[Ahrefs](https://ahrefs.com/) 提供对网站流量和反向链接的详细洞察。
+
+1. 创建 Ahrefs 账户和新网站
+2. 从 [Web Analytics](https://app.ahrefs.com/dashboard?tab=webAnalytics) 获取网站 ID
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_AHREFS_WEBSITE_ID="YOUR-WEBSITE-ID"
+```
+
+### OpenPanel
+
+[OpenPanel](https://openpanel.dev/) 是一个开源产品统计分析平台。
+
+1. 创建 OpenPanel 账户和新项目
+2. 获取客户端 ID
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_OPENPANEL_CLIENT_ID="YOUR-CLIENT-ID"
+```
+
+### DataFast
+
+[DataFast](https://datafa.st/) 是一个简单、注重隐私的统计分析工具，专注于流量与收入跟踪。
+
+1. 创建 DataFast 账户并添加网站
+2. 获取网站 ID 和域名
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_DATAFAST_WEBSITE_ID="YOUR-WEBSITE-ID"
+NEXT_PUBLIC_DATAFAST_DOMAIN="YOUR-DOMAIN"
+```
+
+<Callout type="info">
+  要启用 DataFast 收入跟踪，在 `packages/config/src/website.ts` 中设置 `enableDatafastRevenueTrack: true`。
+</Callout>
+
+### Clarity
+
+[Clarity](https://clarity.microsoft.com) 提供热力图和会话录制来了解用户行为。
+
+1. 创建 Clarity 账户和新项目
+2. 获取项目 ID
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_CLARITY_PROJECT_ID="YOUR-PROJECT-ID"
+```
+
+### Seline
+
+[Seline](https://seline.com/) 专注于订阅业务和转化跟踪。
+
+1. 创建 Seline 账户并设置项目
+2. 获取令牌
+3. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_SELINE_TOKEN="YOUR-TOKEN"
+```
+
+## 分析系统架构
+
+<Files>
+  <Folder name="packages/analytics/src" defaultOpen>
+    <File name="index.ts" />
+    <File name="client.ts" />
+    <File name="server.ts" />
+    <File name="events.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+### 核心模块
+
+* **client.ts** - 客户端分析工具初始化
+* **server.ts** - 服务端分析工具初始化
+* **events.ts** - 事件名称定义
+* **types.ts** - 类型定义
+
+## 扩展新的统计分析
+
+1. 在 `packages/analytics/src` 目录中创建新文件（例如 `my-analytics.ts`）
+2. 实现分析组件：
+
+```tsx title="packages/analytics/src/my-analytics.ts"
+'use client';
+
+import Script from 'next/script';
+
+export function MyAnalytics() {
+  if (process.env.NODE_ENV !== 'production') {
+    return null;
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_MY_ANALYTICS_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return (
+    <Script
+      strategy="afterInteractive"
+      src="https://example.com/analytics.js"
+      data-api-key={apiKey}
+    />
+  );
+}
+```
+
+3. 将其添加到客户端或服务端分析模块中
+
+4. 添加环境变量：
+
+```bash title=".env"
+NEXT_PUBLIC_MY_ANALYTICS_API_KEY="YOUR-API-KEY"
+```
+
+## 参考资料
+
+* [Vercel Analytics 文档](https://vercel.com/docs/analytics)
+* [Google Analytics 文档](https://developers.google.com/analytics)
+* [Umami 文档](https://umami.is/docs)
+* [Plausible 文档](https://plausible.io/docs)
+* [PostHog 文档](https://posthog.com/docs)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="电子邮件" href="/docs/email">
+    设置电子邮件功能
+  </Card>
+
+  <Card icon={<Mailbox className="text-green-500" />} title="邮件订阅" href="/docs/newsletter">
+    设置邮件列表订阅
+  </Card>
+
+  <Card icon={<CreditCard className="text-amber-500" />} title="支付" href="/docs/payment">
+    配置网站的支付功能
+  </Card>
+
+  <Card icon={<LayoutDashboard className="text-purple-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+</Cards>

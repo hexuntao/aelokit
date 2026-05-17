@@ -1,0 +1,30 @@
+'use client';
+
+import { clientEnv } from '@repo/env/client';
+import Script from 'next/script';
+
+/**
+ * Ahrefs Analytics
+ *
+ * https://ahrefs.com/
+ * https://example.com/docs/analytics#ahrefs
+ */
+export function AhrefsAnalytics() {
+  if (process.env.NODE_ENV !== 'production') {
+    return null;
+  }
+
+  const websiteId = clientEnv.NEXT_PUBLIC_AHREFS_WEBSITE_ID;
+  if (!websiteId) {
+    return null;
+  }
+
+  return (
+    <Script
+      async
+      type="text/javascript"
+      data-key={websiteId}
+      src="https://analytics.ahrefs.com/analytics.js"
+    />
+  );
+}

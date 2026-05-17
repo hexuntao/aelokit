@@ -1,0 +1,61 @@
+---
+title: API Key Management
+description: Learn how to manage API keys in AeloKit
+icon: Key
+---
+
+This document introduces the API key management module in the AeloKit template. This module integrates [Better Auth's API Key plugin](https://www.better-auth.com/docs/plugins/api-key) to implement features such as key creation, listing, deletion, and verification.
+
+## Core Features
+
+* Create API keys (supports custom names)
+* Newly created keys display the full key only once; in the list, keys are shown masked (prefix + ••••••)
+* List current user's keys (name, key prefix, creation time, expiration time)
+* Delete API keys
+* Key verification (server-side validation + test page)
+
+## API Key Management Interface
+
+The API key management entry is located at **Settings → API Keys**, accessible only to logged-in users, for managing API keys under the current account.
+
+* **Create Key**: Click "Create API Key", enter a name and confirm; upon successful creation, a popup will display the **full key once**—please copy and save it immediately, as the full key cannot be viewed again after closing the popup.
+* **List**: The table displays the name, key mask (e.g., `aelokit_••••••••••••`), creation time, expiration time (shows "Never expires" if not set), and a delete action for each row.
+* **Delete**: Remove a key via the "Delete" option in the row menu; the key becomes invalid immediately after deletion.
+
+## Verifying API Keys
+
+### Using in Your Own API
+
+In endpoints that require authentication, you can read the API key from the request header and call Better Auth's `auth.api.verifyApiKey` for validation. See `apps/web/src/app/api/test/apikey/route.ts` for an example in the template.
+
+### Test Verification
+
+The project includes a test component `VerifyApiKeyCard` where you can enter a full key and request `/api/test/apikey`. The page will display whether the validation succeeded along with the key's ID, name, creation time, expiration time, and other information, useful for development and debugging.
+
+## Security Recommendations
+
+* After creating a key, be sure to remind the user to copy and save it to a secure location in the popup; the full key cannot be viewed again after closing the popup.
+* Do not print or store full keys in client-side code or logs; only display prefix masks in the key list to avoid key leakage.
+* In production environments, consider disabling or restricting access to `/api/test/apikey`, using it only for internal or development environments.
+
+## Next Steps
+
+Learn more about related capabilities:
+
+<Cards>
+  <Card icon={<Shield className="text-blue-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Users className="text-green-500" />} title="User Management" href="/docs/usermanagement">
+    User roles and ban management
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure database
+  </Card>
+</Cards>

@@ -1,0 +1,632 @@
+---
+title: 网站配置
+description: AeloKit 网站的核心配置
+icon: Globe
+---
+
+包含网站核心控制的主配置文件。
+
+AeloKit 模板已经为您设置了默认的核心设置，配置位于 `packages/config/src/website.ts`。
+
+<Callout type="info">
+  配置包是 `@repo/config`，应用层通过 `import { websiteConfig } from '@repo/config'` 使用。
+</Callout>
+
+```tsx title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  ui: {
+    // UI 设置
+  },
+  metadata: {
+    // 元数据设置
+  },
+  features: {
+    // 功能设置
+  },
+  analytics: {
+    // 分析设置
+  },
+  auth: {
+    // 认证设置
+  },
+  i18n: {
+    // 国际化设置
+  },
+  blog: {
+    // 博客设置
+  },
+  docs: {
+    // 文档设置
+  },
+  mail: {
+    // 邮件设置
+  },
+  newsletter: {
+    // 邮件订阅设置
+  },
+  storage: {
+    // 存储设置
+  },
+  payment: {
+    // 支付设置
+  },
+  price: {
+    // 价格设置
+  },
+  credits: {
+    // 积分设置
+  },
+};
+```
+
+### UI
+
+控制您网站的外观。
+
+#### 模式
+
+控制明亮/暗黑模式设置：
+
+| 属性             | 类型                              | 描述                        |
+| -------------- | ------------------------------- | ------------------------- |
+| `defaultMode`  | `'light' \| 'dark' \| 'system'` | 设置默认显示模式                  |
+| `enableSwitch` | `boolean`                       | 为 true 时，允许用户在明亮/暗黑模式之间切换 |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  mode: {
+    defaultMode: 'system', // 选择：light、dark、system
+    enableSwitch: true,    // 允许用户切换明亮/暗黑模式
+  },
+  // ...
+}
+```
+
+### 元数据
+
+控制您网站的元数据。元数据配置由几个子部分组成：
+
+#### 图片
+
+定义用于品牌和社交分享的图片：
+
+| 属性          | 类型       | 描述                          |
+| ----------- | -------- | --------------------------- |
+| `ogImage`   | `string` | 用于社交媒体预览的 Open Graph 图片 URL |
+| `logoLight` | `string` | 明亮模式下的 logo 图片 URL          |
+| `logoDark`  | `string` | 暗黑模式下的 logo 图片 URL          |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  images: {
+    ogImage: '/og.png',      // 社交分享的 Open Graph 图片
+    logoLight: '/logo.png',  // 明亮模式下显示的 logo
+    logoDark: '/logo-dark.png', // 暗黑模式下显示的 logo
+  },
+  // ...
+}
+```
+
+您可以在 [图片](/docs/images) 文档中了解更多关于自定义图片的信息。
+
+#### 社交媒体
+
+配置社交媒体资料链接：
+
+| 属性          | 类型       | 描述                 |
+| ----------- | -------- | ------------------ |
+| `twitter`   | `string` | Twitter/X 资料 URL   |
+| `github`    | `string` | GitHub 资料或仓库 URL   |
+| `discord`   | `string` | Discord 服务器 URL    |
+| `blueSky`   | `string` | BlueSky 资料 URL     |
+| `youtube`   | `string` | YouTube 频道 URL     |
+| `linkedin`  | `string` | LinkedIn 资料或页面 URL |
+| `facebook`  | `string` | Facebook 页面 URL    |
+| `instagram` | `string` | Instagram 资料 URL   |
+| `tiktok`    | `string` | TikTok 资料 URL      |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+metadata: {
+  social: {
+    github: 'https://github.com/YourOrganization',
+    twitter: 'https://twitter.com/YourHandle',
+    discord: 'https://discord.gg/your-invitation-code',
+    youtube: 'https://youtube.com/@YourChannel',
+    // 根据需要添加其他社交平台
+  },
+  // ...
+}
+```
+
+这些社交媒体链接被 [社交媒体配置](/docs/config/social) 用来在整个网站的适当位置上生成适当的链接。
+
+### 功能
+
+为某些情况配置功能，例如是否显示升级卡等：
+
+| 属性                           | 类型        | 描述                                                         |
+| ---------------------------- | --------- | ---------------------------------------------------------- |
+| `enableUpgradeCard`          | `boolean` | 是否在后台管理页面显示用户升级卡片，默认为 `true`                               |
+| `enableUpdateAvatar`         | `boolean` | 是否启用更新头像，默认为 `true`                                        |
+| `enableDatafastRevenueTrack` | `boolean` | 是否启用 [Datafast 收入跟踪](/docs/analytics)，默认为 `false`          |
+| `enableCrispChat`            | `boolean` | 是否启用 [Crisp 聊天](/docs/chatbox)，默认为 `true`                  |
+| `enableTurnstileCaptcha`     | `boolean` | 是否启用 [Cloudflare Turnstile 验证码](/docs/captcha)，默认为 `false` |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+features: {
+  enableUpgradeCard: true,
+  enableUpdateAvatar: true,
+  enableDatafastRevenueTrack: false,
+  enableCrispChat: process.env.NEXT_PUBLIC_DEMO_WEBSITE === 'true',
+  enableTurnstileCaptcha: process.env.NEXT_PUBLIC_DEMO_WEBSITE === 'true',
+}
+```
+
+您可以在 [联盟营销](/docs/affiliates)、[验证码](/docs/captcha)、[聊天框](/docs/chatbox) 文档中了解更多关于功能配置的信息。
+
+### 联盟营销
+
+配置联盟营销设置：
+
+| 属性         | 类型                          | 描述                     |
+| ---------- | --------------------------- | ---------------------- |
+| `enable`   | `boolean`                   | 是否启用联盟营销功能，默认为 `false` |
+| `provider` | `'affonso' \| 'promotekit'` | 要使用的联盟营销提供商            |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+affiliates: {
+  enable: true,
+  provider: 'affonso', // 或者 'promotekit'
+}
+```
+
+您可以在 [联盟营销](/docs/affiliates) 文档中了解更多关于联盟营销配置的信息。
+
+### 统计分析
+
+为网站网站配置统计分析服务：
+
+| 属性                      | 类型        | 描述                                  |
+| ----------------------- | --------- | ----------------------------------- |
+| `enableVercelAnalytics` | `boolean` | 设置为 true 时，启用 Vercel Web Analytics  |
+| `enableSpeedInsights`   | `boolean` | 设置为 true 时，启用 Vercel Speed Insights |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+analytics: {
+  enableVercelAnalytics: true,  // 启用 Vercel Web Analytics
+  enableSpeedInsights: true,    // 启用 Vercel Speed Insights
+}
+```
+
+您可以在 [统计分析](/docs/analytics) 文档中了解更多关于统计分析服务的信息。
+
+### 认证
+
+为网站网站配置认证选项：
+
+| 属性                      | 类型        | 描述                      |
+| ----------------------- | --------- | ----------------------- |
+| `enableGoogleLogin`     | `boolean` | 设置为 true 时，启用 Google 登录 |
+| `enableGithubLogin`     | `boolean` | 设置为 true 时，启用 GitHub 登录 |
+| `enableCredentialLogin` | `boolean` | 设置为 true 时，启用邮箱密码登录     |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+auth: {
+  enableGoogleLogin: true,  // 允许 Google 登录
+  enableGithubLogin: true,  // 允许 GitHub 登录
+  enableCredentialLogin: true,  // 允许邮箱密码登录
+}
+```
+
+AeloKit 默认支持多种身份认证服务，您可以使用这些配置选项选择性地禁用特定认证服务：
+
+* 将 `enableGoogleLogin` 设置为 `false` 以移除 Google 登录选项
+* 将 `enableGithubLogin` 设置为 `false` 以移除 GitHub 登录选项
+* 将 `enableCredentialLogin` 设置为 `false` 以移除邮箱密码登录选项
+
+<Callout type="warning">
+  **注意：** 请确保至少启用一种登录方式，否则用户将无法登录。
+</Callout>
+
+您可以在 [身份验证](/docs/auth) 文档中了解更多关于认证选项的信息。
+
+### 国际化 (i18n)
+
+为网站配置语言支持：
+
+| 属性              | 类型                                                                   | 描述                |
+| --------------- | -------------------------------------------------------------------- | ----------------- |
+| `defaultLocale` | `string`                                                             | 默认语言区域设置（例如 'en'） |
+| `locales`       | `Record<string, { flag?: string; name: string; hreflang?: string }>` | 可用语言及其标志和显示名称     |
+
+AeloKit 通过其 i18n 系统支持多种语言。以下是配置方法：
+
+```tsx title="packages/config/src/website.ts"
+i18n: {
+  defaultLocale: 'en',
+  locales: {
+    en: {
+      flag: '🇺🇸',
+      name: 'English',
+      hreflang: 'en',
+    },
+    zh: {
+      flag: '🇨🇳',
+      name: '中文',
+      hreflang: 'zh-CN',
+    },
+    // 根据需要添加更多语言
+  },
+}
+```
+
+对于每种支持的语言：
+
+* 键是区域设置代码（例如 `en`、`es`、`fr`）
+* `flag` 是可选的表情符号，用于直观地表示语言，若不需要，可以留空
+* `name` 是语言的本地形式显示名称
+* `hreflang` 是 hreflang 值用于 SEO，更多详情请参阅 [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+
+您可以在 [国际化](/docs/i18n) 文档中了解更多关于国际化设置的信息。
+
+### 博客
+
+配置博客功能：
+
+| 属性                 | 类型        | 描述                |
+| ------------------ | --------- | ----------------- |
+| `enable`           | `boolean` | 是否启用博客，默认为 `true` |
+| `paginationSize`   | `number`  | 每页显示的文章数量         |
+| `relatedPostsSize` | `number`  | 显示的相关文章数量         |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+blog: {
+  enable: true,
+  paginationSize: 6,
+  relatedPostsSize: 3,
+}
+```
+
+<Callout type="info">
+  如果不需要博客功能，可以将 `enable` 设置为 `false`。如果禁用博客功能，博客菜单将不会显示在导航栏和页脚中，并且博客相关页面将不会包含在 sitemap 中，但是不会禁止对 `/blog` 路由的访问。
+</Callout>
+
+您可以在 [博客](/docs/blog) 文档中了解更多关于博客配置的信息。
+
+### 文档
+
+配置文档功能：
+
+| 属性       | 类型        | 描述                |
+| -------- | --------- | ----------------- |
+| `enable` | `boolean` | 是否启用文档，默认为 `true` |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+docs: {
+  enable: true,
+}
+```
+
+<Callout type="info">
+  如果不需要文档功能，可以将 `enable` 设置为 `false`。如果禁用文档功能，文档菜单将不会显示在导航栏和页脚中，并且文档相关页面将不会包含在 sitemap 中，但是不会禁止对 `/docs` 路由的访问。
+</Callout>
+
+您可以在 [文档](/docs/docs) 文档中了解更多关于文档配置的信息。
+
+### 邮件
+
+配置邮件服务：
+
+| 属性             | 类型         | 描述                        |
+| -------------- | ---------- | ------------------------- |
+| `enable`       | `boolean`  | 是否启用邮件功能，默认为 `true`       |
+| `provider`     | `'resend'` | 邮件服务提供商（**目前仅支持 Resend**） |
+| `fromEmail`    | `string`   | 用于发送邮件的联系邮箱               |
+| `supportEmail` | `string`   | 用于接收邮件的联系邮箱               |
+
+示例：
+
+```tsx
+mail: {
+  enable: true,
+  provider: 'resend',
+  fromEmail: 'contact@example.com',
+  supportEmail: 'support@example.com',
+}
+```
+
+您可以在 [邮件](/docs/email) 文档中了解更多关于邮件配置的信息。
+
+### 邮件订阅
+
+配置邮件订阅服务：
+
+| 属性                         | 类型                    | 描述                                |
+| -------------------------- | --------------------- | --------------------------------- |
+| `enable`                   | `boolean`             | 是否启用邮件订阅，默认为 `true`               |
+| `provider`                 | `'resend' \| 'beehiiv'` | 邮件订阅服务提供商（支持 Resend 和 Beehiiv）   |
+| `autoSubscribeAfterSignUp` | `boolean`             | 是否在用户注册后自动订阅                      |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+newsletter: {
+  enable: true,
+  provider: 'resend', // 或 'beehiiv'
+  autoSubscribeAfterSignUp: true,
+}
+```
+
+<Callout type="info">
+  如果不需要邮件订阅功能，可以将 `enable` 设置为 `false`。如果禁用邮件订阅功能，订阅表单将不会显示在首页和博客页面上，并且订阅状态将不会显示在后台通知设置页面中。
+</Callout>
+
+您可以在 [邮件订阅](/docs/newsletter) 文档中了解更多关于邮件订阅配置的信息。
+
+### 存储
+
+配置文件存储：
+
+| 属性         | 类型        | 描述                  |
+| ---------- | --------- | ------------------- |
+| `enable`   | `boolean` | 是否启用存储，默认为 `true`   |
+| `provider` | `'s3'`    | 存储提供商（**目前仅支持 S3**） |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+storage: {
+  enable: true,
+  provider: 's3',
+}
+```
+
+<Callout type="info">
+  如果不需要存储功能，可以将 `enable` 设置为 `false`。如果禁用存储功能，后台设置界面的更新用户头像功能将不可用。
+</Callout>
+
+您可以在 [存储](/docs/storage) 文档中了解更多关于存储配置的信息。
+
+### 支付
+
+配置支付处理服务：
+
+| 属性         | 类型                  | 描述                            |
+| ---------- | ------------------- | ----------------------------- |
+| `provider` | `'stripe' \| 'creem'` | 支付处理器（支持 Stripe 和 Creem）     |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+payment: {
+  provider: 'stripe', // 或 'creem'
+}
+```
+
+您可以在 [支付](/docs/payment) 文档中了解更多关于支付配置的信息。
+
+### 价格
+
+配置价格计划：
+
+| 属性      | 类型                          | 描述     |
+| ------- | --------------------------- | ------ |
+| `plans` | `Record<string, PricePlan>` | 价格计划配置 |
+
+`plans` 对象中的每个价格计划可以具有以下属性：
+
+| 属性            | 类型          | 描述                      |
+| ------------- | ----------- | ----------------------- |
+| `id`          | `string`    | 价格计划的唯一标识符              |
+| `name`        | `string?`   | 价格计划的显示名称               |
+| `description` | `string?`   | 价格计划的描述                 |
+| `features`    | `string[]?` | 价格计划包含的功能列表             |
+| `limits`      | `string[]?` | 价格计划包含的限制列表             |
+| `prices`      | `Price[]`   | 价格计划的价格选项列表（月付、年付、一次性等） |
+| `isFree`      | `boolean`   | 是否为免费价格计划               |
+| `isLifetime`  | `boolean`   | 是否为终身（一次性支付）价格计划        |
+| `popular`     | `boolean?`  | 是否将价格计划突出显示为推荐          |
+| `credits`     | `object?`   | 价格计划包含的积分配置             |
+| `disabled`    | `boolean?`  | 是否在 UI 中禁用价格计划          |
+
+`prices` 数组包含具有以下结构的对象：
+
+| 属性                   | 类型                             | 描述                    |
+| -------------------- | ------------------------------ | --------------------- |
+| `type`               | `'subscription' \| 'one_time'` | 支付类型（订阅或一次性）          |
+| `priceId`            | `string`                       | Stripe 价格 ID（不是产品 ID） |
+| `amount`             | `number`                       | 货币单位的价格金额（美元、欧元等）     |
+| `currency`           | `string`                       | 货币代码（例如 USD）          |
+| `interval`           | `'month' \| 'year'?`           | 定期付款的计费间隔             |
+| `trialPeriodDays`    | `number?`                      | 免费试用期天数               |
+| `allowPromotionCode` | `boolean?`                     | 是否允许价格使用促销代码          |
+| `disabled`           | `boolean?`                     | 是否在 UI 中禁用价格          |
+
+`credits` 对象的结构：
+
+| 属性           | 类型        | 描述            |
+| ------------ | --------- | ------------- |
+| `enable`     | `boolean` | 是否启用积分        |
+| `amount`     | `number`  | 积分数量          |
+| `expireDays` | `number?` | 积分过期期限（天数），可选 |
+
+AeloKit 模板默认使用三个价格计划：免费计划、专业订阅计划（月付/年付）和终身计划（一次性支付）：
+
+```tsx title="packages/config/src/website.ts"
+price: {
+  plans: {
+    free: {
+      id: 'free',
+      prices: [],
+      isFree: true,
+      isLifetime: false,
+      credits: {
+        enable: true,
+        amount: 50,
+        expireDays: 30,
+      },
+    },
+    pro: {
+      id: 'pro',
+      prices: [
+        {
+          type: PaymentTypes.SUBSCRIPTION,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!,
+          amount: 990,
+          currency: 'USD',
+          interval: PlanIntervals.MONTH,
+        },
+        {
+          type: PaymentTypes.SUBSCRIPTION,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY!,
+          amount: 9900,
+          currency: 'USD',
+          interval: PlanIntervals.YEAR,
+        },
+      ],
+      isFree: false,
+      isLifetime: false,
+      popular: true,
+      credits: {
+        enable: true,
+        amount: 1000,
+        expireDays: 30,
+      },
+    },
+    lifetime: {
+      id: 'lifetime',
+      prices: [
+        {
+          type: PaymentTypes.ONE_TIME,
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_LIFETIME!,
+          amount: 19900,
+          currency: 'USD',
+          allowPromotionCode: true,
+        },
+      ],
+      isFree: false,
+      isLifetime: true,
+      credits: {
+        enable: true,
+        amount: 1000,
+        expireDays: 30,
+      },
+    },
+  },
+},
+```
+
+<Callout type="warning">
+  **何时将价格计划或价格设置为禁用？**
+
+  * 当**价格计划**不再对新客户开放，但您需要为已购买的现有用户保留它时，可将**价格计划**设置为 `disabled: true`。
+
+  * 当**特定价格**不再可用，但该价格的现有订阅者仍应能够在账单页面中看到它时，可将**价格**设置为 `disabled: true`。
+</Callout>
+
+向用户显示价格计划时，[价格配置](/docs/config/price) 通过翻译内容（如名称、描述和功能列表）来显示这些价格计划。
+
+您可以在 [支付](/docs/payment) 文档中了解更多关于价格配置的信息。
+
+### 积分
+
+为网站配置积分系统：
+
+| 属性                          | 类型                              | 描述                                      |
+| --------------------------- | ------------------------------- | --------------------------------------- |
+| `enableCredits`             | `boolean`                       | 是否启用积分系统                                |
+| `enablePackagesForFreePlan` | `boolean`                       | 免费计划用户是否可以购买积分（默认情况下，只有付费用户可以购买额外的积分套餐） |
+| `registerGiftCredits`       | `object`                        | 注册赠送积分的配置                               |
+| `packages`                  | `Record<string, CreditPackage>` | 可购买的积分套餐                                |
+
+`registerGiftCredits` 对象的结构：
+
+| 属性           | 类型        | 描述               |
+| ------------ | --------- | ---------------- |
+| `enable`     | `boolean` | 是否启用注册赠送积分       |
+| `credits`    | `number`  | 注册时赠送的积分数量       |
+| `expireDays` | `number?` | 赠送积分的过期期限（天数），可选 |
+
+`packages` 中每个积分套餐的结构：
+
+| 属性            | 类型         | 描述                               |
+| ------------- | ---------- | -------------------------------- |
+| `id`          | `string`   | 套餐的唯一标识符                         |
+| `name`        | `string?`  | 套餐的显示名称                          |
+| `description` | `string?`  | 套餐的描述                            |
+| `popular`     | `boolean?` | 是否将此套餐突出显示为推荐                    |
+| `credits`     | `number`   | 套餐包含的积分数量                        |
+| `price`       | `object`   | 价格信息，包括 priceId、金额、货币、是否允许使用促销代码 |
+| `expireDays`  | `number?`  | 积分的有效期（天数），可选，undefined 表示不过期    |
+| `disabled`    | `boolean?` | 是否在 UI 中禁用此套餐，可选                 |
+
+示例：
+
+```tsx title="packages/config/src/website.ts"
+credits: {
+  enableCredits: false,
+  enablePackagesForFreePlan: false,
+  registerGiftCredits: {
+    enable: true,
+    credits: 50,
+    expireDays: 30,
+  },
+  packages: {
+    basic: {
+      id: 'basic',
+      popular: false,
+      credits: 100,
+      expireDays: 30,
+      price: {
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+        amount: 990,
+        currency: 'USD',
+        allowPromotionCode: true,
+      },
+    },
+    // ... 其他积分套餐 ...
+  },
+},
+```
+
+您可以在 [积分](/docs/credits) 文档中了解更多关于积分配置的信息。
+
+## 下一步
+
+现在您了解了网站配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="导航栏配置" href="/docs/config/navbar">
+    配置头部导航菜单
+  </Card>
+
+  <Card icon={<Footprints className="text-green-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚的链接
+  </Card>
+
+  <Card icon={<CreditCard className="text-amber-500" />} title="支付集成" href="/docs/payment">
+    配置网站的支付功能
+  </Card>
+
+  <Card icon={<CogIcon className="text-purple-500" />} title="价格配置" href="/docs/config/price">
+    配置订阅计划和定价
+  </Card>
+</Cards>

@@ -1,0 +1,61 @@
+---
+title: 密钥管理
+description: 学习如何在 AeloKit 中管理 API 密钥
+icon: Key
+---
+
+本文档介绍 AeloKit 模板中的 API 密钥管理模块。该模块通过集成 [Better Auth 的 API Key 插件](https://www.better-auth.com/docs/plugins/api-key)，实现密钥的创建、列表、删除与验证等功能。
+
+## 核心功能
+
+* 创建 API 密钥（支持自定义名称）
+* 新建密钥仅展示一次完整密钥，列表中以掩码显示（前缀 + ••••••）
+* 列表展示当前用户的密钥（名称、密钥前缀、创建时间、过期时间）
+* 删除 API 密钥
+* 密钥验证（服务端校验 + 测试页面）
+
+## 密钥管理界面
+
+密钥管理入口在 **设置 → API 密钥**，仅登录用户可访问，用于管理当前账号下的 API 密钥。
+
+* **创建密钥**：点击「创建 API 密钥」，输入名称后确认；创建成功会弹窗展示**完整密钥一次**，请及时复制保存，关闭后无法再次查看完整密钥。
+* **列表**：表格展示名称、密钥掩码（如 `aelokit_••••••••••••`）、创建时间、过期时间（未设置则显示「永不过期」），以及每行的删除操作。
+* **删除**：通过行内菜单的「删除」移除密钥，删除后该密钥立即失效。
+
+## 验证 API 密钥
+
+### 在您自己的 API 中使用
+
+在需要鉴权的接口中，可从请求头读取 API 密钥，并调用 Better Auth 的 `auth.api.verifyApiKey` 进行校验。模板中的示例见 `apps/web/src/app/api/test/apikey/route.ts` 文件。
+
+### 测试验证
+
+项目内提供了测试组件 `VerifyApiKeyCard`，可输入完整密钥并请求 `/api/test/apikey`，页面会显示该校验是否成功以及密钥的 ID、名称、创建时间、过期时间等信息，便于开发与调试。
+
+## 安全建议
+
+* 创建密钥后务必提醒用户在弹窗中复制并保存到安全位置，关闭弹窗后无法再次查看完整密钥。
+* 不要在客户端或日志中打印、存储完整密钥，在密钥列表中仅展示前缀掩码，避免泄露密钥。
+* 生产环境可考虑关闭或限制 `/api/test/apikey` 的访问范围，仅用于内部或开发环境。
+
+## 下一步
+
+了解更多相关能力：
+
+<Cards>
+  <Card icon={<Shield className="text-blue-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<Users className="text-green-500" />} title="用户管理" href="/docs/usermanagement">
+    用户角色与封禁管理
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+</Cards>

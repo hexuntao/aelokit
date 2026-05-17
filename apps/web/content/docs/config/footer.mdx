@@ -1,0 +1,63 @@
+---
+title: Footer Configuration
+description: Configure links in the website footer
+icon: PanelBottom
+---
+
+Define links in the website footer, each item is a [NestedMenuItem](/docs/config#nestedmenuitem).
+
+```tsx title="src/config/footer-config.tsx"
+export function getFooterLinks(): NestedMenuItem[] {
+  const t = useTranslations('Marketing.footer');
+
+  return [
+    {
+      title: t('product.title'),
+      items: [
+        {
+          title: t('product.items.features'),
+          href: Routes.Features,
+          external: false,
+        },
+        // More product links...
+      ],
+    },
+    {
+      title: t('resources.title'),
+      items: [
+        {
+          title: t('resources.items.blog'),
+          href: Routes.Blog,
+          external: false,
+        },
+        // More resource links...
+      ],
+    },
+    // More footer sections...
+  ];
+}
+```
+
+Footer links are organized by columns, each column has a title. Each column has a title and a list of links. This structure allows for clear organization of links by category.
+
+## Next Steps
+
+Now that you understand footer configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<MenuSquare className="text-green-500" />} title="Navbar Configuration" href="/docs/config/navbar">
+    Configure header navigation menu
+  </Card>
+
+  <Card icon={<Share2 className="text-amber-500" />} title="Social Configuration" href="/docs/config/social">
+    Configure social media links
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-purple-500" />} title="Sidebar Configuration" href="/docs/config/sidebar">
+    Configure dashboard navigation menu
+  </Card>
+</Cards>

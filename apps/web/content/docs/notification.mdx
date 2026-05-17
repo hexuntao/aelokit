@@ -1,0 +1,189 @@
+---
+title: Notification
+description: Learn how to set up and use notifications in AeloKit
+icon: Bell
+---
+AeloKit supports sending notifications when users successfully complete payments, allowing your team to receive real-time order alerts in your tools.
+
+Currently, two notification channels are supported: Discord and Feishu, and it's easy to extend and add more notification channels.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Enable Notification Channel
+
+    Enable the notification feature in `packages/config/src/website.ts` and configure the notification channel to receive messages:
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      // ...other config
+      notification: {
+        enable: true,
+        provider: 'discord', // or 'feishu'
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### Configure Webhook URL
+
+    Configure the corresponding Webhook URL based on the selected notification channel:
+
+    <Tabs items={['Discord', 'Feishu']}>
+      <Tab value="Discord">
+        1. Go to the Discord server and open the channel where you want to receive notifications
+        2. Click the gear icon to open `Channel Settings`
+        3. Select `Integrations` > `Webhooks` > `New Webhook`
+        4. Set a name and avatar for the Webhook (optional)
+        5. Copy the `Webhook URL` and add it to the environment variables file:
+
+        ```bash title=".env"
+        DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+        ```
+      </Tab>
+
+      <Tab value="Feishu">
+        1. Go to the Feishu group chat
+        2. Click the group name > `Group Settings` > `Bot Management`
+        3. Add a new `Custom Bot` and enable `Webhooks`
+        4. Copy the generated `Webhook URL` and add it to the environment variables file:
+
+        ```bash title=".env"
+        FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/..."
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration** documentation and continue. The rest of this documentation can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#notification">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Notification System Architecture
+
+<Files>
+  <Folder name="packages/notification/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="discord.ts" />
+      <File name="feishu.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+### Core Modules
+
+* **discord.ts** - Discord notification provider
+* **feishu.ts** - Feishu notification provider
+* **service.ts** - Notification service, unified interface for different providers
+
+## Usage
+
+```tsx
+import { sendNotification } from '@/notification';
+
+// Send payment success notification
+await sendNotification({
+  sessionId: 'session_xxx',
+  customerId: 'cus_xxx',
+  userName: 'John Doe',
+  amount: 99.00,
+});
+```
+
+## Extending New Notification Channels
+
+AeloKit supports extending new notification channels:
+
+1. Create a new file in the `packages/notification/src/providers` directory (e.g., `slack.ts`).
+2. Implement the notification function:
+
+```tsx title="packages/notification/src/providers/slack.ts"
+import type { NotificationProvider, SendNotificationParams } from '../types';
+
+export class SlackProvider implements NotificationProvider {
+  constructor() {
+    // Initialize Slack provider
+  }
+
+  public getProviderName(): string {
+    return 'Slack';
+  }
+
+  async sendNotification(params: SendNotificationParams): Promise<void> {
+    const { sessionId, customerId, userName, amount } = params;
+    
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) {
+      console.warn('SLACK_WEBHOOK_URL is not set, skipping Slack notification');
+      return;
+    }
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `🎉 New Purchase\nUsername: ${userName}\nAmount: $${amount.toFixed(2)}`,
+      }),
+    });
+  }
+}
+```
+
+3. Register the new provider in `registry.ts`:
+
+```tsx title="packages/notification/src/registry.ts"
+import { SlackProvider } from './providers/slack';
+
+export function getNotificationProvider(): NotificationProvider {
+  const provider = websiteConfig.notification.provider;
+  
+  switch (provider) {
+    case 'discord':
+      return new DiscordProvider();
+    case 'feishu':
+      return new FeishuProvider();
+    case 'slack':
+      return new SlackProvider();
+    default:
+      throw new Error(`Unsupported notification provider: ${provider}`);
+  }
+}
+```
+
+## Reference Documentation
+
+* [Discord Webhooks Documentation](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+* [Feishu Webhook Documentation](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics service
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="Storage" href="/docs/storage">
+    Configure storage service
+  </Card>
+</Cards>

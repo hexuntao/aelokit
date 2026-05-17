@@ -1,0 +1,144 @@
+---
+title: Vercel 部署
+description: 学习如何将项目部署到 Vercel 平台
+icon: Cloud
+---
+
+本文档将帮助您将 AeloKit 项目部署到 Vercel 平台。由于项目是使用 Next.js 构建的，Vercel 作为 Next.js 的创建者，提供了最佳的开发者体验和性能优化。
+
+## 前提条件
+
+在部署项目之前，请确保您有：
+
+1. 包含项目代码的 Git 仓库（如 [GitHub](https://github.com)）
+2. [Vercel](https://vercel.com) 账户，如果您没有，请在[这里](https://vercel.com/signup)注册
+3. 准备好为网站的生产环境配置的[环境变量](/docs/env)
+
+## 部署步骤
+
+<Steps>
+  <Step>
+    将代码推送到 Git 仓库
+
+    确保代码已推送到 GitHub、GitLab 或 Bitbucket 上的代码仓库。
+  </Step>
+
+  <Step>
+    连接到 Vercel
+
+    * 登录到 [Vercel 控制台](https://vercel.com/dashboard)
+    * 点击 `Add New Project` 按钮
+    * 导入 Git 仓库
+  </Step>
+
+  <Step>
+    配置新项目
+
+    在配置页面上，您需要设置以下选项：
+
+    * **Framework Preset**：选择 `Next.js`
+    * **Build Command**：`pnpm build`
+    * **Output Directory**：使用默认的 `.next`
+    * **Install Command**：`pnpm install`
+
+    如果您不确定某个设置，可以保持默认值，Vercel 通常会自动检测正确的配置。
+  </Step>
+
+  <Step>
+    配置环境变量
+
+    在配置页面上，找到 `Environment Variables` 部分
+
+    * 添加所有必要的环境变量，例如：
+
+      ```bash
+      NEXT_PUBLIC_BASE_URL="https://YOUR-DOMAIN.com"
+      DATABASE_URL="YOUR-DATABASE-URL"
+      BETTER_AUTH_SECRET="YOUR-BETTER-AUTH-SECRET"
+      RESEND_API_KEY="YOUR-RESEND-API-KEY"
+      ...
+      ```
+
+    * 确保添加运行项目所需的所有环境变量
+
+    * 确保环境变量是为网站生产环境配置的
+  </Step>
+
+  <Step>
+    部署项目
+
+    点击 `Deploy` 按钮开始部署过程。Vercel 将自动构建和部署项目。
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  **重要环境变量：`NEXT_PUBLIC_BASE_URL`**
+
+  `NEXT_PUBLIC_BASE_URL` 环境变量用于设置应用程序的基础 URL。
+
+  如果您要部署到自定义域名 (例如，`https://YOUR-DOMAIN.com`)，您需要按照[自定义域名](#custom-domain)部分的步骤将 `NEXT_PUBLIC_BASE_URL` 环境变量设置为自定义域名，然后在部署成功后使用自定义域名访问您的应用程序。
+
+  如果您没有自定义域名，可以使用 Vercel 提供的域名。例如，如果您的项目部署到 `https://your-project.vercel.app`，您需要将 `NEXT_PUBLIC_BASE_URL` 环境变量设置为 `https://your-project.vercel.app`。
+
+  但是 Vercel 提供的域名在成功部署后才可用，所以您需要在部署成功后将 `NEXT_PUBLIC_BASE_URL` 环境变量设置为 Vercel 提供的域名。然后**重新部署项目**以使环境变量生效。之后，您可以使用 Vercel 提供的域名访问您的应用程序。
+</Callout>
+
+## 自定义域名
+
+如果您想为项目添加自定义域名：
+
+1. 在 Vercel 控制台中进入到项目设置
+2. 导航到 `Domains` 部分
+3. 添加自定义域名 (例如，`YOUR-DOMAIN.com`)
+4. 按照 DNS 配置说明操作
+
+## 更新环境变量
+
+你可以在 `Project Settings` > `Environment Variables` 中添加或更新环境变量，然后重新部署项目。
+
+<img src="/images/docs/deployment/vercel-env-variables.png" alt="Vercel 环境变量" />
+
+## 自动部署
+
+Vercel 在以下情况下提供自动部署功能：
+
+* 推送代码到主分支
+* 创建新的 Pull Request
+* 推送到启用预览部署的分支
+
+每个 Pull Request 都会获得一个唯一的**预览 URL**，允许您在合并到主干分支 (通常是 `main` 分支) 之前进行测试。
+
+## 常见问题
+
+### 构建失败
+
+如果构建过程失败：
+
+* 检查构建日志以获取详细的错误信息
+* 确保所有依赖项都正确安装
+* 验证环境变量是否正确配置
+
+### 应用程序功能不正确
+
+* 确认所有环境变量都正确设置
+* 检查数据库连接是否正常工作
+* 验证第三方服务的 API 密钥是否有效
+* 检查日志中是否有任何错误或消息，这些可以帮助您诊断问题
+
+## 下一步
+
+现在您了解了如何将 AeloKit 网站部署到 Vercel，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Cloudflare 部署" href="/docs/deployment/cloudflare">
+    将网站部署到 Cloudflare
+  </Card>
+
+  <Card icon={<Database className="text-green-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<FileKey className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

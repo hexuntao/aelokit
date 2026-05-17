@@ -1,0 +1,288 @@
+---
+title: 邮件
+description: 学习如何使用 Resend 和 React Email 模板设置和使用邮件功能
+icon: Mail
+---
+
+AeloKit 使用 [Resend](https://resend.com) 进行邮件发送，使用 [React Email](https://react.email) 创建美观的邮件模板。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 创建 Resend 账户
+
+    在 [resend.com](https://resend.com) 创建 Resend 账户。
+  </Step>
+
+  <Step>
+    ### 获取 API 密钥
+
+    在 Resend 控制台中点击 `API Keys` > `Create API Key`，设置权限为 `Send emails` 或 `Full access`。获取 API 密钥，并添加到环境变量文件：
+
+    ```bash title=".env"
+    RESEND_API_KEY=YOUR-RESEND-API-KEY
+    ```
+  </Step>
+
+  <Step>
+    ### 更新网站配置
+
+    更新 `packages/config/src/website.ts` 文件。请注意 `fromEmail` 是发送邮件的邮箱地址，`supportEmail` 是接收邮件的邮箱地址：
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...其他配置
+      mail: {
+        enable: true,
+        provider: 'resend',
+        fromEmail: 'AeloKit <support@example.com>',
+        supportEmail: 'AeloKit <support@example.com>',
+      },
+      // ...其他配置
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#email">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 使用方法
+
+```tsx
+import { sendEmail } from '@/mail';
+
+// 基于模板发送邮件
+await sendEmail({
+  to: 'user@example.com',
+  template: 'verifyEmail',
+  context: {
+    name: 'John Doe',
+    url: 'https://example.com/verify?token=abc123',
+  },
+  locale: 'en', // 可选，默认为配置的默认语言
+});
+
+// 发送原始内容邮件
+await sendEmail({
+  to: 'user@example.com',
+  subject: '欢迎来到我们的平台',
+  html: '<h1>您好！</h1><p>欢迎来到我们的平台。</p>',
+  text: '您好！欢迎来到我们的平台。', // 可选
+});
+```
+
+## 邮件模板
+
+AeloKit 包含几个预构建的邮件模板：
+
+<Accordions>
+  <Accordion title="verify-email.tsx">
+    用于用户注册期间的邮箱验证邮件。
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'verifyEmail',
+      context: {
+        name: 'John Doe',
+        url: 'https://example.com/verify?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="forgot-password.tsx">
+    用于密码重置请求。
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'forgotPassword',
+      context: {
+        name: 'John Doe',
+        resetUrl: 'https://example.com/reset?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="subscribe-newsletter.tsx">
+    用于邮件列表订阅确认。
+
+    ```tsx
+    await sendEmail({
+      to: 'user@example.com',
+      template: 'subscribeNewsletter',
+      context: {
+        name: 'John Doe',
+        unsubscribeUrl: 'https://example.com/unsubscribe?token=abc123',
+      },
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="contact-message.tsx">
+    用于联系表单提交。
+
+    ```tsx
+    await sendEmail({
+      to: 'admin@example.com',
+      template: 'contactMessage',
+      context: {
+        name: 'John Doe',
+        email: 'user@example.com',
+        message: '我对您的服务有疑问。',
+      },
+    });
+    ```
+  </Accordion>
+</Accordions>
+
+## 预览邮件
+
+在发送前预览邮件：
+
+```bash
+pnpm email
+```
+
+这将启动一个本地服务器，允许您在浏览器中预览邮件。
+
+## 创建自定义模板
+
+1. 在 `packages/mail/src/templates` 目录中创建邮件模板：
+
+```tsx title="packages/mail/src/templates/my-custom-email.tsx"
+import { BaseEmailProps } from '../types';
+import { EmailLayout } from '../components/email-layout';
+import { EmailButton } from '../components/email-button';
+
+interface MyCustomEmailProps extends BaseEmailProps {
+  username: string;
+  actionUrl: string;
+}
+
+export function MyCustomEmail({
+  username,
+  actionUrl,
+  messages,
+  locale
+}: MyCustomEmailProps) {
+  return (
+    <EmailLayout>
+      <p>您好 {username}！</p>
+      <p>感谢您加入我们的平台。点击下面的按钮开始使用。</p>
+      <EmailButton href={actionUrl}>开始使用</EmailButton>
+    </EmailLayout>
+  );
+}
+```
+
+2. 在 `types.ts` 中更新 `EmailTemplates` 接口：
+
+```tsx title="packages/mail/src/types.ts"
+export interface EmailTemplates {
+  // ... 现有模板
+  myCustomEmail: MyCustomEmail;
+}
+```
+
+3. 使用模板：
+
+```tsx
+await sendEmail({
+  to: 'user@example.com',
+  template: 'myCustomEmail',
+  context: {
+    username: 'John',
+    actionUrl: 'https://example.com/start',
+  },
+});
+```
+
+## 扩展新的邮件提供商
+
+AeloKit 支持扩展新的邮件服务提供商：
+
+1. 在 `packages/mail/src` 目录中创建新文件
+2. 从 `types.ts` 实现 `MailProvider` 接口
+3. 在 `index.ts` 中更新邮件服务提供商选择逻辑
+
+示例实现：
+
+```tsx title="packages/mail/src/my-provider.ts"
+import { MailProvider, SendEmailResult, SendRawEmailParams, SendTemplateParams } from './types';
+
+export class MyProvider implements MailProvider {
+  constructor() {
+    // 初始化您的邮件服务提供商
+  }
+
+  public async sendTemplate(params: SendTemplateParams): Promise<SendEmailResult> {
+    // 发送模板邮件的实现代码
+  }
+
+  public async sendRawEmail(params: SendRawEmailParams): Promise<SendEmailResult> {
+    // 发送原始邮件的实现代码
+  }
+
+  public getProviderName(): string {
+    return 'my-provider';
+  }
+}
+```
+
+## 邮件系统架构
+
+<Files>
+  <Folder name="packages/mail/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <File name="email-button.tsx" />
+      <File name="email-layout.tsx" />
+    </Folder>
+    <Folder name="templates" defaultOpen>
+      <File name="verify-email.tsx" />
+      <File name="forgot-password.tsx" />
+      <File name="subscribe-newsletter.tsx" />
+      <File name="contact-message.tsx" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="resend.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## 参考资料
+
+* [Resend 文档](https://resend.com/docs)
+* [React Email 文档](https://react.email/docs)
+* [Resend | 发送邮件](https://resend.com/docs/send)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Database className="text-blue-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置身份验证
+  </Card>
+
+  <Card icon={<Mailbox className="text-amber-500" />} title="邮件订阅" href="/docs/newsletter">
+    配置邮件列表的订阅
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

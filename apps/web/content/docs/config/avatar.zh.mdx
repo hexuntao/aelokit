@@ -1,0 +1,63 @@
+---
+title: 头像配置
+description: 配置用户头像下拉菜单
+icon: User
+---
+
+定义用户头像下拉菜单中的菜单项，每个项目都是 [MenuItem](/docs/config#menuitem)。
+
+```tsx title="src/config/avatar-config.tsx"
+export function getAvatarLinks(): MenuItem[] {
+  const t = useTranslations('Marketing.avatar');
+
+  return [
+    {
+      title: t('dashboard'),
+      href: Routes.Dashboard,
+      icon: <LayoutDashboardIcon className="size-4 shrink-0" />,
+    },
+    {
+      title: t('billing'),
+      href: Routes.SettingsBilling,
+      icon: <CreditCardIcon className="size-4 shrink-0" />,
+    },
+    {
+      title: t('settings'),
+      href: Routes.SettingsProfile,
+      icon: <Settings2Icon className="size-4 shrink-0" />,
+    },
+  ];
+}
+```
+
+头像配置定义了用户点击个人头像时出现的下拉菜单。通常包括以下链接：
+
+* 积分余额（通过 `enableCredits` 在 `website.tsx` 中启用）
+* 用户仪表盘
+* 账户设置
+* 账单/订阅管理
+* 退出登录选项（已默认配置，无需额外配置）
+
+此菜单为用户提供特定功能的快速访问，而不会使主导航变得混乱。
+
+## 下一步
+
+现在您了解了头像配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+
+  <Card icon={<MenuSquare className="text-green-500" />} title="导航栏配置" href="/docs/config/navbar">
+    配置头部导航菜单
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚中的链接
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-purple-500" />} title="侧边栏配置" href="/docs/config/sidebar">
+    配置仪表盘的导航菜单
+  </Card>
+</Cards>

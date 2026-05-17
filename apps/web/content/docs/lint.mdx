@@ -1,0 +1,121 @@
+---
+title: Code Formatting and Linting
+description: Documentation for using Biome for code quality management in AeloKit
+icon: CheckCircle
+---
+
+AeloKit uses [Biome](https://biomejs.dev/) for code formatting and linting to ensure the project maintains consistent code quality.
+
+Biome is configured via `biome.json` in the project root. This configuration enforces consistent code style and catches common errors.
+
+## Running Linting and Formatting
+
+### Checking Code Quality
+
+To check your code without making changes:
+
+```bash
+pnpm run lint
+```
+
+This command will report any linting errors or warnings in the codebase and attempt to automatically fix issues.
+
+### Formatting Code
+
+To automatically format your code:
+
+```bash
+pnpm run format
+```
+
+This will format all supported files according to the project's style rules.
+
+## Custom Rules
+
+The project's Biome configuration is defined in `biome.json`. Here's a simplified view of our configuration:
+
+```json title="biome.json"
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      // Various rule customizations...
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "es5",
+      "semicolons": "always"
+    }
+  }
+}
+```
+
+AeloKit has customized certain rules to better fit our development workflow. See the `biome.json` file in the project root for the complete configuration.
+
+For more information on how to customize rule configuration, refer to the [Biome linter rules documentation](https://biomejs.dev/linter/rules/).
+
+## Editor Integration
+
+Biome works best when integrated with your editor:
+
+* **VSCode/Cursor**: Install the [Biome extension](https://marketplace.visualstudio.com/items?itemName=biomejs.biome) for real-time linting and formatting
+* **Other editors**: Check the [Biome documentation](https://biomejs.dev/guides/getting-started) for integration options
+
+AeloKit provides pre-configured VSCode/Cursor settings for Biome:
+
+```json title=".vscode/settings.json"
+{
+  "editor.defaultFormatter": "biomejs.biome",
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "quickfix.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  }
+}
+```
+
+These settings ensure:
+
+* Biome is used as the default formatter for JavaScript and TypeScript files
+* Files are automatically formatted on save
+* Import statements are organized on save
+
+## Next Steps
+
+Now that you understand how to maintain code quality in AeloKit, explore these related topics:
+
+<Cards>
+  <Card icon={<Network className="text-blue-500" />} title="Project Structure" href="/docs/structure">
+    Learn about the template project structure
+  </Card>
+
+  <Card icon={<FileKey className="text-green-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<AppWindowMac className="text-amber-500" />} title="Development Environment" href="/docs/ide">
+    Configure development environment
+  </Card>
+</Cards>

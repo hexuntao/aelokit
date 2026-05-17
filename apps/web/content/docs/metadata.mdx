@@ -1,0 +1,279 @@
+---
+title: Metadata
+description: Learn how to customize metadata for AeloKit template
+icon: FileText
+---
+
+This document covers the metadata system in AeloKit template, how to customize SEO-related information, and how to configure social sharing metadata for optimal SEO performance.
+
+## Core Features
+
+AeloKit template comes with a metadata system that provides:
+
+* SEO-optimized page titles and descriptions
+* Social media sharing metadata (Open Graph and Twitter)
+* Site icons and app icons
+* Internationalization support for metadata
+
+## Understanding the Metadata System
+
+The metadata system in AeloKit is built on Next.js Metadata API and configured through several key files:
+
+### 1. Website Configuration
+
+The main website configuration is defined in `packages/config/src/website.ts`:
+
+```typescript title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  metadata: {
+    mode: {
+      defaultMode: 'dark',
+      enableSwitch: true,
+    },
+    images: {
+      ogImage: '/og.png',
+      logoLight: '/logo.png',
+      logoDark: '/logo-dark.png',
+    },
+    social: {
+      github: 'https://github.com/your-org',
+      twitter: 'https://x.com/your-handle',
+      discord: 'https://discord.gg/your-invite',
+    },
+  },
+  // Other configuration sections...
+};
+```
+
+This configuration defines:
+
+* Default theme and dark mode settings
+* Logo and Open Graph image paths
+* Official account links for social platforms
+
+### 2. Translation Files
+
+Basic website metadata (such as name, title, and description) is defined in translation files:
+
+<Tabs items={['messages/en.json', 'messages/zh.json']}>
+  <Tab value="messages/en.json">
+    ```json title="messages/en.json"
+    {
+      "Metadata": {
+        "name": "AeloKit",
+        "title": "AeloKit - Modern SaaS Starter Template",
+        "description": "AeloKit is a modern SaaS starter template built with Next.js, TypeScript, and Tailwind CSS"
+      },
+      // Other translations...
+    }
+    ```
+  </Tab>
+
+  <Tab value="messages/zh.json">
+    ```json title="messages/zh.json"
+    {
+      "Metadata": {
+        "name": "AeloKit",
+        "title": "AeloKit - Modern SaaS Starter Template",
+        "description": "AeloKit is a modern SaaS starter template built with Next.js, TypeScript, and Tailwind CSS"
+      },
+      // Other translations...
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### 3. Metadata Construction
+
+The `constructMetadata` function in `apps/web/src/lib/metadata.ts` creates metadata objects for each page:
+
+```typescript title="apps/web/src/lib/metadata.ts"
+export function constructMetadata({
+  title,
+  description,
+  image,
+  noIndex = false,
+  locale,
+  pathname,
+}: {
+  title?: string;
+  description?: string;
+  image?: string;
+  noIndex?: boolean;
+  locale?: Locale;
+  pathname?: string;
+} = {}): Metadata {
+  // Metadata construction logic...
+}
+```
+
+This function handles:
+
+* Setting default values for metadata from configuration in translation files
+* Configuring Open Graph and Twitter card metadata
+* Setting site icons and icon information
+* Managing canonical URLs and crawler directives
+
+## Customizing Website Metadata
+
+### Basic Website Information
+
+To change basic website information (such as name, title, and description):
+
+1. Edit the `messages/en.json` file:
+
+```json title="messages/en.json"
+{
+  "Metadata": {
+    "name": "Your Website Name",
+    "title": "Your Website Title - Tagline",
+    "description": "A detailed description of your website for SEO purposes"
+  }
+}
+```
+
+For multilingual websites, update each language file with appropriate translations:
+
+```json title="messages/zh.json"
+{
+  "Metadata": {
+    "name": "Your Website Name",
+    "title": "Your Website Title - Tagline",
+    "description": "A detailed description of your website for SEO purposes"
+  }
+}
+```
+
+### Custom Social Images
+
+To change Open Graph images and logos:
+
+1. Place your images in the `public` directory (no need to update paths if replacing original files)
+2. Update paths in `packages/config/src/website.ts` if necessary:
+
+```typescript title="packages/config/src/website.ts"
+metadata: {
+  // Other settings...
+  images: {
+    ogImage: '/your-og-image.png',  // Used for social sharing
+    logoLight: '/your-logo-light.png',  // Light mode logo
+    logoDark: '/your-logo-dark.png',  // Dark mode logo
+  },
+}
+```
+
+Recommended dimensions:
+
+* **OG Image**: 1200×630 pixels for optimal display on social platforms
+* **Logo**: At least 512×512 pixels for high-resolution displays
+
+### Social Media Links
+
+Update your social media official account links in the website configuration:
+
+```typescript title="packages/config/src/website.ts"
+metadata: {
+  // Other settings...
+  social: {
+    github: 'https://github.com/YourUsername',
+    twitter: 'https://x.com/YourHandle',
+    discord: 'https://discord.gg/YourInvite',
+    // Add other social platforms as needed
+  },
+}
+```
+
+### Favicon and App Icons
+
+To replace default favicons and app icons:
+
+1. Use a tool like [Real Favicon Generator](https://realfavicongenerator.net/) to generate a complete icon set
+2. Place the generated files in the `public` directory (no need to update paths if replacing original files)
+
+### Canonical URLs
+
+For pages with multiple URLs or to prevent duplicate content issues, set a canonical URL:
+
+```tsx
+export const metadata = constructMetadata({
+  title: 'Example Page',
+  description: 'Description',
+  pathname: '/preferred-path',
+  locale: 'en',
+});
+```
+
+### No-Index Pages
+
+For pages you don't want search engines to index:
+
+```tsx
+export const metadata = constructMetadata({
+  title: 'Private Page',
+  description: 'This page is not meant for search engines',
+  noIndex: true,
+});
+```
+
+## Page-Specific Metadata
+
+### Adding Metadata to MDX Pages
+
+In your MDX content pages (blog posts, documentation, etc.), you can define metadata in the frontmatter:
+
+```mdx title="content/blog/example-post.mdx"
+---
+title: Example Blog Post
+description: This is an example blog post with custom metadata
+image: /images/blog/example-post.png
+---
+
+Content goes here...
+```
+
+The metadata system will automatically use these values when rendering the page.
+
+### Programmatic Metadata
+
+For other programmatic pages, you can use the `constructMetadata` function:
+
+```tsx title="apps/web/src/app/[locale]/example/page.tsx"
+import { constructMetadata } from '@/lib/metadata';
+
+export const metadata = constructMetadata({
+  title: 'Example Page',
+  description: 'This is an example page with custom metadata',
+  image: '/images/example-page.png',
+});
+```
+
+## Best Practices
+
+* **Keep titles concise**: Aim for titles under 60 characters for optimal display in search results
+* **Descriptive meta descriptions**: Write compelling descriptions of 150-160 characters
+* **Use high-quality images**: Create professional, relevant images for OG and Twitter cards
+* **Include keywords**: Naturally include relevant keywords in titles and descriptions
+* **Keep updated**: Keep metadata in sync with your content changes
+* **Mobile optimization**: Ensure your metadata looks good on mobile devices
+
+## Next Steps
+
+Now that you understand how to customize metadata in AeloKit template, explore these related topics:
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="Themes" href="/docs/themes">
+    Configure themes and appearance settings
+  </Card>
+
+  <Card icon={<Image className="text-green-500" />} title="Images" href="/docs/images">
+    Configure various website images
+  </Card>
+
+  <Card icon={<GlobeIcon className="text-purple-500" />} title="Internationalization" href="/docs/i18n">
+    Configure multilingual features
+  </Card>
+
+  <Card icon={<Layout className="text-amber-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

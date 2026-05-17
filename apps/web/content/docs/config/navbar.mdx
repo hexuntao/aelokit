@@ -1,0 +1,69 @@
+---
+title: Navbar Configuration
+description: Configure the navigation menu in the website header
+icon: Menu
+---
+
+Define navigation menu links in the website header. Each item is a [NestedMenuItem](/docs/config#nestedmenuitem).
+
+```tsx title="src/config/navbar-config.tsx"
+export function getNavbarLinks(): NestedMenuItem[] {
+  const t = useTranslations('Marketing.navbar');
+
+  return [
+    {
+      title: t('features.title'),
+      href: Routes.Features,
+      external: false,
+    },
+    {
+      title: t('pricing.title'),
+      href: Routes.Pricing,
+      external: false,
+    },
+    {
+      title: t('blocks.title'),
+      items: [
+        {
+          title: t('blocks.items.hero-section.title'),
+          icon: <FlameIcon className="size-4 shrink-0" />,
+          href: Routes.HeroBlocks,
+          external: false,
+        },
+        // More dropdown items...
+      ],
+    },
+    // More navigation items...
+  ];
+}
+```
+
+The navbar supports simple links and dropdown menus with nested items. Dropdown menus can include icons and descriptions to provide a richer user experience.
+
+## FAQ
+
+### How to change the navbar menu layout?
+
+The navbar menu layout is defined in the `src/components/shared/navbar.tsx` file, using the [NavigationMenu](https://ui.shadcn.com/docs/components/navigation-menu) component from Shadcn UI. As shown, if you want to change the menu layout to a vertical menu, you can refer to the code in the Shadcn UI documentation.
+
+## Next Steps
+
+Now that you understand navbar configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Footprints className="text-green-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure links in the website footer
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-amber-500" />} title="Sidebar Configuration" href="/docs/config/sidebar">
+    Configure the dashboard navigation menu
+  </Card>
+
+  <Card icon={<CircleUser className="text-purple-500" />} title="Avatar Configuration" href="/docs/config/avatar">
+    Configure the user avatar dropdown menu
+  </Card>
+</Cards>

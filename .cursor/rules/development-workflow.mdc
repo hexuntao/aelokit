@@ -1,0 +1,55 @@
+---
+description:
+globs: *.tsx,*.ts
+alwaysApply: false
+---
+# Development Workflow Guide
+
+## Available Scripts
+
+### Monorepo-level (run from root)
+- `pnpm dev`: Start all apps in dev mode via Turbo
+- `pnpm build`: Build all apps via Turbo
+- `pnpm lint`: Lint all apps via Turbo
+- `pnpm format`: Format all apps via Turbo
+- `pnpm typecheck`: Type-check all apps via Turbo
+
+### Web app (run from root with filter)
+- `pnpm --filter @repo/web dev`: Start development server
+- `pnpm --filter @repo/web build`: Build the application
+- `pnpm --filter @repo/web start`: Start production server
+- `pnpm --filter @repo/web lint`: Run Biome linter
+- `pnpm --filter @repo/web format`: Format code with Biome
+- `pnpm --filter @repo/web content`: Generate Fumadocs MDX content
+- `pnpm --filter @repo/web db:generate`: Generate new migration files based on schema changes
+- `pnpm --filter @repo/web db:migrate`: Apply pending migrations to the database
+- `pnpm --filter @repo/web db:push`: Sync schema changes directly to the database (development only)
+- `pnpm --filter @repo/web db:studio`: Open Drizzle Studio for database inspection and management
+- `pnpm --filter @repo/web email`: Start email template development server
+
+### Shortcut scripts (root)
+- `pnpm web:dev`: Same as `pnpm --filter @repo/web dev`
+- `pnpm web:build`: Same as `pnpm --filter @repo/web build`
+- `pnpm web:content`: Same as `pnpm --filter @repo/web content`
+- `pnpm web:db:generate`: Same as `pnpm --filter @repo/web db:generate`
+
+## Development Process
+1. Use TypeScript for all new code
+2. Follow Biome formatting rules
+3. Write server actions in `apps/web/src/actions/`
+4. Use Zustand for client-side state
+5. Implement database changes through Drizzle migrations
+6. Use Radix UI components for consistent UI
+7. Follow the established directory structure
+8. Write tests for new features
+9. Update content collections when adding new content
+10. Use environment variables from `env.example`
+
+## Code Style
+- Use functional components with hooks
+- Implement proper error handling
+- Follow TypeScript best practices
+- Use proper type definitions
+- Document complex logic
+- Keep components small and focused
+- Use proper naming conventions

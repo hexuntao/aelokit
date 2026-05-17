@@ -1,0 +1,6 @@
+{
+  "title": "网站部署",
+  "description": "部署您的 AeloKit 应用程序",
+  "icon": "Cloud",
+  "pages": ["vercel", "cloudflare", "docker"]
+}

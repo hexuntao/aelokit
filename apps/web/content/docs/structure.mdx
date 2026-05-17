@@ -1,0 +1,310 @@
+---
+title: Project Structure
+description: Overview of AeloKit template file and folder organization
+icon: FolderTree
+---
+
+AeloKit follows a modular architecture based on Next.js App Router, focusing on scalability and maintainability. This document explains the key directories and files in the template, helping you navigate the codebase more effectively.
+
+## Root Directory Structure
+
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="web">
+      Main Web application
+    </Folder>
+  </Folder>
+
+  <Folder name="packages" defaultOpen>
+    <Folder name="config">
+      Shared configuration and configuration types
+    </Folder>
+
+    <Folder name="shared">
+      Shared utility functions, constants, types
+    </Folder>
+
+    <Folder name="env">
+      Environment variable validation
+    </Folder>
+
+    <Folder name="i18n">
+      Internationalization routes and messages
+    </Folder>
+
+    <Folder name="db">
+      Drizzle database layer
+    </Folder>
+
+    <Folder name="auth">
+      Authentication core layer
+    </Folder>
+
+    <Folder name="payment">
+      Payment domain package
+    </Folder>
+
+    <Folder name="credits">
+      Credits domain package
+    </Folder>
+
+    <Folder name="mail">
+      Transactional email domain package
+    </Folder>
+
+    <Folder name="newsletter">
+      Email subscription domain package
+    </Folder>
+
+    <Folder name="notification">
+      System notification domain package
+    </Folder>
+
+    <Folder name="storage">
+      Object storage domain package
+    </Folder>
+
+    <Folder name="analytics">
+      Analytics domain package
+    </Folder>
+  </Folder>
+
+  <File name="pnpm-workspace.yaml">
+    pnpm workspace configuration
+  </File>
+
+  <File name="turbo.json">
+    Turborepo configuration
+  </File>
+</Files>
+
+## apps/web Directory Structure
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="actions">
+      Server Actions for form handling and data mutations
+    </Folder>
+
+    <Folder name="app">
+      Next.js App Router pages and routes
+    </Folder>
+
+    <Folder name="assets">
+      Static assets used in the application
+    </Folder>
+
+    <Folder name="components">
+      UI components organized by feature
+    </Folder>
+
+    <Folder name="config">
+      Configuration files for the application
+    </Folder>
+
+    <Folder name="hooks">
+      Custom React hooks
+    </Folder>
+
+    <Folder name="lib">
+      Core application logic and utility modules
+    </Folder>
+
+    <Folder name="styles">
+      Global styles and CSS modules
+    </Folder>
+
+    <Folder name="types">
+      TypeScript type definitions
+    </Folder>
+
+    <File name="middleware.ts">
+      Next.js middleware for authentication and routing
+    </File>
+
+    <File name="routes.ts">
+      Application route definitions
+    </File>
+  </Folder>
+
+  <Folder name="content">
+    <Folder name="docs">
+      Documentation in MDX format
+    </Folder>
+
+    <Folder name="blog">
+      Blog posts in MDX format
+    </Folder>
+
+    <Folder name="pages">
+      Custom pages in MDX format
+    </Folder>
+  </Folder>
+
+  <Folder name="public">
+    Static assets served from the root
+  </Folder>
+
+  <Folder name="messages">
+    Internationalization messages
+  </Folder>
+</Files>
+
+## Key Files
+
+* **`apps/web/src/middleware.ts`**: Contains route protection logic and redirects
+* **`apps/web/src/routes.ts`**: Defines core routes for consistent navigation
+* **`packages/db/src/schema.ts`**: Database schema definitions
+* **`apps/web/next.config.ts`**: Next.js configuration
+* **`source.config.ts`**: Fumadocs configuration
+* **`env.example`**: Environment variable template
+
+## Key Directories
+
+### `/apps/web/src/app` Directory
+
+The app directory follows Next.js App Router conventions:
+
+<Files>
+  <Folder name="[locale]" defaultOpen>
+    <Folder name="(marketing)">
+      Public marketing pages
+    </Folder>
+
+    <Folder name="(protected)">
+      Protected pages
+    </Folder>
+
+    <Folder name="auth">
+      Authentication pages
+    </Folder>
+
+    <Folder name="docs">
+      Documentation pages
+    </Folder>
+  </Folder>
+
+  <Folder name="api">
+    API routes
+  </Folder>
+
+  <File name="layout.tsx">
+    Root layout
+  </File>
+
+  <File name="not-found.tsx">
+    404 page
+  </File>
+
+  <File name="robots.ts">
+    Robots.txt configuration
+  </File>
+
+  <File name="sitemap.ts">
+    Sitemap generation
+  </File>
+
+  <File name="manifest.ts">
+    PWA manifest configuration
+  </File>
+</Files>
+
+### `/apps/web/src/lib` Directory
+
+Core application logic and utilities:
+
+<Files>
+  <File name="auth.ts">
+    Better Auth configuration and utilities
+  </File>
+
+  <File name="auth-client.ts">
+    Better Auth client configuration and utilities
+  </File>
+
+  <File name="source.ts">
+    Fumadocs configuration and utilities
+  </File>
+
+  <File name="metadata.ts">
+    SEO metadata utilities
+  </File>
+
+  <File name="constants.ts">
+    Application constants
+  </File>
+
+  <File name="formatter.ts">
+    Data formatting utilities
+  </File>
+
+  <File name="utils.ts">
+    General utilities
+  </File>
+
+  <Folder name="urls">
+    URL-related utilities
+  </Folder>
+
+  <Folder name="docs">
+    Documentation-related utilities
+  </Folder>
+</Files>
+
+## Code Organization Best Practices
+
+When using AeloKit, follow these code organization best practices:
+
+<Steps>
+  <Step>
+    ### Group by feature, not by type
+
+    Keep related files together, regardless of their type.
+  </Step>
+
+  <Step>
+    ### Keep components focused and small
+
+    Each component should have a single responsibility.
+  </Step>
+
+  <Step>
+    ### Use barrel exports wisely
+
+    Create `index.ts` files to re-export components from a directory, making imports cleaner.
+
+    ```tsx
+    // components/ui/index.ts
+    export * from './Button';
+    export * from './Card';
+    export * from './Input';
+
+    // Usage
+    import { Button, Card, Input } from '@/components/ui';
+    ```
+  </Step>
+
+  <Step>
+    ### Separate client and server components
+
+    Use the `'use client'` directive at the top of client components, and keep server components as the default.
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you understand the project structure, explore these related topics:
+
+<Cards>
+  <Card icon={<Code className="text-blue-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<FileKey className="text-green-500" />} title="Linting" href="/docs/lint">
+    Code formatting and linting
+  </Card>
+
+  <Card icon={<Rocket className="text-amber-500" />} title="Getting Started" href="/docs/start">
+    AeloKit template getting started documentation
+  </Card>
+</Cards>

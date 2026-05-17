@@ -1,0 +1,82 @@
+---
+title: 价格配置
+description: 定义订阅计划和定价选项
+icon: DollarSign
+---
+扩展在 `website.tsx` 中定义的价格计划，添加翻译内容。
+
+```tsx title="src/config/price-config.tsx"
+// 返回带有翻译内容的价格计划
+export function getPricePlans(): Record<string, PricePlan> {
+  const t = useTranslations('PricePlans');
+  const priceConfig = websiteConfig.price;
+  const plans: Record<string, PricePlan> = {};
+
+  // 为每个计划添加翻译内容
+  if (priceConfig.plans.free) {
+    plans.free = {
+      ...priceConfig.plans.free,
+      name: t('free.name'),
+      description: t('free.description'),
+      features: [
+        t('free.features.feature-1'),
+        t('free.features.feature-2'),
+        t('free.features.feature-3'),
+        t('free.features.feature-4'),
+      ],
+      limits: [
+        t('free.limits.limit-1'),
+        t('free.limits.limit-2'),
+        t('free.limits.limit-3'),
+      ],
+    };
+  }
+  ...
+}
+```
+
+`plans` 对象中的每个价格计划可以具有以下属性：
+
+| 属性            | 类型          | 描述                      |
+| ------------- | ----------- | ----------------------- |
+| `id`          | `string`    | 价格计划的唯一标识符              |
+| `name`        | `string?`   | 价格计划的显示名称               |
+| `description` | `string?`   | 价格计划的描述                 |
+| `features`    | `string[]?` | 价格计划包含的功能列表             |
+| `limits`      | `string[]?` | 价格计划包含的限制列表             |
+| `prices`      | `Price[]`   | 价格计划的价格选项列表（月付、年付、一次性等） |
+| `isFree`      | `boolean`   | 是否为免费价格计划               |
+| `isLifetime`  | `boolean`   | 是否为终身（一次性支付）价格计划        |
+| `popular`     | `boolean?`  | 是否将价格计划突出显示为推荐          |
+| `credits`     | `object?`   | 价格计划包含的积分配置             |
+| `disabled`    | `boolean?`  | 是否在 UI 中禁用价格计划          |
+
+<Callout type="warning">
+  问：`website.tsx` 中的**价格配置**和 `price-config.tsx` 中的**价格计划**有什么区别？
+
+  答：`website.tsx` 文件定义了价格计划的基本信息，不包括特定于语言环境的信息，而 `price-config.tsx` 文件通过添加翻译内容来显示这些价格计划。
+
+  拆开来的原因是 `price-config.tsx` 文件只能在客户端组件中使用，而 `website.tsx` 文件既可以在服务器端组件中使用，也可以在客户端组件中使用。
+</Callout>
+
+## 下一步
+
+现在您了解了定价配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+
+  <Card icon={<Coins className="text-green-500" />} title="积分套餐" href="/docs/config/credits">
+    配置积分套餐
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚中的链接
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-amber-500" />} title="侧边栏配置" href="/docs/config/sidebar">
+    配置仪表盘的导航菜单
+  </Card>
+</Cards>

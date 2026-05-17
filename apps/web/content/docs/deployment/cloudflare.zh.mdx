@@ -1,0 +1,155 @@
+---
+title: Cloudflare 部署
+description: 学习如何将项目部署到 Cloudflare Workers 平台
+icon: Cloud
+---
+
+本文档将帮助您将 AeloKit 项目部署到 Cloudflare Workers 平台。Cloudflare Workers 提供了边缘计算能力，让您的应用在全球范围内快速响应。
+
+## 前提条件
+
+在部署项目之前，请确保您有：
+
+1. 包含项目代码的 Git 仓库（如 [GitHub](https://github.com)）
+2. [Cloudflare](https://dash.cloudflare.com) 账户
+3. 已安装 [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)：`npm install -g wrangler`
+4. 准备好为网站的生产环境配置的[环境变量](/docs/env)
+
+## 部署步骤
+
+<Steps>
+  <Step>
+    登录 Cloudflare
+
+    ```bash
+    wrangler login
+    ```
+
+    这将打开浏览器窗口，让您授权 Wrangler 访问您的 Cloudflare 账户。
+  </Step>
+
+  <Step>
+    配置 wrangler.toml
+
+    项目根目录已包含 `wrangler.toml` 配置文件。根据您的需求修改配置：
+
+    ```toml title="wrangler.toml"
+    name = "your-app-name"
+    compatibility_date = "2024-01-01"
+    compatibility_flags = ["nodejs_compat"]
+    
+    [site]
+    bucket = ".open-next"
+    ```
+
+    将 `name` 改为您的应用名称。
+  </Step>
+
+  <Step>
+    配置环境变量
+
+    使用 Wrangler 设置环境变量：
+
+    ```bash
+    wrangler secret put NEXT_PUBLIC_BASE_URL
+    wrangler secret put DATABASE_URL
+    wrangler secret put BETTER_AUTH_SECRET
+    wrangler secret put RESEND_API_KEY
+    ```
+
+    或者直接在 Cloudflare Dashboard 的 Workers 设置中添加环境变量。
+  </Step>
+
+  <Step>
+    构建项目
+
+    ```bash
+    pnpm build
+    ```
+
+    这将使用 OpenNext 构建适配 Cloudflare Workers 的输出。
+  </Step>
+
+  <Step>
+    部署项目
+
+    ```bash
+    pnpm deploy
+    ```
+
+    或使用 Wrangler 直接部署：
+
+    ```bash
+    wrangler deploy
+    ```
+  </Step>
+</Steps>
+
+## 自定义域名
+
+如果您想为项目添加自定义域名：
+
+1. 在 Cloudflare Dashboard 中进入您的 Workers 设置
+2. 点击 `Triggers` 标签
+3. 在 `Custom Domains` 部分添加自定义域名
+4. 按照说明配置 DNS 记录
+
+## 数据库选项
+
+AeloKit 支持多种数据库选项用于 Cloudflare 部署：
+
+### Cloudflare D1
+
+Cloudflare D1 是 Cloudflare 提供的边缘 SQLite 数据库：
+
+```toml title="wrangler.toml"
+[[d1_databases]]
+binding = "DB"
+database_name = "your-database-name"
+database_id = "your-database-id"
+```
+
+### 外部数据库
+
+您也可以使用 Neon、Supabase 或其他支持 HTTP 连接的数据库服务。
+
+## 常见问题
+
+### 构建失败
+
+如果构建过程失败：
+
+* 检查构建日志以获取详细的错误信息
+* 确保所有依赖项都正确安装
+* 验证 `wrangler.toml` 配置是否正确
+
+### 运行时错误
+
+* 确认所有环境变量都正确设置
+* 检查数据库连接是否正常工作
+* 查看 Cloudflare Workers 日志以诊断问题
+
+### 冷启动问题
+
+Cloudflare Workers 可能会有冷启动延迟：
+
+* 使用 Cloudflare D1 可以减少延迟
+* 考虑使用 Workers KV 缓存频繁访问的数据
+
+## 下一步
+
+现在您了解了如何将 AeloKit 网站部署到 Cloudflare，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Vercel 部署" href="/docs/deployment/vercel">
+    将网站部署到 Vercel
+  </Card>
+
+  <Card icon={<Database className="text-green-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<FileKey className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

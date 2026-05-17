@@ -1,0 +1,332 @@
+---
+title: 字体
+description: 学习如何自定义 AeloKit 模板中的字体
+icon: Type
+---
+
+本文档涵盖了 AeloKit 模板中的字体系统，如何使用内置字体，以及如何添加和自定义您自己的字体。
+
+## 核心功能
+
+AeloKit 模板配备了精心选择的字体集，提供出色的可读性和视觉吸引力。字体系统包括：
+
+* 用于不同场景的多种字体系列（无衬线、衬线、等宽）
+* [Google Fonts](https://fonts.google.com/) 集成，轻松访问数千种字体
+* 支持本地字体文件
+* 基于 CSS 变量的配置，便于自定义
+
+## 默认字体
+
+默认情况下可用以下字体系列：
+
+* **Noto Sans**：用于大多数文本的主要无衬线字体
+* **Noto Serif**：可用于标题或正文的衬线字体
+* **Noto Sans Mono**：用于代码块和技术内容的等宽字体
+* **Bricolage Grotesque**：用于装饰元素或标题的现代无衬线字体
+
+这些字体从 Google Fonts 加载，并在 `apps/web/src/assets/fonts/index.ts` 文件中配置：
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import {
+  Bricolage_Grotesque,
+  Noto_Sans,
+  Noto_Sans_Mono,
+  Noto_Serif,
+} from 'next/font/google';
+
+// 带有选定字重的 Noto Sans
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-sans',
+  weight: ['500', '600', '700'],
+});
+
+// Noto Serif
+export const fontNotoSerif = Noto_Serif({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-serif',
+  weight: ['400'],
+});
+
+// Noto Sans Mono
+export const fontNotoSansMono = Noto_Sans_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-sans-mono',
+  weight: ['400'],
+});
+
+// 带有多种字重的 Bricolage Grotesque
+export const fontBricolageGrotesque = Bricolage_Grotesque({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-bricolage-grotesque',
+  weight: ['400', '500', '600', '700'],
+});
+```
+
+## 字体配置
+
+字体在根布局组件中应用到应用程序：
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+import {
+  fontBricolageGrotesque,
+  fontNotoSans,
+  fontNotoSansMono,
+  fontNotoSerif,
+} from '@/assets/fonts';
+import { cn } from '@/lib/utils';
+
+// 在布局组件内部
+<body
+  suppressHydrationWarning
+  className={cn(
+    'size-full antialiased',
+    fontNotoSans.className,
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable
+  )}
+>
+  {/* 布局内容 */}
+</body>
+```
+
+注意 `fontNotoSans.className` 配置的是整个网站的默认字体，而其他字体作为 CSS 变量使用。
+
+## CSS 变量
+
+字体变量在全局 CSS 文件中定义，可以在您的 Tailwind CSS 类中使用：
+
+```css title="apps/web/src/styles/globals.css"
+@theme inline {
+  /* font */
+  --font-sans: var(--font-noto-sans);
+  --font-mono: var(--font-noto-sans-mono);
+  --font-serif: var(--font-noto-serif);
+  --font-bricolage: var(--font-bricolage-grotesque);
+
+  /* 其他变量 */
+}
+```
+
+## 添加自定义字体
+
+您可以通过两种方式向网站添加自定义字体：使用 Google Fonts 或本地字体文件。
+
+### 添加 Google Fonts
+
+要添加新的 Google Font：
+
+1. 从 `next/font/google` 导入字体
+2. 使用适当的选项配置字体
+3. 导出字体变量
+
+例如，要添加 Roboto 字体：
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import { Roboto } from 'next/font/google';
+
+export const fontRoboto = Roboto({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto',
+  weight: ['400', '500', '700'],
+});
+```
+
+您可以浏览 [Google Fonts](https://fonts.google.com/) 网站为您的网站找到完美的字体。
+
+### 添加本地字体
+
+要使用本地字体文件：
+
+1. 下载字体文件（最好是 WOFF2 格式以获得最佳性能）
+2. 将字体文件放在 `apps/web/src/assets/fonts` 目录中
+3. 从 `next/font/local` 导入 `localFont`
+4. 使用适当的选项配置字体
+
+例如：
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import localFont from 'next/font/local';
+
+// 本地字体示例
+export const fontCustom = localFont({
+  src: './CustomFont.woff2',
+  variable: '--font-custom',
+});
+```
+
+您可以从 [Google Webfonts Helper](https://gwfh.mranftl.com/fonts) 下载字体文件。
+
+### 使用新字体
+
+添加新字体后，您需要：
+
+1. 更新布局组件以包含新的字体变量：
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+import { fontCustom } from '@/assets/fonts';
+
+// 在布局组件内部
+<body
+  className={cn(
+    'size-full antialiased',
+    fontNotoSans.className,  // 默认字体
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable,
+    fontCustom.variable      // 新字体变量
+  )}
+>
+  {/* 布局内容 */}
+</body>
+```
+
+2. 可选地，在 `globals.css` 中添加 CSS 变量：
+
+```css title="apps/web/src/styles/globals.css"
+@theme inline {
+  /* font */
+  --font-sans: var(--font-noto-sans);
+  --font-mono: var(--font-noto-sans-mono);
+  --font-serif: var(--font-noto-serif);
+  --font-bricolage: var(--font-bricolage-grotesque);
+  --font-custom: var(--font-custom);  /* 新字体变量 */
+
+  /* 其他变量 */
+}
+```
+
+### 更改默认字体
+
+要更改整个网站的默认字体：
+
+1. 选择您想要设置为默认的字体
+2. 更新布局组件以使用该字体的 `className` 属性而不是 `fontNotoSans.className`：
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+<body
+  className={cn(
+    'size-full antialiased',
+    fontCustom.className,    // 这现在是默认字体
+    fontNotoSans.variable,   // Noto Sans 现在作为变量可用
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable
+  )}
+>
+  {/* 布局内容 */}
+</body>
+```
+
+## 字体使用示例
+
+以下是如何在组件中使用不同字体的一些示例：
+
+```tsx
+// 使用默认字体（无需指定）
+<p>此文本使用默认字体。</p>
+
+// 使用 Tailwind CSS 的特定字体系列
+<h1 className="font-serif">此标题使用衬线字体</h1>
+
+// 为代码使用等宽字体
+<code className="font-mono">console.log('Hello, world!');</code>
+
+// 为特殊标题使用装饰字体
+<h2 className="font-bricolage">特殊部分</h2>
+
+// 使用自定义字体（如果已添加）
+<p className="font-custom">此文本使用自定义字体。</p>
+```
+
+## 字体子集和性能
+
+Next.js 自动对 Google Fonts 进行子集化，仅包含您指定语言所需的字符，这提高了性能。
+
+`subsets` 参数指定要包含的字符集：
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin'],  // 仅包含拉丁字符
+  // ...其他选项
+});
+```
+
+对于多语言网站，您可以包含其他子集：
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin', 'cyrillic', 'greek'],  // 支持多种字母表
+  // ...其他选项
+});
+```
+
+## 高级字体自定义
+
+### 字体显示策略
+
+`display` 属性控制字体的加载和显示方式：
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  display: 'swap',  // 在自定义字体加载前使用后备字体
+  // ...其他选项
+});
+```
+
+选项包括：
+
+* `'swap'`：在自定义字体加载前显示后备字体（防止不可见文本）
+* `'block'`：短暂显示不可见文本，然后后备字体，然后自定义字体
+* `'fallback'`：类似于 swap 但超时时间更短
+* `'optional'`：让浏览器根据连接情况决定是否使用自定义字体
+
+### 调整字体字重
+
+您可以指定要包含的字体字重以优化性能：
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  weight: ['400', '500', '700'],  // 仅包含常规、中等和粗体
+  // ...其他选项
+});
+```
+
+这对性能很重要，因为每个额外的字重都会增加需要下载的字体数据量。
+
+## 最佳实践
+
+* **限制字体系列**：在您的网站上使用不超过 2-3 种字体系列以保持一致的外观
+* **限制字体字重**：仅包含您实际需要的字重（通常是常规、中等和粗体）
+* **使用 WOFF2 格式**：对于本地字体，使用 WOFF2 格式以获得最佳压缩和性能
+* **测试性能**：添加自定义字体后，通过 [PageSpeed Insights](https://pagespeed.web.dev/) 检查您网站的性能
+* **考虑后备字体**：使用 Tailwind 的字体系列工具指定适当的后备字体
+* **可访问性**：确保您选择的字体对所有用户都可读，特别是正文文本
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用字体，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Image className="text-green-500" />} title="图片" href="/docs/images">
+    配置网站各种图片
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+</Cards>

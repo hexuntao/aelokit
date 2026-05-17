@@ -1,0 +1,69 @@
+---
+title: 积分配置
+description: 定义积分计划和积分选项
+icon: Coins
+---
+
+扩展在 `website.tsx` 中定义的积分套餐，添加翻译内容。
+
+```tsx title="src/config/credits-config.tsx"
+// 返回带有翻译内容的积分套餐
+export function getCreditPackages(): Record<string, CreditPackage> {
+  const t = useTranslations('CreditPackages');
+  const creditsConfig = websiteConfig.credits;
+  const packages: Record<string, CreditPackage> = {};
+
+  // 为每个套餐添加翻译内容
+  if (creditsConfig.packages.basic) {
+    packages.basic = {
+      ...creditsConfig.packages.basic,
+      name: t('basic.name'),
+      description: t('basic.description'),
+    };
+  }
+  ...
+}
+```
+
+`packages` 对象中的每个积分套餐可以具有以下属性：
+
+| 属性            | 类型         | 描述                                       |
+| ------------- | ---------- | ---------------------------------------- |
+| `id`          | `string`   | 套餐的唯一标识符                                 |
+| `name`        | `string?`  | 套餐的显示名称                                  |
+| `description` | `string?`  | 套餐的描述                                    |
+| `popular`     | `boolean`  | 是否推荐此套餐                                  |
+| `credits`     | `number`   | 套餐包含的积分数量                                |
+| `price`       | `object`   | 价格信息，包括 priceId、金额、货币、allowPromotionCode |
+| `expireDays`  | `number?`  | 积分的有效期（天数），可选，undefined 表示不过期            |
+| `disabled`    | `boolean?` | 是否在 UI 中禁用此套餐，可选                         |
+
+<Callout type="warning">
+  问：`website.tsx` 中的**积分套餐**和 `credits-config.tsx` 中的**积分套餐**有什么区别？
+
+  答：`website.tsx` 文件定义了积分套餐的基本信息，不包括特定于语言环境的信息，而 `credits-config.tsx` 文件通过添加翻译内容来显示这些积分套餐。
+
+  拆开来的原因是 `credits-config.tsx` 文件只能在客户端组件中使用，而 `website.tsx` 文件既可以在服务器端组件中使用，也可以在客户端组件中使用。
+</Callout>
+
+## 下一步
+
+现在您了解了积分套餐配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+
+  <Card icon={<DollarSign className="text-green-500" />} title="价格配置" href="/docs/config/price">
+    配置产品的价格计划
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚中的链接
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-amber-500" />} title="侧边栏配置" href="/docs/config/sidebar">
+    配置仪表盘的导航菜单
+  </Card>
+</Cards>

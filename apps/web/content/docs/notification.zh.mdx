@@ -1,0 +1,189 @@
+---
+title: 通知
+description: 学习如何在 AeloKit 中设置和使用通知
+icon: Bell
+---
+AeloKit 支持在用户成功完成支付时发送通知，这允许您的团队在工具中接收实时订单提醒。
+
+目前支持 Discord 和飞书两种通知渠道，并且易于扩展添加更多通知渠道。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 启用通知渠道
+
+    在 `packages/config/src/website.ts` 中启用通知功能，并配置接收消息的通知渠道：
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      // ...other config
+      notification: {
+        enable: true,
+        provider: 'discord', // or 'feishu'
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 配置 Webhook URL
+
+    根据选择的通知渠道，配置对应的 Webhook URL：
+
+    <Tabs items={['Discord', '飞书']}>
+      <Tab value="Discord">
+        1. 进入到 Discord 服务器并打开想要接收通知的频道
+        2. 点击齿轮图标打开 `Channel Settings`
+        3. 选择 `Integrations` > `Webhooks` > `New Webhook`
+        4. 为 Webhook 设置名称和头像（可选）
+        5. 复制 `Webhook URL` 并添加到环境变量文件中：
+
+        ```bash title=".env"
+        DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+        ```
+      </Tab>
+
+      <Tab value="飞书">
+        1. 进入到飞书群聊
+        2. 点击群名称 > `Group Settings` > `Bot Management`
+        3. 添加新的 `Custom Bot` 并启用 `Webhooks`
+        4. 复制生成的 `Webhook URL` 并添加到环境变量文件中：
+
+        ```bash title=".env"
+        FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/..."
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#notification">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 通知系统架构
+
+<Files>
+  <Folder name="packages/notification/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="discord.ts" />
+      <File name="feishu.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+### 核心模块
+
+* **discord.ts** - Discord 通知提供商
+* **feishu.ts** - 飞书通知提供商
+* **service.ts** - 通知服务，统一调用不同提供商
+
+## 使用方法
+
+```tsx
+import { sendNotification } from '@/notification';
+
+// 发送支付成功通知
+await sendNotification({
+  sessionId: 'session_xxx',
+  customerId: 'cus_xxx',
+  userName: 'John Doe',
+  amount: 99.00,
+});
+```
+
+## 扩展新的通知渠道
+
+AeloKit 支持扩展新的通知渠道：
+
+1. 在 `packages/notification/src/providers` 目录中创建新文件（例如 `slack.ts`）。
+2. 实现通知函数：
+
+```tsx title="packages/notification/src/providers/slack.ts"
+import type { NotificationProvider, SendNotificationParams } from '../types';
+
+export class SlackProvider implements NotificationProvider {
+  constructor() {
+    // 初始化 Slack 提供商
+  }
+
+  public getProviderName(): string {
+    return 'Slack';
+  }
+
+  async sendNotification(params: SendNotificationParams): Promise<void> {
+    const { sessionId, customerId, userName, amount } = params;
+    
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) {
+      console.warn('SLACK_WEBHOOK_URL is not set, skipping Slack notification');
+      return;
+    }
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `🎉 New Purchase\nUsername: ${userName}\nAmount: $${amount.toFixed(2)}`,
+      }),
+    });
+  }
+}
+```
+
+3. 在 `registry.ts` 中注册新的提供商：
+
+```tsx title="packages/notification/src/registry.ts"
+import { SlackProvider } from './providers/slack';
+
+export function getNotificationProvider(): NotificationProvider {
+  const provider = websiteConfig.notification.provider;
+  
+  switch (provider) {
+    case 'discord':
+      return new DiscordProvider();
+    case 'feishu':
+      return new FeishuProvider();
+    case 'slack':
+      return new SlackProvider();
+    default:
+      throw new Error(`不支持的通知提供商: ${provider}`);
+  }
+}
+```
+
+## 参考文档
+
+* [Discord Webhooks 文档](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+* [飞书 Webhook 文档](https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="邮件" href="/docs/email">
+    配置邮件服务
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="统计分析" href="/docs/analytics">
+    配置统计分析服务
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="存储" href="/docs/storage">
+    配置存储服务
+  </Card>
+</Cards>

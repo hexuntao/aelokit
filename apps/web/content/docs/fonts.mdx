@@ -1,0 +1,332 @@
+---
+title: Fonts
+description: Learn how to customize fonts in AeloKit template
+icon: Type
+---
+
+This document covers the font system in the AeloKit template, how to use built-in fonts, and how to add and customize your own fonts.
+
+## Core Features
+
+The AeloKit template comes with a carefully selected set of fonts that provide excellent readability and visual appeal. The font system includes:
+
+* Multiple font families for different scenarios (sans-serif, serif, monospace)
+* [Google Fonts](https://fonts.google.com/) integration for easy access to thousands of fonts
+* Support for local font files
+* CSS variable-based configuration for easy customization
+
+## Default Fonts
+
+The following font families are available by default:
+
+* **Noto Sans**: The primary sans-serif font for most text
+* **Noto Serif**: A serif font available for headings or body text
+* **Noto Sans Mono**: A monospace font for code blocks and technical content
+* **Bricolage Grotesque**: A modern sans-serif font for decorative elements or headings
+
+These fonts are loaded from Google Fonts and configured in the `apps/web/src/assets/fonts/index.ts` file:
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import {
+  Bricolage_Grotesque,
+  Noto_Sans,
+  Noto_Sans_Mono,
+  Noto_Serif,
+} from 'next/font/google';
+
+// Noto Sans with selected weights
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-sans',
+  weight: ['500', '600', '700'],
+});
+
+// Noto Serif
+export const fontNotoSerif = Noto_Serif({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-serif',
+  weight: ['400'],
+});
+
+// Noto Sans Mono
+export const fontNotoSansMono = Noto_Sans_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-noto-sans-mono',
+  weight: ['400'],
+});
+
+// Bricolage Grotesque with multiple weights
+export const fontBricolageGrotesque = Bricolage_Grotesque({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-bricolage-grotesque',
+  weight: ['400', '500', '600', '700'],
+});
+```
+
+## Font Configuration
+
+Fonts are applied to the application in the root layout component:
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+import {
+  fontBricolageGrotesque,
+  fontNotoSans,
+  fontNotoSansMono,
+  fontNotoSerif,
+} from '@/assets/fonts';
+import { cn } from '@/lib/utils';
+
+// Inside the layout component
+<body
+  suppressHydrationWarning
+  className={cn(
+    'size-full antialiased',
+    fontNotoSans.className,
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable
+  )}
+>
+  {/* Layout content */}
+</body>
+```
+
+Note that `fontNotoSans.className` sets the default font for the entire website, while other fonts are used as CSS variables.
+
+## CSS Variables
+
+Font variables are defined in the global CSS file and can be used in your Tailwind CSS classes:
+
+```css title="apps/web/src/styles/globals.css"
+@theme inline {
+  /* font */
+  --font-sans: var(--font-noto-sans);
+  --font-mono: var(--font-noto-sans-mono);
+  --font-serif: var(--font-noto-serif);
+  --font-bricolage: var(--font-bricolage-grotesque);
+
+  /* Other variables */
+}
+```
+
+## Adding Custom Fonts
+
+You can add custom fonts to your website in two ways: using Google Fonts or local font files.
+
+### Adding Google Fonts
+
+To add a new Google Font:
+
+1. Import the font from `next/font/google`
+2. Configure the font with appropriate options
+3. Export the font variable
+
+For example, to add the Roboto font:
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import { Roboto } from 'next/font/google';
+
+export const fontRoboto = Roboto({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto',
+  weight: ['400', '500', '700'],
+});
+```
+
+You can browse the [Google Fonts](https://fonts.google.com/) website to find the perfect font for your website.
+
+### Adding Local Fonts
+
+To use local font files:
+
+1. Download the font files (preferably in WOFF2 format for best performance)
+2. Place the font files in the `apps/web/src/assets/fonts` directory
+3. Import `localFont` from `next/font/local`
+4. Configure the font with appropriate options
+
+For example:
+
+```typescript title="apps/web/src/assets/fonts/index.ts"
+import localFont from 'next/font/local';
+
+// Local font example
+export const fontCustom = localFont({
+  src: './CustomFont.woff2',
+  variable: '--font-custom',
+});
+```
+
+You can download font files from [Google Webfonts Helper](https://gwfh.mranftl.com/fonts).
+
+### Using New Fonts
+
+After adding a new font, you need to:
+
+1. Update the layout component to include the new font variable:
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+import { fontCustom } from '@/assets/fonts';
+
+// Inside the layout component
+<body
+  className={cn(
+    'size-full antialiased',
+    fontNotoSans.className,  // Default font
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable,
+    fontCustom.variable      // New font variable
+  )}
+>
+  {/* Layout content */}
+</body>
+```
+
+2. Optionally, add a CSS variable in `globals.css`:
+
+```css title="apps/web/src/styles/globals.css"
+@theme inline {
+  /* font */
+  --font-sans: var(--font-noto-sans);
+  --font-mono: var(--font-noto-sans-mono);
+  --font-serif: var(--font-noto-serif);
+  --font-bricolage: var(--font-bricolage-grotesque);
+  --font-custom: var(--font-custom);  /* New font variable */
+
+  /* Other variables */
+}
+```
+
+### Changing the Default Font
+
+To change the default font for the entire website:
+
+1. Select the font you want to set as default
+2. Update the layout component to use that font's `className` property instead of `fontNotoSans.className`:
+
+```typescript title="apps/web/src/app/[locale]/layout.tsx"
+<body
+  className={cn(
+    'size-full antialiased',
+    fontCustom.className,    // This is now the default font
+    fontNotoSans.variable,   // Noto Sans is now available as a variable
+    fontNotoSerif.variable,
+    fontNotoSansMono.variable,
+    fontBricolageGrotesque.variable
+  )}
+>
+  {/* Layout content */}
+</body>
+```
+
+## Font Usage Examples
+
+Here are some examples of how to use different fonts in your components:
+
+```tsx
+// Use the default font (no need to specify)
+<p>This text uses the default font.</p>
+
+// Use a specific font family with Tailwind CSS
+<h1 className="font-serif">This heading uses the serif font</h1>
+
+// Use monospace font for code
+<code className="font-mono">console.log('Hello, world!');</code>
+
+// Use decorative font for special headings
+<h2 className="font-bricolage">Special Section</h2>
+
+// Use a custom font (if added)
+<p className="font-custom">This text uses a custom font.</p>
+```
+
+## Font Subsets and Performance
+
+Next.js automatically subsets Google Fonts to include only the characters needed for the languages you specify, which improves performance.
+
+The `subsets` parameter specifies which character sets to include:
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin'],  // Only include Latin characters
+  // ...other options
+});
+```
+
+For multilingual websites, you can include additional subsets:
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  subsets: ['latin', 'cyrillic', 'greek'],  // Support multiple alphabets
+  // ...other options
+});
+```
+
+## Advanced Font Customization
+
+### Font Display Strategy
+
+The `display` property controls how the font is loaded and displayed:
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  display: 'swap',  // Use fallback font before custom font loads
+  // ...other options
+});
+```
+
+Options include:
+
+* `'swap'`: Display fallback font before custom font loads (prevents invisible text)
+* `'block'`: Briefly show invisible text, then fallback font, then custom font
+* `'fallback'`: Similar to swap but with shorter timeout
+* `'optional'`: Let the browser decide whether to use custom font based on connection
+
+### Adjusting Font Weights
+
+You can specify which font weights to include to optimize performance:
+
+```typescript
+export const fontNotoSans = Noto_Sans({
+  weight: ['400', '500', '700'],  // Only include regular, medium, and bold
+  // ...other options
+});
+```
+
+This is important for performance because each additional weight increases the amount of font data that needs to be downloaded.
+
+## Best Practices
+
+* **Limit font families**: Use no more than 2-3 font families on your website to maintain a consistent look
+* **Limit font weights**: Only include the weights you actually need (usually regular, medium, and bold)
+* **Use WOFF2 format**: For local fonts, use WOFF2 format for best compression and performance
+* **Test performance**: After adding custom fonts, check your website's performance with [PageSpeed Insights](https://pagespeed.web.dev/)
+* **Consider fallback fonts**: Use Tailwind's font family utilities to specify appropriate fallback fonts
+* **Accessibility**: Ensure the fonts you choose are readable for all users, especially for body text
+
+## Next Steps
+
+Now that you understand how to use fonts in AeloKit, explore these related topics:
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="Themes" href="/docs/themes">
+    Configure themes and appearance settings
+  </Card>
+
+  <Card icon={<Image className="text-green-500" />} title="Images" href="/docs/images">
+    Configure various images for the website
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core settings for the website
+  </Card>
+</Cards>

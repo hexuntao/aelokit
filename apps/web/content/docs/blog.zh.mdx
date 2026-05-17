@@ -1,0 +1,185 @@
+---
+title: 博客
+description: 学习如何创建、管理和自定义支持多语言的博客文章
+icon: BookOpen
+---
+
+AeloKit 内置一个基于 [Fumadocs MDX](https://fumadocs.dev) 构建的博客系统，支持多语言内容、分类、作者和丰富的内容格式。
+
+## 创建博客内容
+
+### 添加新作者
+
+在 `content/author` 目录中创建新的 MDX 文件：
+
+```mdx title="content/author/john-doe.mdx"
+---
+name: John Doe
+avatar: /images/authors/john-doe.jpg
+---
+```
+
+### 添加新分类
+
+在 `content/category` 目录中创建新的 MDX 文件：
+
+```mdx title="content/category/tutorial.mdx"
+---
+name: Tutorial
+description: Step-by-step guides to learn new features
+---
+```
+
+### 添加新博客文章
+
+在 `content/blog` 目录中创建新的 MDX 文件：
+
+```mdx title="content/blog/my-first-post.mdx"
+---
+title: My First Blog Post
+description: This is a brief description of my first blog post.
+image: /images/blog/my-first-post.jpg
+date: "2023-12-01"
+published: true
+categories: ["tutorial", "announcement"]
+author: "admin"
+---
+
+# 介绍
+
+这是我的第一篇博客文章。在这里我将谈论一些有趣的事情。
+
+## 第一部分
+
+这里是一些内容...
+
+## 第二部分
+
+这里是更多内容...
+```
+
+## 多语言支持
+
+AeloKit 博客系统完全支持国际化。您可以使用以下文件命名约定创建多语言内容：
+
+1. **默认语言（例如英语）**：`filename.mdx`
+2. **其他语言（例如中文）**：`filename.zh.mdx`
+
+### 多语言作者和分类
+
+对作者和分类遵循相同的模式：
+
+```mdx title="content/author/admin.zh.mdx"
+---
+name: 管理员
+avatar: /images/authors/admin.jpg
+---
+```
+
+```mdx title="content/category/announcement.zh.mdx"
+---
+name: 公告
+description: 官方平台公告和更新
+---
+```
+
+### 多语言博客文章示例
+
+英语博客文章：
+
+```mdx title="content/blog/welcome-post.mdx"
+---
+title: Welcome to our Blog
+description: Our first official blog post
+image: /images/blog/welcome.jpg
+date: "2023-12-01"
+published: true
+categories: ["announcement"]
+author: "admin"
+---
+
+英语内容...
+```
+
+同一篇文章的中文版本：
+
+```mdx title="content/blog/welcome-post.zh.mdx"
+---
+title: 欢迎来到我们的博客
+description: 我们的第一篇官方博客文章
+image: /images/blog/welcome.jpg
+date: "2023-12-01"
+published: true
+categories: ["announcement"]
+author: "admin"
+---
+
+中文内容...
+```
+
+## 付费阅读文章
+
+您可以通过设置 `premium` 字段为 `true` 来创建付费阅读文章：
+
+```mdx title="content/blog/premium.mdx"
+---
+title: Premium Post
+...
+premium: true
+---
+
+这是付费文章的免费阅读部分的内容。
+
+...
+
+<PremiumContent>
+
+这是付费文章的付费阅读部分的内容。
+
+...
+
+</PremiumContent>
+
+```
+
+如果博客文章是付费的，在博客卡片的右上角上会有一个付费标记。
+
+如果用户未登录，他们只能看到付费文章的免费阅读部分的内容，同时提示用户登录查看完整内容。
+
+如果用户已登录，但不是付费用户，他们只能看到付费文章的免费阅读部分的内容，同时提示用户升级到付费计划查看完整内容。
+
+如果用户已登录，并且是付费用户，他们可以查看付费文章的完整的内容。
+
+## 自定义
+
+### 自定义博客文章数据结构
+
+要向博客文章、作者或分类添加新字段：
+
+1. 在 `source.config.ts` 中修改架构
+2. 运行命令 `pnpm run content` 重新生成 `.source` 文件夹
+3. 更新组件以显示新字段
+
+### 更改博客文章卡片布局
+
+在 `apps/web/src/components/blog/blog-card.tsx` 中自定义博客卡片组件。
+
+## 下一步
+
+<Cards>
+  <Card icon={<BookOpen className="text-blue-500" />} title="文档" href="/docs/docs">
+    如何使用文档系统
+  </Card>
+
+  <Card icon={<Globe className="text-green-500" />} title="i18n" href="/docs/i18n">
+    网站国际化功能
+  </Card>
+
+  <Card icon={<Mailbox className="text-amber-500" />} title="邮件订阅" href="/docs/newsletter">
+    将邮件订阅与博客集成
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="网站配置" href="/docs/config">
+    配置网站设置
+  </Card>
+</Cards>

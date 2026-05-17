@@ -1,0 +1,15 @@
+{
+  "title": "Website Configuration",
+  "description": "Configure your website settings",
+  "icon": "Settings",
+  "pages": [
+    "website",
+    "navbar",
+    "footer",
+    "sidebar",
+    "avatar",
+    "social",
+    "price",
+    "credits"
+  ]
+}

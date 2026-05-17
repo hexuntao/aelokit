@@ -1,0 +1,144 @@
+---
+title: Vercel Deployment
+description: Learn how to deploy your project to Vercel platform
+icon: Cloud
+---
+
+This document will help you deploy your AeloKit project to the Vercel platform. Since the project is built with Next.js, Vercel, as the creator of Next.js, provides the best developer experience and performance optimization.
+
+## Prerequisites
+
+Before deploying the project, make sure you have:
+
+1. A Git repository containing the project code (such as [GitHub](https://github.com))
+2. A [Vercel](https://vercel.com) account, if you don't have one, register [here](https://vercel.com/signup)
+3. [Environment variables](/docs/env) configured for the production environment of your website
+
+## Deployment Steps
+
+<Steps>
+  <Step>
+    Push code to Git repository
+
+    Make sure the code has been pushed to a repository on GitHub, GitLab, or Bitbucket.
+  </Step>
+
+  <Step>
+    Connect to Vercel
+
+    * Log in to the [Vercel Dashboard](https://vercel.com/dashboard)
+    * Click the `Add New Project` button
+    * Import the Git repository
+  </Step>
+
+  <Step>
+    Configure the new project
+
+    On the configuration page, you need to set the following options:
+
+    * **Framework Preset**: Select `Next.js`
+    * **Build Command**: `pnpm build`
+    * **Output Directory**: Use the default `.next`
+    * **Install Command**: `pnpm install`
+
+    If you're unsure about a setting, you can keep the default value. Vercel usually auto-detects the correct configuration.
+  </Step>
+
+  <Step>
+    Configure environment variables
+
+    On the configuration page, find the `Environment Variables` section
+
+    * Add all necessary environment variables, for example:
+
+      ```bash
+      NEXT_PUBLIC_BASE_URL="https://YOUR-DOMAIN.com"
+      DATABASE_URL="YOUR-DATABASE-URL"
+      BETTER_AUTH_SECRET="YOUR-BETTER-AUTH-SECRET"
+      RESEND_API_KEY="YOUR-RESEND-API-KEY"
+      ...
+      ```
+
+    * Make sure to add all environment variables required to run the project
+
+    * Ensure the environment variables are configured for the production environment of your website
+  </Step>
+
+  <Step>
+    Deploy the project
+
+    Click the `Deploy` button to start the deployment process. Vercel will automatically build and deploy the project.
+  </Step>
+</Steps>
+
+<Callout type="warning">
+  **Important Environment Variable: `NEXT_PUBLIC_BASE_URL`**
+
+  The `NEXT_PUBLIC_BASE_URL` environment variable is used to set the base URL of the application.
+
+  If you are deploying to a custom domain (e.g., `https://YOUR-DOMAIN.com`), you need to follow the steps in the [Custom Domain](#custom-domain) section to set the `NEXT_PUBLIC_BASE_URL` environment variable to the custom domain, then access your application using the custom domain after successful deployment.
+
+  If you don't have a custom domain, you can use the domain provided by Vercel. For example, if your project is deployed to `https://your-project.vercel.app`, you need to set the `NEXT_PUBLIC_BASE_URL` environment variable to `https://your-project.vercel.app`.
+
+  However, the domain provided by Vercel is only available after successful deployment, so you need to set the `NEXT_PUBLIC_BASE_URL` environment variable to the Vercel-provided domain after successful deployment. Then **redeploy the project** for the environment variable to take effect. After that, you can access your application using the Vercel-provided domain.
+</Callout>
+
+## Custom Domain
+
+If you want to add a custom domain to your project:
+
+1. Go to the project settings in the Vercel dashboard
+2. Navigate to the `Domains` section
+3. Add the custom domain (e.g., `YOUR-DOMAIN.com`)
+4. Follow the DNS configuration instructions
+
+## Updating Environment Variables
+
+You can add or update environment variables in `Project Settings` > `Environment Variables`, then redeploy the project.
+
+<img src="/images/docs/deployment/vercel-env-variables.png" alt="Vercel Environment Variables" />
+
+## Automatic Deployment
+
+Vercel provides automatic deployment in the following cases:
+
+* Pushing code to the main branch
+* Creating a new Pull Request
+* Pushing to a branch with preview deployments enabled
+
+Each Pull Request gets a unique **preview URL**, allowing you to test before merging to the main branch (usually the `main` branch).
+
+## Common Issues
+
+### Build Failure
+
+If the build process fails:
+
+* Check the build logs for detailed error information
+* Make sure all dependencies are correctly installed
+* Verify that environment variables are correctly configured
+
+### Application Not Working Correctly
+
+* Confirm all environment variables are correctly set
+* Check if the database connection is working properly
+* Verify that API keys for third-party services are valid
+* Check the logs for any errors or messages that can help you diagnose the problem
+
+## Next Steps
+
+Now that you understand how to deploy an AeloKit website to Vercel, explore other related topics:
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Cloudflare Deployment" href="/docs/deployment/cloudflare">
+    Deploy the website to Cloudflare
+  </Card>
+
+  <Card icon={<Database className="text-green-500" />} title="Database" href="/docs/database">
+    Configure the database
+  </Card>
+
+  <Card icon={<FileKey className="text-amber-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

@@ -1,0 +1,213 @@
+---
+title: Images
+description: Learn how to customize images in the AeloKit template
+icon: Image
+---
+
+This document covers the image system in the AeloKit template, focusing on how to configure and customize logos, favicons, and other image assets.
+
+## Core Features
+
+The AeloKit template includes a flexible image system that allows you to:
+
+* Configure logos for light and dark modes
+* Set social media preview images (Open Graph)
+* Customize favicons and browser icons
+* Efficiently organize and access image assets
+
+## Image Configuration
+
+Images are primarily configured in the `packages/config/src/website.ts` configuration file.
+
+```typescript title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  metadata: {
+    // ...other settings
+    images: {
+      ogImage: '/og.png',            // Social media preview image
+      logoLight: '/logo.png',        // Light mode logo
+      logoDark: '/logo-dark.png',    // Dark mode logo
+    },
+    // ...other config
+  },
+  // ...rest of config
+};
+```
+
+**Configuration Options:**
+
+| Property     | Description                                |
+| ------------ | ------------------------------------------ |
+| `ogImage`    | Open Graph image for social media previews when sharing the site |
+| `logoLight`  | Logo displayed in light mode               |
+| `logoDark`   | Logo displayed in dark mode                |
+
+## Image Directory Structure
+
+Image assets are primarily stored in the `public` directory and can be accessed directly from the browser.
+
+### Main Image Assets
+
+The following image assets are typically stored in the root of the `public` directory:
+
+* **Main Logo**: `logo.png` (light mode) and `logo-dark.png` (dark mode)
+* **Open Graph Image**: `og.png` for social media previews
+* **Favicon Assets**: Various sizes of favicons and browser icons
+
+### Other Image Directories
+
+For better organization, you can create subdirectories within the `public` folder:
+
+* `/public/images/` - For general website images
+* `/public/blocks/` - For component-specific images
+* `/public/svg/` - For SVG assets
+
+## Customizing Logos
+
+### Logo Requirements
+
+For optimal display on your website, logos should:
+
+* Be in PNG format with transparency
+* Have consistent height (width can vary)
+* Have both light and dark versions for different themes (if not needed, you can prepare only one version)
+
+### Creating Custom Logos
+
+To create professional logos for your website:
+
+1. **Use a Logo Creation Tool**: We recommend [Ray.so Icon Maker](https://ray.so/icon) for creating clean, simple logos
+2. Export your logo as a PNG with transparency
+3. Create two versions: one for light mode and one for dark mode
+4. Place both files in your `/public` directory
+
+### Updating Logo Configuration
+
+After creating custom logos:
+
+1. Save your light mode logo as `/public/logo.png`
+2. Save your dark mode logo as `/public/logo-dark.png`
+3. Optionally update the paths in `website.ts` if you use different filenames or locations:
+
+```typescript title="packages/config/src/website.ts"
+images: {
+  // ...other image settings
+  logoLight: '/path/to/your-logo.png',
+  logoDark: '/path/to/your-dark-logo.png',
+},
+```
+
+## Customizing Favicons
+
+Favicons are small icons displayed in browser tabs, bookmarks, and when your site is added to mobile home screens.
+
+### Favicon Files
+
+A complete favicon set includes several files:
+
+* `favicon.ico` - Traditional favicon (16x16, 32x32, 48x48px)
+* `favicon-16x16.png` - 16x16 pixel PNG favicon
+* `favicon-32x32.png` - 32x32 pixel PNG favicon
+* `apple-touch-icon.png` - 180x180 pixel icon for iOS
+* `android-chrome-192x192.png` - Android icon (192x192 pixels)
+* `android-chrome-512x512.png` - Larger Android icon (512x512 pixels)
+
+### Creating Custom Favicons
+
+To create a complete favicon file set:
+
+1. Design a simple, recognizable logo image (preferably square)
+2. Use the [Favicon.io Converter](https://favicon.io/favicon-converter/) to generate the complete favicon set
+3. Upload your logo image to the converter and download the zip file containing all favicon formats
+4. Extract and place all files in the `public` directory
+
+### Favicon HTML
+
+Favicon files are automatically linked to your HTML through the following tags in the AeloKit template, so you don't need to add them manually.
+
+```html
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+```
+
+These links are typically included in the `<head>` section of your application HTML.
+
+## Creating Open Graph Images
+
+Open Graph images (`og.png`) are displayed when your website is shared on social media platforms.
+
+### Open Graph Image Guidelines
+
+For optimal display across platforms:
+
+* Use 1200×630 pixel dimensions (1.91:1 aspect ratio)
+* Keep important content in the center area
+* Include your logo, site name, and possibly a tagline
+* Use colors consistent with your brand
+
+### Updating Open Graph Images
+
+1. Create your Open Graph image using a design tool
+2. Save it as `og.png`
+3. Place it in your `public` directory
+4. If replacing the original file, no need to update the path. Otherwise, update the path in `website.ts`:
+
+```typescript title="packages/config/src/website.ts"
+images: {
+  ogImage: '/your-custom-og.png',
+  // ...other image settings
+},
+```
+
+## Best Practices
+
+* **Image Optimization**: Always compress images before adding them to the project
+* **Responsive Images**: Use the Next.js Image component for automatic responsive handling
+* **Consistent Styling**: Maintain consistent sizes and styling for logos throughout the site
+* **Alt Text**: Always include descriptive alt text for accessibility
+* **File Size**: Keep image file sizes as small as possible for better performance
+* **Format Selection**: Use WebP or AVIF formats when possible for better compression
+* **Image Dimensions**: Store images at the largest required size and let Next.js handle resizing
+
+## Troubleshooting
+
+### Images Not Displaying
+
+If your images are not displaying correctly:
+
+1. Verify file paths in your `website.ts` configuration
+2. Check that image files exist at the correct paths (case-sensitive)
+3. Clear browser cache and reload the page
+4. Verify that image dimensions and formats are supported
+
+### Favicons Not Showing
+
+If your favicon is not showing:
+
+1. Check that all favicon files are in your `public` directory
+2. Verify that HTML links are correctly set
+3. Force refresh your browser (Ctrl+F5 or Cmd+R)
+4. Check browser developer tools for any 404 errors
+
+## Next Steps
+
+Now that you understand how to work with images in AeloKit, explore these related topics:
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="Themes" href="/docs/themes">
+    Configure themes and appearance settings
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="Fonts" href="/docs/fonts">
+    Configure fonts
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

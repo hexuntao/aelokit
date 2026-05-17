@@ -1,0 +1,268 @@
+---
+title: 组件
+description: 了解 AeloKit 中可用的组件以及如何有效使用它们
+icon: Puzzle
+---
+
+AeloKit 模板内置 UI 组件集合，组织成不同的类别。这些组件经过精心构建，以保持一致性和易于更新。
+
+## 组件结构
+
+AeloKit 中的组件组织在几个关键目录中：
+
+<Files>
+  <Folder name="apps/web/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <Folder name="ui" description="shadcn/ui 基础组件" />
+
+      <Folder name="magicui" description="Magic UI 组件" />
+
+      <Folder name="animate-ui" description="Animate UI 组件" />
+
+      <Folder name="diceui" description="DiceUI 组件" />
+
+      <Folder name="tailark" description="Tailark 组件" />
+
+      <Folder name="auth" description="身份验证组件" />
+
+      <Folder name="blog" description="博客组件" />
+
+      <Folder name="dashboard" description="仪表盘组件" />
+
+      <Folder name="docs" description="文档组件" />
+
+      <Folder name="layout" description="布局组件" />
+
+      <Folder name="shared" description="共享组件" />
+
+      <Folder name="settings" description="设置组件" />
+    </Folder>
+  </Folder>
+</Files>
+
+## 组件库注册表
+
+AeloKit 使用 `Components.json` 文件集中管理所有 UI 组件库的注册信息，方便组件的添加、升级和版本追踪。
+
+### 添加新组件集合
+
+你可以从这里找到所有的[Shadcn/ui Components Registry Directory](https://ui.shadcn.com/docs/directory)，然后添加其他UI库的组件。
+
+## Shadcn/ui 组件
+
+位于 `apps/web/src/components/ui` 目录中，都是 [Shadcn/ui](https://ui.shadcn.com/docs/components) 的基础组件。此目录包含作为应用程序构建块的基础组件。
+
+<Callout type="warn">
+  * 不要修改 `apps/web/src/components/ui` 目录中的组件。
+  * 任何修改可能会在与模板同步代码库时导致冲突。
+  * 这些组件定期与官方 shadcn/ui 发布版本同步。
+  * `apps/web/src/components/ui` 目录被排除在 Biome 代码检查和格式化之外。
+</Callout>
+
+### 可用组件
+
+`apps/web/src/components/ui` 目录包括：
+
+| 类别   | 组件                                                                       | 描述            |
+| ---- | ------------------------------------------------------------------------ | ------------- |
+| 表单   | [Input](https://ui.shadcn.com/docs/components/input)                     | 文本输入字段        |
+|      | [Textarea](https://ui.shadcn.com/docs/components/textarea)               | 多行文本输入        |
+|      | [Select](https://ui.shadcn.com/docs/components/select)                   | 下拉选择          |
+|      | [Checkbox](https://ui.shadcn.com/docs/components/checkbox)               | 单个复选框输入       |
+|      | [Radio Group](https://ui.shadcn.com/docs/components/radio-group)         | 单选按钮组         |
+|      | [Switch](https://ui.shadcn.com/docs/components/switch)                   | 切换开关          |
+|      | [Form](https://ui.shadcn.com/docs/components/form)                       | 表单验证和处理       |
+|      | [Input OTP](https://ui.shadcn.com/docs/components/input-otp)             | 一次性密码输入       |
+|      | [Input Group](https://ui.shadcn.com/docs/components/input-group)         | 带图标、按钮、标签的输入框 |
+|      | [Field](https://ui.shadcn.com/docs/components/field)                     | 统一表单组件        |
+| 对话框  | [Dialog](https://ui.shadcn.com/docs/components/dialog)                   | 模态对话框         |
+|      | [Alert Dialog](https://ui.shadcn.com/docs/components/alert-dialog)       | 警告确认          |
+|      | [Sheet](https://ui.shadcn.com/docs/components/sheet)                     | 滑出对话框         |
+|      | [Drawer](https://ui.shadcn.com/docs/components/drawer)                   | 滑出面板          |
+|      | [Popover](https://ui.shadcn.com/docs/components/popover)                 | 浮动内容          |
+|      | [Hover Card](https://ui.shadcn.com/docs/components/hover-card)           | 悬停内容卡片        |
+| 导航   | [Tabs](https://ui.shadcn.com/docs/components/tabs)                       | 选项卡界面         |
+|      | [Navigation Menu](https://ui.shadcn.com/docs/components/navigation-menu) | 导航菜单          |
+|      | [Breadcrumb](https://ui.shadcn.com/docs/components/breadcrumb)           | 面包屑导航         |
+|      | [Menubar](https://ui.shadcn.com/docs/components/menubar)                 | 菜单栏导航         |
+|      | [Pagination](https://ui.shadcn.com/docs/components/pagination)           | 页面导航          |
+| 数据显示 | [Table](https://ui.shadcn.com/docs/components/table)                     | 数据表格          |
+|      | [Card](https://ui.shadcn.com/docs/components/card)                       | 内容卡片          |
+|      | [Calendar](https://ui.shadcn.com/docs/components/calendar)               | 日期选择器         |
+|      | [Carousel](https://ui.shadcn.com/docs/components/carousel)               | 图片轮播          |
+|      | [Avatar](https://ui.shadcn.com/docs/components/avatar)                   | 用户头像          |
+|      | [Badge](https://ui.shadcn.com/docs/components/badge)                     | 状态徽章          |
+| 布局   | [Accordion](https://ui.shadcn.com/docs/components/accordion)             | 可折叠部分         |
+|      | [Collapsible](https://ui.shadcn.com/docs/components/collapsible)         | 切换内容          |
+|      | [Separator](https://ui.shadcn.com/docs/components/separator)             | 视觉分隔符         |
+|      | [Aspect Ratio](https://ui.shadcn.com/docs/components/aspect-ratio)       | 保持宽高比         |
+|      | [Scroll Area](https://ui.shadcn.com/docs/components/scroll-area)         | 自定义滚动条        |
+|      | [Resizable](https://ui.shadcn.com/docs/components/resizable)             | 可调整大小的面板      |
+| 反馈   | [Alert](https://ui.shadcn.com/docs/components/alert)                     | 状态警告          |
+|      | [Progress](https://ui.shadcn.com/docs/components/progress)               | 进度指示器         |
+|      | [Skeleton](https://ui.shadcn.com/docs/components/skeleton)               | 加载占位符         |
+|      | [Toast](https://ui.shadcn.com/docs/components/toast)                     | 提示通知          |
+|      | [Sonner](https://ui.shadcn.com/docs/components/sonner)                   | 提示管理器         |
+|      | [Command](https://ui.shadcn.com/docs/components/command)                 | 命令面板          |
+|      | [Spinner](https://ui.shadcn.com/docs/components/spinner)                 | 加载状态指示器       |
+| 交互元素 | [Button Group](https://ui.shadcn.com/docs/components/button-group)       | 按钮组和分割按钮      |
+|      | [Kbd](https://ui.shadcn.com/docs/components/kbd)                         | 键盘按键显示        |
+|      | [Item](https://ui.shadcn.com/docs/components/item)                       | 列表项和卡片显示      |
+|      | [Empty](https://ui.shadcn.com/docs/components/empty)                     | 空状态显示         |
+
+## Magic UI 组件
+
+`apps/web/src/components/magicui` 目录包含具有高级动画和交互的专业 UI 组件，都是 [Magic UI](https://magicui.design/docs/components) 的组件。
+
+<Callout type="warn">
+  * 不要修改 `apps/web/src/components/magicui` 目录中的组件。
+  * 任何修改可能会在与模板同步代码库时导致冲突。
+  * 这些组件定期与官方 magicui 发布版本同步。
+  * `apps/web/src/components/magicui` 目录被排除在 Biome 代码检查和格式化之外。
+</Callout>
+
+### 可用组件
+
+`apps/web/src/components/magicui` 目录包括：
+
+| 类别   | 组件                                                                                      | 描述       |
+| ---- | --------------------------------------------------------------------------------------- | -------- |
+| 文本效果 | [Animated Gradient Text](https://magicui.design/docs/components/animated-gradient-text) | 带动画渐变的文本 |
+|      | [Morphing Text](https://magicui.design/docs/components/morphing-text)                   | 文本变形动画   |
+|      | [Sparkles Text](https://magicui.design/docs/components/sparkles-text)                   | 带闪烁效果的文本 |
+|      | [Word Rotate](https://magicui.design/docs/components/word-rotate)                       | 旋转单词动画   |
+|      | [Hyper Text](https://magicui.design/docs/components/hyper-text)                         | 交互式文本效果  |
+|      | [Flip Text](https://magicui.design/docs/components/flip-text)                           | 文本翻转动画   |
+|      | [Typing Animation](https://magicui.design/docs/components/typing-animation)             | 打字机效果    |
+| 交互元素 | [Animated Beam](https://magicui.design/docs/components/animated-beam)                   | 动画光束效果   |
+|      | [Border Beam](https://magicui.design/docs/components/border-beam)                       | 边框动画     |
+|      | [Pulsating Button](https://magicui.design/docs/components/pulsating-button)             | 带脉冲效果的按钮 |
+|      | [Shimmer Button](https://magicui.design/docs/components/shimmer-button)                 | 带闪烁的按钮   |
+|      | [Rainbow Button](https://magicui.design/docs/components/rainbow-button)                 | 彩虹效果按钮   |
+|      | [Ripple Button](https://magicui.design/docs/components/ripple-button)                   | 带涟漪的按钮   |
+|      | [Shiny Button](https://magicui.design/docs/components/shiny-button)                     | 带光泽的按钮   |
+| 布局组件 | [Magic Card](https://magicui.design/docs/components/magic-card)                         | 交互式卡片    |
+|      | [Animated Grid Pattern](https://magicui.design/docs/components/animated-grid-pattern)   | 动画网格背景   |
+|      | [Bento Grid](https://magicui.design/docs/components/bento-grid)                         | 便当盒布局    |
+|      | [Marquee](https://magicui.design/docs/components/marquee)                               | 滚动内容     |
+|      | [Hero Video Dialog](https://magicui.design/docs/components/hero-video-dialog)           | 视频模态     |
+|      | [Box Reveal](https://magicui.design/docs/components/box-reveal)                         | 揭示动画     |
+| 特殊效果 | [Confetti](https://magicui.design/docs/components/confetti)                             | 五彩纸屑动画   |
+|      | [Meteors](https://magicui.design/docs/components/meteors)                               | 流星效果     |
+|      | [Blur Fade](https://magicui.design/docs/components/blur-fade)                           | 模糊过渡     |
+|      | [Ripple](https://magicui.design/docs/components/ripple)                                 | 涟漪效果     |
+|      | [Dot Pattern](https://magicui.design/docs/components/dot-pattern)                       | 点状背景     |
+|      | [Grid Pattern](https://magicui.design/docs/components/grid-pattern)                     | 网格背景     |
+
+## 业务组件
+
+业务特定组件放在 `apps/web/src/components` 下的专用目录中，每个模块都有自己的目录：
+
+<Files>
+  <Folder name="apps/web/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <Folder name="auth" description="身份验证组件" defaultOpen>
+        <File name="login-form.tsx" />
+
+        <File name="register-form.tsx" />
+
+        <File name="auth-card.tsx" />
+      </Folder>
+
+      <Folder name="blog" description="博客相关组件">
+        <File name="blog-card.tsx" />
+
+        <File name="blog-grid.tsx" />
+
+        <File name="blog-toc.tsx" />
+      </Folder>
+
+      <Folder name="dashboard" description="仪表盘界面组件">
+        <File name="dashboard-sidebar.tsx" />
+
+        <File name="dashboard-header.tsx" />
+
+        <File name="sidebar-main.tsx" />
+      </Folder>
+
+      <Folder name="docs" description="文档组件">
+        <File name="dynamic-codeblock.tsx" />
+
+        <File name="lazy.tsx" />
+
+        <File name="wrapper.tsx" />
+      </Folder>
+
+      <Folder name="layout" description="布局组件">
+        <File name="navbar.tsx" />
+
+        <File name="footer.tsx" />
+
+        <File name="sidebar.tsx" />
+      </Folder>
+
+      <Folder name="shared" description="共享实用组件">
+        <File name="pagination.tsx" />
+
+        <File name="form-error.tsx" />
+
+        <File name="form-success.tsx" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+## 添加自定义组件
+
+向项目添加新组件时：
+
+1. **选择正确的位置**：将组件放在适当的业务模块目录中
+2. **遵循命名约定**：为组件使用描述性的 PascalCase 名称
+3. **保持一致性**：遵循现有的组件结构和模式
+
+添加新组件的示例：
+
+```tsx
+// apps/web/src/components/dashboard/AnalyticsChart.tsx
+import { Card } from "@/components/ui/card"
+import { Chart } from "@/components/ui/chart"
+
+export function AnalyticsChart() {
+  return (
+    <Card>
+      <Chart data={...} />
+    </Card>
+  )
+}
+```
+
+## 参考资料
+
+* [Shadcn/ui](https://ui.shadcn.com)
+* [Magic UI](https://magicui.design)
+* [Animate UI](https://animate-ui.com)
+* [Tailark](https://tailark.com)
+* [21st.dev](https://21st.dev)
+* [Shadcnblocks](https://www.shadcnblocks.com)
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用组件，您可能想要探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="字体" href="/docs/fonts">
+    配置字体
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="自定义页面" href="/docs/pages">
+    自定义页面
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="落地页" href="/docs/landingpage">
+    创建落地页
+  </Card>
+</Cards>

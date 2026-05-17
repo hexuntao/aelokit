@@ -1,0 +1,24 @@
+{
+  "name": "aelokit",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.26.1",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck",
+    "web:dev": "pnpm --filter @repo/web dev",
+    "web:build": "pnpm --filter @repo/web build",
+    "web:content": "pnpm --filter @repo/web content",
+    "web:db:generate": "pnpm --filter @repo/web db:generate",
+    "check:db-shims": "node scripts/check-db-shims.mjs",
+    "check:package-exports": "node scripts/check-package-exports.mjs",
+    "check:env": "node scripts/check-env-example.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.12",
+    "turbo": "^2.5.4"
+  }
+}

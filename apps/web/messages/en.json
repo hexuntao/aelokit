@@ -1,0 +1,989 @@
+{
+  "Metadata": {
+    "name": "AeloKit",
+    "title": "AeloKit - Open-source AI Chat and Agent workspace kit",
+    "description": "AeloKit is an open-source full-stack kit for building self-hostable, production-ready AI chat and agent workspaces."
+  },
+  "Common": {
+    "premium": "Premium",
+    "login": "Log in",
+    "logout": "Log out",
+    "signUp": "Sign up",
+    "language": "Switch language",
+    "mode": {
+      "label": "Toggle mode",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "copy": "Copy",
+    "saving": "Saving...",
+    "save": "Save",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "logoutFailed": "Failed to log out",
+    "table": {
+      "totalRecords": "Total {count} records",
+      "noResults": "No results",
+      "loading": "Loading...",
+      "columns": "Columns",
+      "rowsPerPage": "Rows per page",
+      "page": "Page",
+      "firstPage": "First Page",
+      "lastPage": "Last Page",
+      "nextPage": "Next Page",
+      "previousPage": "Previous Page",
+      "ascending": "Asc",
+      "descending": "Desc",
+      "resetSorting": "Reset",
+      "hideColumn": "Hide",
+      "viewOptions": "View",
+      "toggleColumns": "Toggle columns",
+      "searchColumns": "Search columns...",
+      "noColumns": "No columns found.",
+      "clearFilters": "Clear filters"
+    }
+  },
+  "PricingPage": {
+    "title": "Pricing",
+    "description": "Choose the plan that works best for you",
+    "subtitle": "Choose the plan that works best for you",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "PricingCard": {
+      "freePrice": "$0",
+      "perMonth": "/month",
+      "perYear": "/year",
+      "popular": "Popular",
+      "currentPlan": "Current Plan",
+      "yourCurrentPlan": "Your Current Plan",
+      "getStartedForFree": "Get Started For Free",
+      "getLifetimeAccess": "Get Lifetime Access",
+      "getStarted": "Get Started",
+      "notAvailable": "Not Available",
+      "daysTrial": "{days}-day free trial"
+    },
+    "CheckoutButton": {
+      "loading": "Loading...",
+      "checkoutFailed": "Failed to open checkout page"
+    }
+  },
+  "PricePlans": {
+    "free": {
+      "name": "Starter",
+      "description": "A small workspace for evaluating the product base.",
+      "features": {
+        "feature-1": "One AI workspace",
+        "feature-2": "Starter credits",
+        "feature-3": "Core dashboard and docs",
+        "feature-4": "Community support"
+      },
+      "limits": {
+        "limit-1": "No custom domain",
+        "limit-2": "No custom branding",
+        "limit-3": "No priority support"
+      }
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "For builders shipping a commercial AI workspace.",
+      "features": {
+        "feature-1": "Unlimited workspace projects",
+        "feature-2": "Expanded credit balance",
+        "feature-3": "Advanced analytics surfaces",
+        "feature-4": "Priority support",
+        "feature-5": "Custom domain ready"
+      },
+      "limits": {
+        "limit-1": "No white-label distribution",
+        "limit-2": "No lifetime updates"
+      }
+    },
+    "lifetime": {
+      "name": "Lifetime",
+      "description": "One-time access for long-running product teams.",
+      "features": {
+        "feature-1": "All Pro features",
+        "feature-2": "Larger storage allowance",
+        "feature-3": "Dedicated support path",
+        "feature-4": "Enterprise security posture",
+        "feature-5": "Advanced integrations",
+        "feature-6": "Custom branding ready",
+        "feature-7": "Lifetime updates"
+      }
+    }
+  },
+  "CreditPackages": {
+    "basic": {
+      "name": "Basic",
+      "description": "Starter credits for light AI runs."
+    },
+    "standard": {
+      "name": "Standard",
+      "description": "A balanced package for active workspace usage."
+    },
+    "premium": {
+      "name": "Premium",
+      "description": "More credits for frequent agent and tool runs."
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "High-volume credits for team and client workspaces."
+    }
+  },
+  "NotFoundPage": {
+    "title": "404",
+    "message": "Sorry, the page you are looking for does not exist.",
+    "backToHome": "Back to home"
+  },
+  "ErrorPage": {
+    "title": "Oops! Something went wrong!",
+    "tryAgain": "Try again",
+    "backToHome": "Back to home"
+  },
+  "AboutPage": {
+    "title": "About",
+    "description": "AeloKit is an open-source full-stack kit for shipping self-hostable AI chat and agent workspaces with a production-ready foundation.",
+    "authorName": "AeloKit",
+    "authorBio": "Open-source AI workspace kit",
+    "introduction": "AeloKit gives builders a calm, production-ready foundation for AI chat and agent workspaces: auth, billing, credits, storage, analytics, docs, and a clear path from chat to executable tools.",
+    "talkWithMe": "Talk with us",
+    "followMe": "Follow us on X"
+  },
+  "ChangelogPage": {
+    "title": "Changelog",
+    "description": "Stay up to date with the latest changes in our product",
+    "subtitle": "Stay up to date with the latest changes in our product"
+  },
+  "RoadmapPage": {
+    "title": "Roadmap",
+    "description": "Explore our future plans and upcoming features",
+    "subtitle": "Explore our future plans and upcoming features"
+  },
+  "ContactPage": {
+    "title": "Contact",
+    "description": "We'll help you find the right plan for your business",
+    "subtitle": "We'll help you find the right plan for your business",
+    "form": {
+      "title": "Contact Us",
+      "description": "If you have any questions or feedback, please reach out to our team",
+      "name": "Name",
+      "email": "Email",
+      "message": "Message",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "success": "Message sent successfully",
+      "fail": "Failed to send message",
+      "nameMinLength": "Name must be at least 3 characters",
+      "nameMaxLength": "Name must not exceed 30 characters",
+      "emailValidation": "Please enter a valid email address",
+      "messageMinLength": "Message must be at least 10 characters",
+      "messageMaxLength": "Message must not exceed 500 characters"
+    }
+  },
+  "WaitlistPage": {
+    "title": "Waitlist",
+    "description": "Join our waitlist for the launch of our product",
+    "subtitle": "Join our waitlist for the launch of our product",
+    "form": {
+      "title": "Join Our Waitlist",
+      "description": "We will notify you when we launch our product",
+      "email": "Email",
+      "subscribe": "Subscribe",
+      "subscribing": "Subscribing...",
+      "success": "Subscribed successfully",
+      "fail": "Failed to subscribe",
+      "emailValidation": "Please enter a valid email address"
+    }
+  },
+  "Newsletter": {
+    "title": "Newsletter",
+    "subtitle": "Join the community",
+    "description": "Subscribe for AeloKit updates, release notes, and build notes",
+    "form": {
+      "email": "Email",
+      "subscribe": "Subscribe",
+      "subscribing": "Subscribing...",
+      "success": "Subscribed successfully",
+      "fail": "Failed to subscribe",
+      "emailValidation": "Please enter a valid email address"
+    }
+  },
+  "AuthPage": {
+    "login": {
+      "title": "Login",
+      "welcomeBack": "Welcome back",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Sign In",
+      "signUpHint": "Don't have an account? Sign up",
+      "forgotPassword": "Forgot Password?",
+      "signInWithGoogle": "Sign In with Google",
+      "signInWithGitHub": "Sign In with GitHub",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "or": "Or continue with",
+      "emailRequired": "Please enter your email",
+      "passwordRequired": "Please enter your password",
+      "captchaInvalid": "Captcha verification failed",
+      "captchaError": "Captcha verification error"
+    },
+    "register": {
+      "title": "Register",
+      "createAccount": "Create an account",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "signUp": "Sign Up",
+      "signInHint": "Already have an account? Sign in",
+      "checkEmail": "Please check your email inbox",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "nameRequired": "Please enter your name",
+      "emailRequired": "Please enter your email",
+      "passwordRequired": "Please enter your password",
+      "captchaInvalid": "Captcha verification failed",
+      "captchaError": "Captcha verification error"
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "email": "Email",
+      "send": "Send reset link",
+      "backToLogin": "Back to login",
+      "checkEmail": "Please check your email inbox",
+      "emailRequired": "Please enter your email"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "password": "Password",
+      "reset": "Reset password",
+      "backToLogin": "Back to login",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "minLength": "Password must be at least 8 characters"
+    },
+    "error": {
+      "title": "Oops! Something went wrong!",
+      "tryAgain": "Please try again.",
+      "backToLogin": "Back to login",
+      "checkEmail": "Please check your email inbox"
+    },
+    "common": {
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "byClickingContinue": "By clicking continue, you agree to our ",
+      "and": " and "
+    }
+  },
+  "BlogPage": {
+    "title": "Blog",
+    "description": "Latest news and updates from our team",
+    "subtitle": "Latest news and updates from our team",
+    "author": "Author",
+    "categories": "Categories",
+    "tableOfContents": "Table of Contents",
+    "readTime": "{minutes} min read",
+    "all": "All",
+    "noPostsFound": "No posts found",
+    "allPosts": "All Posts",
+    "morePosts": "More Posts"
+  },
+  "DocsPage": {
+    "toc": "Table of Contents",
+    "search": "Search docs",
+    "lastUpdate": "Last updated on",
+    "searchNoResult": "No results",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "chooseLanguage": "Select language",
+    "title": "Documentation",
+    "homepage": "Homepage",
+    "PageActions": {
+      "copyMarkdown": "Copy Markdown",
+      "open": "Open",
+      "openInChatGPT": "Open in ChatGPT",
+      "openInClaude": "Open in Claude",
+      "queryHint": "Read {url}, I want to ask questions about it."
+    }
+  },
+  "PremiumContent": {
+    "title": "Unlock Premium Content",
+    "description": "Subscribe to our Pro plan to access all premium content and exclusive content.",
+    "upgradeCta": "Upgrade Now",
+    "benefit1": "All premium content",
+    "benefit2": "Exclusive content",
+    "benefit3": "Cancel anytime",
+    "signIn": "Sign In",
+    "loginRequired": "Sign in to continue reading",
+    "loginDescription": "This is premium content. Sign in to your account to access the full content.",
+    "checkingAccess": "Checking access...",
+    "loadingContent": "Loading full content..."
+  },
+  "Marketing": {
+    "navbar": {
+      "features": {
+        "title": "Features"
+      },
+      "pricing": {
+        "title": "Pricing"
+      },
+      "blog": {
+        "title": "Blog"
+      },
+      "docs": {
+        "title": "Docs"
+      },
+      "pages": {
+        "title": "Pages",
+        "items": {
+          "about": {
+            "title": "About",
+            "description": "Learn more about our company, mission, and values"
+          },
+          "contact": {
+            "title": "Contact",
+            "description": "Get in touch with our team for support or inquiries"
+          },
+          "waitlist": {
+            "title": "Waitlist",
+            "description": "Join our waitlist for latest news and updates"
+          },
+          "changelog": {
+            "title": "Changelog",
+            "description": "See the latest updates to our products"
+          },
+          "roadmap": {
+            "title": "Roadmap",
+            "description": "Explore our future plans and upcoming features"
+          },
+          "cookiePolicy": {
+            "title": "Cookie Policy",
+            "description": "How we use the cookies on our website"
+          },
+          "privacyPolicy": {
+            "title": "Privacy Policy",
+            "description": "How we protect and handle your data"
+          },
+          "termsOfService": {
+            "title": "Terms of Service",
+            "description": "The legal agreement between you and our company"
+          }
+        }
+      }
+    },
+    "footer": {
+      "tagline": "Open-source full-stack kit for self-hostable AI chat and agent workspaces.",
+      "product": {
+        "title": "Product",
+        "items": {
+          "features": "Features",
+          "pricing": "Pricing",
+          "faq": "FAQ"
+        }
+      },
+      "resources": {
+        "title": "Resources",
+        "items": {
+          "blog": "Blog",
+          "docs": "Documentation",
+          "changelog": "Changelog",
+          "roadmap": "Roadmap"
+        }
+      },
+      "company": {
+        "title": "Company",
+        "items": {
+          "about": "About",
+          "contact": "Contact",
+          "waitlist": "Waitlist"
+        }
+      },
+      "legal": {
+        "title": "Legal",
+        "items": {
+          "cookiePolicy": "Cookie Policy",
+          "privacyPolicy": "Privacy Policy",
+          "termsOfService": "Terms of Service"
+        }
+      }
+    },
+    "avatar": {
+      "dashboard": "Dashboard",
+      "billing": "Billing",
+      "credits": "Credits",
+      "settings": "Settings"
+    }
+  },
+  "Dashboard": {
+    "dashboard": {
+      "title": "Workspace"
+    },
+    "admin": {
+      "title": "Admin",
+      "users": {
+        "title": "Users",
+        "fakeData": "Note: Faked data for demonstration, some features are disabled",
+        "error": "Failed to get users",
+        "search": "Search users...",
+        "noResults": "No users found",
+        "columns": {
+          "columns": "Columns",
+          "name": "Name",
+          "email": "Email",
+          "role": "Role",
+          "createdAt": "Created At",
+          "customerId": "Customer ID",
+          "status": "Status",
+          "banReason": "Ban Reason",
+          "banExpires": "Ban Expires"
+        },
+        "admin": "Admin",
+        "user": "User",
+        "email": {
+          "verified": "Email Verified",
+          "unverified": "Email Unverified"
+        },
+        "emailCopied": "Email copied to clipboard",
+        "banned": "Banned",
+        "active": "Active",
+        "inactive": "Inactive",
+        "clearSearch": "Clear search",
+        "joined": "Joined at",
+        "updated": "Updated at",
+        "ban": {
+          "reason": "Ban Reason",
+          "reasonPlaceholder": "Enter the reason for banning this user",
+          "defaultReason": "Spamming",
+          "never": "Never",
+          "expires": "Ban Expires",
+          "selectDate": "Select Date",
+          "button": "Ban User",
+          "success": "User has been banned",
+          "error": "Failed to ban user"
+        },
+        "unban": {
+          "button": "Unban User",
+          "success": "User has been unbanned",
+          "error": "Failed to unban user"
+        },
+        "close": "Close"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "profile": {
+        "title": "Profile",
+        "description": "Manage your AeloKit workspace profile",
+        "avatar": {
+          "title": "Avatar",
+          "description": "Click upload button to upload a custom one",
+          "recommendation": "An avatar is optional but strongly recommended",
+          "uploading": "Uploading...",
+          "uploadAvatar": "Upload Avatar",
+          "success": "Avatar updated successfully",
+          "fail": "Failed to update avatar"
+        },
+        "name": {
+          "title": "Name",
+          "description": "Please enter your display name",
+          "placeholder": "Enter your name",
+          "minLength": "Please use 3 characters at minimum",
+          "maxLength": "Please use 30 characters at maximum",
+          "hint": "Please use 3-30 characters for your name",
+          "success": "Name updated successfully",
+          "fail": "Failed to update name",
+          "saving": "Saving...",
+          "save": "Save"
+        }
+      },
+      "billing": {
+        "title": "Billing",
+        "description": "Manage subscription and billing for your AI workspace",
+        "status": {
+          "active": "Active",
+          "trial": "Trial",
+          "free": "Free",
+          "lifetime": "Lifetime"
+        },
+        "interval": {
+          "month": "month",
+          "year": "year",
+          "oneTime": "one-time"
+        },
+        "currentPlan": {
+          "title": "Current Plan",
+          "description": "Your current plan details",
+          "noPlan": "You have no active plan"
+        },
+        "CustomerPortalButton": {
+          "loading": "Loading...",
+          "createCustomerPortalFailed": "Failed to open Stripe customer portal"
+        },
+        "price": "Price:",
+        "periodStartDate": "Period start date:",
+        "periodEndDate": "Period end date:",
+        "trialEnds": "Trial ends:",
+        "freePlanMessage": "You are currently on the free plan with limited features",
+        "lifetimeMessage": "You have lifetime access to all premium features",
+        "manageSubscription": "Manage Subscription and Billing",
+        "manageBilling": "Manage Billing",
+        "upgradePlan": "Upgrade Plan",
+        "retry": "Retry",
+        "errorMessage": "Failed to get data",
+        "paymentSuccess": "Payment success"
+      },
+      "payment": {
+        "processing": {
+          "title": "Processing Payment",
+          "description": "Please wait while we confirm your payment..."
+        },
+        "success": {
+          "title": "Payment Success",
+          "description": "Redirecting automatically..."
+        },
+        "failed": {
+          "title": "Payment Failed",
+          "description": "There was an issue processing your payment."
+        },
+        "timeout": {
+          "title": "Processing Timeout",
+          "description": "Payment processing is taking longer than expected."
+        },
+        "retry": "Retry"
+      },
+      "credits": {
+        "title": "Credits",
+        "description": "Manage usage credits for AI runs and workspace actions",
+        "tabs": {
+          "balance": "Balance",
+          "transactions": "Transactions"
+        },
+        "balance": {
+          "title": "Credit Balance",
+          "description": "Your credit balance",
+          "credits": "Credits",
+          "creditsDescription": "You have {credits} credits",
+          "creditsExpired": "Credits expired",
+          "creditsAdded": "Credits have been added to your account",
+          "viewTransactions": "View Credit Transactions",
+          "retry": "Retry",
+          "expiringCredits": "{credits} credits expiring in the next {days} days"
+        },
+        "packages": {
+          "title": "Credit Packages",
+          "description": "Purchase additional credits for AI runs and tools",
+          "purchase": "Purchase",
+          "processing": "Processing...",
+          "popular": "Popular",
+          "completePurchase": "Complete Your Purchase",
+          "failedToFetchCredits": "Failed to fetch credits",
+          "failedToCreatePaymentIntent": "Failed to create payment intent",
+          "failedToInitiatePayment": "Failed to initiate payment",
+          "cancel": "Cancel",
+          "purchaseFailed": "Purchase credits failed",
+          "checkoutFailed": "Failed to create checkout session",
+          "loading": "Loading...",
+          "pay": "Pay"
+        },
+        "transactions": {
+          "title": "Credit Transactions",
+          "error": "Failed to get credit transactions",
+          "search": "Search credit transactions...",
+          "clearSearch": "Clear search",
+          "paymentIdCopied": "Payment ID copied to clipboard",
+          "noResults": "No results found",
+          "columns": {
+            "columns": "Columns",
+            "id": "ID",
+            "type": "Type",
+            "description": "Description",
+            "amount": "Amount",
+            "remainingAmount": "Remaining Amount",
+            "paymentId": "Payment ID",
+            "expirationDate": "Expiration Date",
+            "expirationDateProcessedAt": "Expiration Processed At",
+            "createdAt": "Created At",
+            "updatedAt": "Updated At"
+          },
+          "types": {
+            "MONTHLY_REFRESH": "Monthly Refresh",
+            "REGISTER_GIFT": "Register Gift",
+            "PURCHASE": "Purchased Credits",
+            "USAGE": "Consumed Credits",
+            "EXPIRE": "Expired Credits",
+            "SUBSCRIPTION_RENEWAL": "Subscription Renewal",
+            "LIFETIME_MONTHLY": "Lifetime Monthly"
+          },
+          "detailViewer": {
+            "title": "Credit Transaction Detail",
+            "close": "Close"
+          },
+          "expired": "Expired",
+          "never": "Never"
+        }
+      },
+      "notification": {
+        "title": "Notification",
+        "description": "Manage your notification preferences",
+        "newsletter": {
+          "title": "Newsletter Subscription",
+          "description": "Manage your newsletter subscription preferences",
+          "label": "Subscribe to newsletter",
+          "hint": "You can change your subscription preferences at any time",
+          "emailRequired": "Email is required to subscribe to the newsletter",
+          "subscribeSuccess": "Successfully subscribed to the newsletter",
+          "subscribeFail": "Failed to subscribe to the newsletter",
+          "unsubscribeSuccess": "Successfully unsubscribed from the newsletter",
+          "unsubscribeFail": "Failed to unsubscribe from the newsletter",
+          "error": "An error occurred while updating your subscription"
+        }
+      },
+      "security": {
+        "title": "Security",
+        "description": "Manage your security settings",
+        "updatePassword": {
+          "title": "Change Password",
+          "description": "Enter your current password and a new password",
+          "currentPassword": "Current Password",
+          "currentRequired": "Current password is required",
+          "newPassword": "New Password",
+          "newMinLength": "Password must be at least 8 characters",
+          "hint": "Please use at least 8 characters for password",
+          "showPassword": "Show password",
+          "hidePassword": "Hide password",
+          "success": "Password updated successfully",
+          "fail": "Failed to update password",
+          "saving": "Saving...",
+          "save": "Save"
+        },
+        "resetPassword": {
+          "title": "Reset Password",
+          "description": "Reset password to enable email login",
+          "info": "Resetting your password will allow you to sign in using your email and password in addition to your social login methods. You will receive an email with instructions to reset your password",
+          "button": "Reset Password"
+        },
+        "deleteAccount": {
+          "title": "Delete Account",
+          "description": "Permanently remove your account and all of its contents",
+          "warning": "This action is not reversible, so please continue with caution",
+          "button": "Delete Account",
+          "confirmTitle": "Delete Account",
+          "confirmDescription": "Are you sure you want to delete your account? This action cannot be undone.",
+          "confirm": "Delete",
+          "cancel": "Cancel",
+          "deleting": "Deleting...",
+          "success": "Account deleted successfully",
+          "fail": "Failed to delete account"
+        }
+      },
+      "apiKeys": {
+        "title": "API Keys",
+        "description": "Manage API keys for workspace automation and tools",
+        "createButton": "Create API Key",
+        "createDialogTitle": "Create New API Key",
+        "createDialogDescription": "Give your API key a name to identify it later",
+        "keyNameLabel": "Key Name",
+        "keyNamePlaceholder": "Please enter a name for your API key",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating...",
+        "noResults": "No API keys found",
+        "createSuccess": "API key created successfully",
+        "createError": "Failed to create API key",
+        "deleteSuccess": "API key deleted successfully",
+        "deleteError": "Failed to delete API key",
+        "never": "Never",
+        "delete": "Delete",
+        "done": "Done",
+        "newKeyDialogTitle": "Your New API Key",
+        "newKeyDialogDescription": "Please copy and save this key now. You won't be able to see it again!",
+        "columns": {
+          "name": "Name",
+          "key": "Key",
+          "createdAt": "Created At",
+          "expiresAt": "Expires At",
+          "actions": "Actions"
+        }
+      }
+    },
+    "upgrade": {
+      "title": "Add commercial controls",
+      "description": "Plans and credits are ready when your AI workspace needs usage limits.",
+      "button": "Configure billing"
+    }
+  },
+  "Mail": {
+    "common": {
+      "team": "{name} Team",
+      "copyright": "©️ {year} All Rights Reserved."
+    },
+    "verifyEmail": {
+      "title": "Hi, {name}.",
+      "body": "Please click the link below to verify your email address.",
+      "confirmEmail": "Confirm email",
+      "subject": "Verify your email"
+    },
+    "forgotPassword": {
+      "title": "Hi, {name}.",
+      "body": "Please click the link below to reset your password.",
+      "resetPassword": "Reset password",
+      "subject": "Reset your password"
+    },
+    "subscribeNewsletter": {
+      "body": "Thank you for subscribing to the newsletter. We will keep you updated with the latest news and updates.",
+      "subject": "Thanks for subscribing"
+    },
+    "contactMessage": {
+      "name": "Name: {name}",
+      "email": "Email: {email}",
+      "message": "Message: {message}",
+      "subject": "Contact Message from Website"
+    }
+  },
+  "HomePage": {
+    "title": "AeloKit",
+    "description": "Open-source full-stack kit for self-hostable AI chat and agent workspaces.",
+    "hero": {
+      "title": "AeloKit",
+      "description": "From boilerplate to production—ship your AI workspace fast.",
+      "introduction": "Open-source AI Chat / Agent workspace kit",
+      "primary": "Start Building",
+      "secondary": "Open Dashboard"
+    },
+    "logocloud": {
+      "title": "Designed to sit cleanly beside the tools teams already use"
+    },
+    "integration": {
+      "title": "Agent-ready by default",
+      "subtitle": "Composable model and tool surfaces",
+      "description": "Organize chat, tools, context, billing, and observability paths before your product logic gets tangled.",
+      "learnMore": "Learn more",
+      "items": {
+        "item-1": {
+          "title": "Model adapters",
+          "description": "Keep model access replaceable so OpenAI-compatible providers can evolve without rewriting the workspace."
+        },
+        "item-2": {
+          "title": "Tool execution",
+          "description": "Shape tools and function calls as first-class product capabilities instead of one-off handlers."
+        },
+        "item-3": {
+          "title": "Workspace UI",
+          "description": "Use restrained, readable blocks for conversations, references, attachments, and account flows."
+        },
+        "item-4": {
+          "title": "Developer workflow",
+          "description": "Monorepo boundaries, typed config, docs, and commands are ready for commercial customization."
+        },
+        "item-5": {
+          "title": "Knowledge surfaces",
+          "description": "Leave room for citations, files, docs, and retrieval workflows as the product matures."
+        },
+        "item-6": {
+          "title": "Runtime control",
+          "description": "Credits, plans, API keys, and analytics create a foundation for cost and access control."
+        }
+      }
+    },
+    "integration2": {
+      "title": "From chat to executable workspace",
+      "description": "AeloKit keeps the product surface calm while the underlying code is ready for tools, agents, billing, storage, and deployment.",
+      "primaryButton": "Start Building",
+      "secondaryButton": "View Docs"
+    },
+    "features": {
+      "title": "Product foundation",
+      "subtitle": "The generic engineering is already handled",
+      "description": "AeloKit packages the baseline a commercial AI workspace needs, so teams can focus on their differentiated agent behavior.",
+      "items": {
+        "item-1": {
+          "title": "Production base layer",
+          "description": "Authentication, account flows, dashboard structure, configuration, environment validation, and deployment conventions are in place."
+        },
+        "item-2": {
+          "title": "Agent-ready organization",
+          "description": "Code and UI are shaped around extensible chat, tools, context, and future evaluation or observability layers."
+        },
+        "item-3": {
+          "title": "Commercial primitives",
+          "description": "Plans, checkout, credits, email, newsletter, storage, notifications, and analytics remain available for real products."
+        },
+        "item-4": {
+          "title": "Self-hostable path",
+          "description": "The stack stays explicit and portable: Next.js, PostgreSQL, Drizzle, Better Auth, and workspace packages with clear ownership."
+        }
+      }
+    },
+    "features2": {
+      "title": "OpenAI-style product feel",
+      "subtitle": "Calm, legible, action-oriented interfaces",
+      "description": "AeloKit favors whitespace, hierarchy, structured output, and responsive layouts that keep attention on the conversation and next action.",
+      "feature-1": "Streaming-first chat surfaces",
+      "feature-2": "Tool and function-call ready flows",
+      "feature-3": "References, attachments, and structured messages",
+      "feature-4": "Session, billing, and access-control scaffolding"
+    },
+    "features3": {
+      "title": "What is included",
+      "subtitle": "A full-stack kit, not a blank starter",
+      "description": "Use the pieces as-is, replace the provider layer, or keep only the foundation your AI product needs.",
+      "items": {
+        "item-1": {
+          "title": "Auth and accounts",
+          "description": "Better Auth integration, profile settings, security flows, and social login wiring."
+        },
+        "item-2": {
+          "title": "Database ownership",
+          "description": "Drizzle schema and package boundaries that keep persistence logic out of app-level shims."
+        },
+        "item-3": {
+          "title": "Billing and credits",
+          "description": "Subscriptions, lifetime plans, credit packages, and transaction views for usage-based AI products."
+        },
+        "item-4": {
+          "title": "Content and docs",
+          "description": "Marketing pages, blog, changelog, roadmap, and documentation surfaces are already wired."
+        },
+        "item-5": {
+          "title": "Config and env",
+          "description": "Typed website config and shared environment validation for predictable deployment behavior."
+        },
+        "item-6": {
+          "title": "Signals and operations",
+          "description": "Analytics, notifications, storage, newsletter, and transactional email packages are ready to connect."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": "Commercial scaffolding included",
+      "description": "Keep the built-in plans for your hosted product or adapt them for self-hosted distribution."
+    },
+    "faqs": {
+      "title": "FAQ",
+      "subtitle": "Practical questions",
+      "items": {
+        "item-1": {
+          "question": "Is AeloKit self-hostable?",
+          "answer": "Yes. It is designed around explicit infrastructure choices and environment configuration so teams can self-host or deploy to managed platforms."
+        },
+        "item-2": {
+          "question": "Does it include an AI chat product?",
+          "answer": "It provides the full-stack foundation and product surfaces for AI chat and agent workspaces. You can add or replace the model and tool behavior for your use case."
+        },
+        "item-3": {
+          "question": "Can I use it commercially?",
+          "answer": "The project is prepared as an open-source commercial foundation. Review the License section before shipping your own distribution."
+        },
+        "item-4": {
+          "question": "Can I replace the model provider?",
+          "answer": "Yes. AeloKit is positioned around replaceable model access and composable tool execution rather than a single hard-coded provider."
+        },
+        "item-5": {
+          "question": "What should I customize first?",
+          "answer": "Start with brand config, environment values, model/tool behavior, pricing, and the workspace flows that make your product specific."
+        }
+      }
+    },
+    "testimonials": {
+      "title": "Built for focused AI teams",
+      "subtitle": "Use cases AeloKit is meant to support",
+      "items": {
+        "item-1": {
+          "name": "Solo builders",
+          "role": "Launch a paid AI workspace",
+          "image": "https://randomuser.me/api/portraits/men/1.jpg",
+          "quote": "Start from a working product base instead of stitching together auth, billing, storage, and chat structure from scratch."
+        },
+        "item-2": {
+          "name": "AI agencies",
+          "role": "Deliver client workspaces",
+          "image": "https://randomuser.me/api/portraits/men/6.jpg",
+          "quote": "Reuse the same reliable foundation while customizing tools, prompts, permissions, and deployment for each client."
+        },
+        "item-3": {
+          "name": "Internal platform teams",
+          "role": "Prototype agent workflows",
+          "image": "https://randomuser.me/api/portraits/men/7.jpg",
+          "quote": "Give teams a coherent place to test chat, tools, files, and operational controls before committing to a larger platform."
+        },
+        "item-4": {
+          "name": "Open-source maintainers",
+          "role": "Publish a commercial-ready kit",
+          "image": "https://randomuser.me/api/portraits/men/8.jpg",
+          "quote": "Keep the architecture understandable and the product surface polished enough for contributors and adopters."
+        },
+        "item-5": {
+          "name": "Product engineers",
+          "role": "Own the full stack",
+          "image": "https://randomuser.me/api/portraits/men/4.jpg",
+          "quote": "Work inside clear package boundaries while keeping the application deployable, typed, and easy to inspect."
+        },
+        "item-6": {
+          "name": "Founding teams",
+          "role": "Validate AI features",
+          "image": "https://randomuser.me/api/portraits/men/2.jpg",
+          "quote": "Ship the workspace shell early, then iterate on the agent behavior that actually differentiates the product."
+        },
+        "item-7": {
+          "name": "SaaS operators",
+          "role": "Add usage controls",
+          "image": "https://randomuser.me/api/portraits/men/5.jpg",
+          "quote": "Use credits, billing, and analytics as the starting point for cost-aware AI product operations."
+        },
+        "item-8": {
+          "name": "Developer tool makers",
+          "role": "Embed executable workflows",
+          "image": "https://randomuser.me/api/portraits/men/9.jpg",
+          "quote": "Move from conversational UI toward tools and actions without rethinking the whole application shell."
+        },
+        "item-9": {
+          "name": "Consultants",
+          "role": "Package repeatable delivery",
+          "image": "https://randomuser.me/api/portraits/men/10.jpg",
+          "quote": "Keep common infrastructure consistent and spend client time on domain-specific workflows."
+        },
+        "item-10": {
+          "name": "AI researchers",
+          "role": "Demo applied systems",
+          "image": "https://randomuser.me/api/portraits/men/11.jpg",
+          "quote": "Present experiments inside a credible product frame with accounts, docs, and deployment already considered."
+        },
+        "item-11": {
+          "name": "Enterprise builders",
+          "role": "Prepare for isolation",
+          "image": "https://randomuser.me/api/portraits/men/12.jpg",
+          "quote": "The foundation leaves room for permissions, tenant boundaries, evaluation, and observability as requirements mature."
+        },
+        "item-12": {
+          "name": "Design-minded teams",
+          "role": "Keep the interface quiet",
+          "image": "https://randomuser.me/api/portraits/men/13.jpg",
+          "quote": "A restrained visual language helps users focus on answers, context, citations, and action."
+        }
+      }
+    },
+    "stats": {
+      "title": "Foundation metrics",
+      "subtitle": "A complete product base",
+      "description": "The kit keeps the baseline broad while leaving agent behavior open to your product.",
+      "items": {
+        "item-1": {
+          "title": "Workspace packages"
+        },
+        "item-2": {
+          "title": "Product surfaces"
+        },
+        "item-3": {
+          "title": "Deployment paths"
+        }
+      }
+    },
+    "calltoaction": {
+      "title": "Build the workspace, then make it yours",
+      "description": "Use AeloKit as the calm starting point for a self-hostable AI Chat / Agent product.",
+      "primaryButton": "Start Building",
+      "secondaryButton": "View Docs"
+    }
+  }
+}

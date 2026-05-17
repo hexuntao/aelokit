@@ -1,0 +1,215 @@
+---
+title: 存储
+description: 学习如何设置和使用云存储进行文件上传和媒体处理
+icon: HardDrive
+---
+
+AeloKit 使用兼容 Amazon S3 的存储服务（如 [Cloudflare R2](https://www.cloudflare.com/products/r2/)）进行文件存储。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 创建 Cloudflare R2 存储桶（推荐）
+
+    1. 在 [cloudflare.com](https://cloudflare.com) 创建 Cloudflare 账户
+    2. 创建新的 R2 存储桶：
+       * 选择全局唯一的存储桶名称（例如 `your-project-name`）
+       * 选择靠近目标受众的区域
+       * 根据您的需要设置其他选项
+  </Step>
+
+  <Step>
+    ### 启用公共访问
+
+    允许对存储桶的公共访问：
+
+    * `Settings` > `Public Development URL`，点击 `启用`
+    * 将公共访问 URL 保存为 `STORAGE_PUBLIC_URL`
+    * 为存储桶的公共访问设置自定义域名 (推荐使用自定义域名以提高安全性)
+  </Step>
+
+  <Step>
+    ### 创建 API 令牌
+
+    创建新的 API 令牌：
+
+    * `Storage & databases` > `R2 object storage` > `API Tokens` > `Manage`，点击 `Create User API Token`
+    * 将权限设置为对存储桶的 `Object Read & Write`
+    * 创建 API 令牌，获取 `Access Key ID` 和 `Secret Access Key`
+  </Step>
+
+  <Step>
+    ### 设置环境变量
+
+    设置以下环境变量：
+
+    ```bash title=".env"
+    STORAGE_REGION=auto
+    STORAGE_BUCKET_NAME=YOUR-BUCKET-NAME
+    STORAGE_ACCESS_KEY_ID=YOUR-ACCESS-KEY
+    STORAGE_SECRET_ACCESS_KEY=YOUR-SECRET-KEY
+    STORAGE_ENDPOINT=https://xxx.r2.cloudflarestorage.com
+    STORAGE_PUBLIC_URL=https://your-custom-domain.com
+    ```
+  </Step>
+</Steps>
+
+### S3 兼容的替代方案
+
+AeloKit 与任何 S3 兼容的存储服务兼容，包括：
+
+* **[Amazon S3](https://aws.amazon.com/s3/)** - 亚马逊的存储服务
+* **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html)** - 非常经济实惠的选择
+* **[Google Cloud Storage](https://cloud.google.com/storage)** - 具有 Google 基础设施的高性能
+* **[Digital Ocean Spaces](https://www.digitalocean.com/products/spaces/)** - 简单定价并与 DigitalOcean 基础设施集成
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#storage">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 使用方法
+
+### 基本文件操作
+
+AeloKit 为常见文件操作提供简单的实用程序：
+
+```tsx
+import { uploadFile, deleteFile } from '@/storage';
+
+// 将文件上传到存储
+const { url, key } = await uploadFile(
+  fileBuffer,
+  'original-filename.jpg',
+  'image/jpeg',
+  'uploads/images'
+);
+
+// 从存储中删除文件
+await deleteFile(key);
+```
+
+### 浏览器端上传文件
+
+要直接从浏览器上传文件，请使用 `uploadFileFromBrowser` 函数：
+
+```tsx
+'use client';
+
+import { uploadFileFromBrowser } from '@/storage/client';
+
+// 在您的 React 组件中
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+
+  try {
+    const { url, key } = await uploadFileFromBrowser(file, 'uploads/images');
+    console.log('文件已上传：', url);
+  } catch (error) {
+    console.error('上传失败：', error);
+  }
+}
+```
+
+## 存储系统架构
+
+<Files>
+  <Folder name="packages/storage/src" defaultOpen>
+    <Folder name="config" defaultOpen>
+      <File name="storage-config.ts" />
+    </Folder>
+    <Folder name="providers" defaultOpen>
+      <File name="s3.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## 扩展新的存储提供商
+
+AeloKit 支持扩展新的存储服务提供商：
+
+1. 在 `packages/storage/src/providers` 目录中创建新的文件
+
+2. 实现 `StorageProvider` 接口：
+
+```tsx title="packages/storage/src/providers/custom-provider.ts"
+import {
+  PresignedUploadUrlParams,
+  StorageProvider,
+  UploadFileParams,
+  UploadFileResult
+} from '../types';
+
+export class CustomStorageProvider implements StorageProvider {
+  constructor() {
+    // 初始化您的存储服务提供商
+  }
+
+  public getProviderName(): string {
+    return 'CustomProvider';
+  }
+
+  async uploadFile(params: UploadFileParams): Promise<UploadFileResult> {
+    // 上传文件的实现
+    return { url: 'https://example.com/file.jpg', key: 'file.jpg' };
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    // 删除文件的实现
+  }
+}
+```
+
+3. 在 `registry.ts` 中注册新的提供商：
+
+```tsx title="packages/storage/src/registry.ts"
+import { CustomStorageProvider } from './providers/custom-provider';
+
+export function getStorageProvider(): StorageProvider {
+  const provider = websiteConfig.storage.provider;
+  
+  switch (provider) {
+    case 's3':
+      return new S3Provider();
+    case 'custom':
+      return new CustomStorageProvider();
+    default:
+      throw new Error(`不支持的存储提供商: ${provider}`);
+  }
+}
+```
+
+## 参考资料
+
+* [Cloudflare R2 文档](https://developers.cloudflare.com/r2/)
+* [Amazon S3 文档](https://docs.aws.amazon.com/s3/)
+* [s3mini 库文档](https://github.com/example/s3mini)
+
+## 下一步
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="支付" href="/docs/payment">
+    配置网站支付功能
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

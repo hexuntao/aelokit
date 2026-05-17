@@ -1,0 +1,169 @@
+---
+title: 验证码
+description: 学习如何在 AeloKit 中设置和使用验证码
+icon: Shield
+---
+
+AeloKit 支持使用 [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) 作为验证码服务，这允许您保护您的网站免受攻击和滥用。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 登录 Cloudflare
+
+    登录 [Cloudflare 仪表盘](https://dash.cloudflare.com/) 并选择您的账户。
+  </Step>
+
+  <Step>
+    ### 创建 Turnstile 小部件
+
+    点击 `Turnstile`。选择 `Add widget` 并填写网站名称和您网站的主机名（例如 `YOUR-DOMAIN.com` 或 `localhost`）。
+  </Step>
+
+  <Step>
+    ### 配置小部件模式
+
+    将小部件模式选择为 `Managed`。选择预清除支持（可选）。
+  </Step>
+
+  <Step>
+    ### 设置环境变量
+
+    复制您的 `Site Key` 和 `Secret Key`，并将其粘贴到环境变量文件中。
+
+    ```bash title=".env"
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=YOUR-SITE-KEY
+    TURNSTILE_SECRET_KEY=YOUR-SECRET-KEY
+    ```
+  </Step>
+
+  <Step>
+    ### 在配置中启用验证码
+
+    在 `packages/config/src/website.ts` 文件中设置 `enableTurnstileCaptcha` 为 `true`（默认是 `false`）
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      features: {
+        enableTurnstileCaptcha: true,
+      },
+    }
+    ```
+  </Step>
+</Steps>
+
+有关更多详细信息，请参阅 [Cloudflare Turnstile 文档](https://developers.cloudflare.com/turnstile/get-started/) 和 [React Turnstile 文档](https://docs.page/marsidev/react-turnstile)。
+
+<Callout type="warn">
+  如果您正在设置环境，现在您可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#captcha">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 验证码系统架构
+
+<Files>
+  <Folder name="apps/web/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <Folder name="shared" defaultOpen>
+        <File name="captcha.tsx" />
+      </Folder>
+    </Folder>
+
+    <Folder name="lib" defaultOpen>
+      <File name="captcha.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+* `components/shared/captcha.tsx`：验证码组件
+* `lib/captcha.ts`：用于校验验证码的工具库
+
+## 使用验证码
+
+验证码组件目前仅在注册和登录表单中使用，但您也可以复用相关代码，在其他地方使用它。
+
+### 在表单中使用
+
+```tsx title="apps/web/src/components/auth/register-form.tsx"
+import { Captcha } from '@/components/shared/captcha';
+
+export default function RegisterForm() {
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const turnstileEnabled = websiteConfig.features.enableTurnstileCaptcha;
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* ...其他表单字段 */}
+        <Captcha
+          onSuccess={(token) => setCaptchaToken(token)}
+          validationError={form.formState.errors.captchaToken?.message}
+        />
+        <Button
+          disabled={isPending || (turnstileEnabled && !captchaToken)}
+          type="submit"
+          className="w-full"
+        >
+          {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+          <span>注册</span>
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+### 服务端验证
+
+在 Server Action 中验证验证码：
+
+```tsx title="apps/web/src/actions/register.ts"
+import { verifyCaptcha } from '@/lib/captcha';
+
+export async function register(formData: FormData) {
+  const captchaToken = formData.get('captchaToken') as string;
+  
+  // 验证验证码
+  const isValid = await verifyCaptcha(captchaToken);
+  if (!isValid) {
+    return { error: '验证码验证失败' };
+  }
+  
+  // 继续处理注册逻辑
+  // ...
+}
+```
+
+## 参考资料
+
+* [Cloudflare Turnstile 文档](https://developers.cloudflare.com/turnstile/get-started/)
+* [React Turnstile 依赖库文档](https://docs.page/marsidev/react-turnstile)
+* [将 Cloudflare Turnstile 添加到 Next.js](https://developers.cloudflare.com/turnstile/get-started/next-js/)
+
+## 下一步
+
+现在您已经了解了如何在 AeloKit 中开启验证码，您可能想要探索这些相关功能：
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="电子邮件" href="/docs/email">
+    配置电子邮件服务
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    设置用户身份验证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="统计分析" href="/docs/analytics">
+    配置统计分析服务
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="存储" href="/docs/storage">
+    配置存储服务
+  </Card>
+</Cards>

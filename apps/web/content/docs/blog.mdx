@@ -1,0 +1,179 @@
+---
+title: Blog
+description: Learn how to create and manage blog posts using the built-in blog system
+icon: PenLine
+---
+
+AeloKit includes a fully-featured blog system with support for MDX, categories, tags, and internationalization.
+
+## Core Features
+
+* **MDX Support**: Use React components in blog posts
+* **Categories and Tags**: Organize articles by topic
+* **Reading Time**: Automatically calculate reading time
+* **Related Posts**: Display related content recommendations
+* **SEO Optimization**: Automatically generate metadata
+* **Internationalization**: Multi-language blog support
+* **RSS Feed**: Automatically generate RSS feed
+
+## Blog Structure
+
+Blog content is located in the `apps/web/content/blog` directory:
+
+<Files>
+  <Folder name="apps/web/content/blog" defaultOpen>
+    <File name="getting-started.mdx" />
+    <File name="getting-started.zh.mdx" />
+    <File name="another-post.mdx" />
+  </Folder>
+</Files>
+
+### Blog Metadata
+
+Each blog post starts with frontmatter:
+
+```mdx
+---
+title: Article Title
+description: Article description
+date: 2024-01-15
+image: /images/blog/cover.jpg
+authors:
+  - name: Author Name
+    username: author-username
+categories:
+  - Tutorial
+tags:
+  - nextjs
+  - react
+---
+```
+
+## Creating Blog Posts
+
+1. Create a new `.mdx` file in the `apps/web/content/blog` directory
+2. Add frontmatter metadata
+3. Write the article content
+4. Save the file
+
+### Article Template
+
+```mdx
+---
+title: My New Article
+description: This article introduces how to use new features
+date: 2024-01-20
+image: /images/blog/new-feature.jpg
+authors:
+  - name: John Doe
+    username: johndoe
+categories:
+  - Tutorial
+tags:
+  - feature
+  - guide
+---
+
+## Introduction
+
+This is the introduction section of the article.
+
+## Main Content
+
+The main content goes here.
+
+## Summary
+
+The summary section.
+```
+
+## Internationalization
+
+The blog supports multi-language articles:
+
+* `article.mdx` - English version
+* `article.zh.mdx` - Chinese version
+
+### Creating Translations
+
+1. Copy the existing article file
+2. Add a language suffix (e.g., `.zh.mdx`)
+3. Translate the content
+4. Maintain the same frontmatter structure
+
+## Blog Configuration
+
+Configure the blog in `packages/config/src/website.ts`:
+
+```ts
+blog: {
+  enable: true,
+  paginationSize: 6,
+  relatedPostsSize: 3,
+}
+```
+
+### Configuration Options
+
+| Property | Description | Default |
+| --- | --- | --- |
+| `enable` | Whether to enable the blog | `true` |
+| `paginationSize` | Number of articles per page | `6` |
+| `relatedPostsSize` | Number of related articles | `3` |
+
+## Blog Routes
+
+The blog system provides the following routes:
+
+| Route | Description |
+| --- | --- |
+| `/blog` | Blog post list |
+| `/blog/[slug]` | Single article page |
+| `/blog/category/[category]` | Category page |
+| `/blog/tag/[tag]` | Tag page |
+| `/feed.xml` | RSS feed |
+
+## Custom Components
+
+Blog posts can use custom React components:
+
+```mdx
+import { Callout } from 'nextra/components';
+
+<Callout type="warning">
+  This is a warning notice.
+</Callout>
+```
+
+## Best Practices
+
+1. **Use Cover Images**: Add a cover image for each article
+2. **Add Categories and Tags**: Help users discover content
+3. **Stay Consistent**: Use a consistent writing style
+4. **Update Regularly**: Keep the blog active
+5. **SEO Optimization**: Use descriptive titles and descriptions
+
+## References
+
+* [MDX Documentation](https://mdxjs.com/docs/)
+* [Contentlayer Documentation](https://contentlayer.dev/)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<BookOpen className="text-blue-500" />} title="Docs" href="/docs/docs">
+    Configure documentation site
+  </Card>
+
+  <Card icon={<Layout className="text-green-500" />} title="Landing Page" href="/docs/landingpage">
+    Create landing pages
+  </Card>
+
+  <Card icon={<Globe className="text-amber-500" />} title="Internationalization" href="/docs/i18n">
+    Configure multi-language support
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="Website Config" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

@@ -1,0 +1,169 @@
+---
+title: CAPTCHA
+description: Learn how to set up and use CAPTCHA in AeloKit
+icon: Shield
+---
+
+AeloKit supports using [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) as the CAPTCHA service, which allows you to protect your website from attacks and abuse.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Log in to Cloudflare
+
+    Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/) and select your account.
+  </Step>
+
+  <Step>
+    ### Create a Turnstile Widget
+
+    Click `Turnstile`. Select `Add widget` and fill in the site name and your website's hostname (e.g., `YOUR-DOMAIN.com` or `localhost`).
+  </Step>
+
+  <Step>
+    ### Configure Widget Mode
+
+    Select the widget mode as `Managed`. Select pre-clearance support (optional).
+  </Step>
+
+  <Step>
+    ### Set Environment Variables
+
+    Copy your `Site Key` and `Secret Key`, and paste them into your environment variables file.
+
+    ```bash title=".env"
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY=YOUR-SITE-KEY
+    TURNSTILE_SECRET_KEY=YOUR-SECRET-KEY
+    ```
+  </Step>
+
+  <Step>
+    ### Enable CAPTCHA in Configuration
+
+    Set `enableTurnstileCaptcha` to `true` in the `packages/config/src/website.ts` file (default is `false`)
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      features: {
+        enableTurnstileCaptcha: true,
+      },
+    }
+    ```
+  </Step>
+</Steps>
+
+For more details, please refer to [Cloudflare Turnstile Documentation](https://developers.cloudflare.com/turnstile/get-started/) and [React Turnstile Documentation](https://docs.page/marsidev/react-turnstile).
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration Documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#captcha">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## CAPTCHA System Architecture
+
+<Files>
+  <Folder name="apps/web/src" defaultOpen>
+    <Folder name="components" defaultOpen>
+      <Folder name="shared" defaultOpen>
+        <File name="captcha.tsx" />
+      </Folder>
+    </Folder>
+
+    <Folder name="lib" defaultOpen>
+      <File name="captcha.ts" />
+    </Folder>
+  </Folder>
+</Files>
+
+* `components/shared/captcha.tsx`: CAPTCHA component
+* `lib/captcha.ts`: Utility library for CAPTCHA verification
+
+## Using CAPTCHA
+
+The CAPTCHA component is currently only used in registration and login forms, but you can also reuse the related code to use it in other places.
+
+### Using in Forms
+
+```tsx title="apps/web/src/components/auth/register-form.tsx"
+import { Captcha } from '@/components/shared/captcha';
+
+export default function RegisterForm() {
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const turnstileEnabled = websiteConfig.features.enableTurnstileCaptcha;
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* ...other form fields */}
+        <Captcha
+          onSuccess={(token) => setCaptchaToken(token)}
+          validationError={form.formState.errors.captchaToken?.message}
+        />
+        <Button
+          disabled={isPending || (turnstileEnabled && !captchaToken)}
+          type="submit"
+          className="w-full"
+        >
+          {isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+          <span>Register</span>
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+### Server-side Verification
+
+Verify CAPTCHA in Server Actions:
+
+```tsx title="apps/web/src/actions/register.ts"
+import { verifyCaptcha } from '@/lib/captcha';
+
+export async function register(formData: FormData) {
+  const captchaToken = formData.get('captchaToken') as string;
+  
+  // Verify CAPTCHA
+  const isValid = await verifyCaptcha(captchaToken);
+  if (!isValid) {
+    return { error: 'CAPTCHA verification failed' };
+  }
+  
+  // Continue with registration logic
+  // ...
+}
+```
+
+## References
+
+* [Cloudflare Turnstile Documentation](https://developers.cloudflare.com/turnstile/get-started/)
+* [React Turnstile Library Documentation](https://docs.page/marsidev/react-turnstile)
+* [Adding Cloudflare Turnstile to Next.js](https://developers.cloudflare.com/turnstile/get-started/next-js/)
+
+## Next Steps
+
+Now that you understand how to enable CAPTCHA in AeloKit, you may want to explore these related features:
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Set up user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics service
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="Storage" href="/docs/storage">
+    Configure storage service
+  </Card>
+</Cards>

@@ -1,0 +1,188 @@
+---
+title: 定时任务
+description: 了解如何在 AeloKit 中设置和使用定时任务
+icon: Clock
+---
+
+AeloKit 需要每天执行一次定时任务来发放用户积分并处理积分过期。你可以通过 GitHub Actions（推荐）或 cron-job.org 等外部服务来完成配置。
+
+<Callout type="warn">
+  如果您开启了积分系统，那么您需要设置定时任务来发放积分给用户，以及处理用户的积分过期。
+
+  <Card icon={<Coins className="text-amber-500" />} title="积分" href="/docs/credits">
+    了解更多关于积分的信息
+  </Card>
+</Callout>
+
+## 方式一：GitHub Actions（推荐）
+
+GitHub Actions 直接在 CI 环境中运行 `pnpm run distribute-credits` 脚本，不存在 HTTP 请求超时的问题，也无需依赖外部服务。
+
+模板中已包含工作流文件 `.github/workflows/distribute-credits.yml`，默认每天 UTC 00:10 执行，同时支持通过 `workflow_dispatch` 手动触发。
+
+<Steps>
+  <Step>
+    ### 确认工作流文件
+
+    确保仓库中存在 `.github/workflows/distribute-credits.yml`。如果你是从模板克隆的项目，该文件应已包含在内。工作流内容如下：
+
+    ```yaml title=".github/workflows/distribute-credits.yml"
+    name: Distribute Credits
+    on:
+      schedule:
+        - cron: '10 0 * * *'
+      workflow_dispatch:
+    jobs:
+      distribute:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+          - name: Install pnpm
+            uses: pnpm/action-setup@v4
+          - name: Setup Node
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20'
+              cache: 'pnpm'
+          - name: Install dependencies
+            run: pnpm install --frozen-lockfile
+          - name: Run credit distribution
+            env:
+              DATABASE_URL: ${{ secrets.DATABASE_URL }}
+              DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+              FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+            run: pnpm run distribute-credits
+    ```
+  </Step>
+
+  <Step>
+    ### 添加 GitHub Secrets
+
+    进入 GitHub 仓库 > `Settings` > `Secrets and variables` > `Actions`，添加以下密钥：
+
+    | Secret                | 是否必填 | 说明                         |
+    | --------------------- | ---- | -------------------------- |
+    | `DATABASE_URL`        | 是    | PostgreSQL 数据库连接字符串        |
+    | `DISCORD_WEBHOOK_URL` | 否    | 用于发放通知的 Discord Webhook 地址 |
+    | `FEISHU_WEBHOOK_URL`  | 否    | 用于发放通知的飞书 Webhook 地址       |
+  </Step>
+
+  <Step>
+    ### 推送并验证
+
+    将工作流文件推送到仓库的默认分支，然后进入 **Actions** 标签页确认工作流已出现。
+
+    如需立即测试，选择 "Distribute Credits" 工作流，点击 **Run workflow** 手动触发。执行日志和状态可在同一页面查看。
+  </Step>
+</Steps>
+
+## 方式二：cron-job.org（备选方案）
+
+[cron-job.org](https://cron-job.org/) 是一个免费的外部定时任务调度器，通过 HTTP 请求触发积分发放 API。
+
+<Steps>
+  <Step>
+    ### 创建账户
+
+    在 [cron-job.org](https://cron-job.org/) 注册一个账户。
+  </Step>
+
+  <Step>
+    ### 创建定时任务
+
+    进入 [Cron Job Dashboard](https://console.cron-job.org/) > `Cronjobs`，点击 `CREATE CRONJOB`。
+  </Step>
+
+  <Step>
+    ### 配置基本设置
+
+    在 `Cron Job Common` 部分设置 `Title` 和 `URL`，将 `Execution schedule` 设为每天执行一次，时间自选（如 `00:00`）。URL 格式为：
+
+    ```
+    https://{YOUR-DOMAIN}/api/distribute-credits
+    ```
+ </Step>
+
+  <Step>
+    ### 配置高级设置
+
+    在 `Cron Job Advance` 部分设置 `Username` 和 `Password`，并将 `Timeout` 设为 `30` 秒。
+
+    <Callout type="warn">
+      这里的用户名和密码不是 cron-job.org 的账号密码，而是用于访问 API 的 Basic Auth 凭证，请妥善保管。
+    </Callout>
+
+   </Step>
+
+  <Step>
+    ### 设置环境变量
+
+    将上面配置的认证凭证添加到环境变量文件中：
+
+    ```bash title=".env"
+    CRON_JOBS_USERNAME=YOUR-USERNAME
+    CRON_JOBS_PASSWORD=YOUR-PASSWORD
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#payment">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 文件结构
+
+<Files>
+  <Folder name=".github" defaultOpen>
+    <Folder name="workflows" defaultOpen>
+      <File name="distribute-credits.yml" />
+    </Folder>
+  </Folder>
+
+  <Folder name="src" defaultOpen>
+    <Folder name="app" defaultOpen>
+      <Folder name="api" defaultOpen>
+        <Folder name="distribute-credits" defaultOpen>
+          <File name="route.ts" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+* `.github/workflows/distribute-credits.yml` — GitHub Actions 定时积分发放工作流（方式一）
+* `src/app/api/distribute-credits/route.ts` — HTTP 方式的积分发放 API 路由（方式二，供 cron-job.org 调用）
+
+## 参考资料
+
+* [GitHub Actions - 计划事件](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
+* [cron-job.org](https://cron-job.org/)
+
+## 后续操作
+
+定时任务配置完成后，你可以继续配置以下相关服务：
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="支付服务" href="/docs/payment">
+    配置支付服务
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="用户认证" href="/docs/auth">
+    配置用户认证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="分析统计" href="/docs/analytics">
+    配置分析统计
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="存储服务" href="/docs/storage">
+    配置存储服务
+  </Card>
+</Cards>

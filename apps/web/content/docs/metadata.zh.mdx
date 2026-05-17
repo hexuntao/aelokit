@@ -1,0 +1,279 @@
+---
+title: 元数据
+description: 学习如何为 AeloKit 模板自定义元数据
+icon: FileText
+---
+
+本文档涵盖了 AeloKit 模板中的元数据系统，如何自定义 SEO 相关信息，以及如何配置社交分享元数据以获得最佳 SEO 效果。
+
+## 核心功能
+
+AeloKit 模板配备了元数据系统，提供：
+
+* SEO 优化的页面标题和描述
+* 社交媒体分享元数据（Open Graph 和 Twitter）
+* 网站图标和应用图标
+* 元数据的国际化支持
+
+## 理解元数据系统
+
+AeloKit 中的元数据系统基于 Next.js 元数据 API 构建，通过几个关键文件进行配置：
+
+### 1. 网站配置
+
+主要网站配置在 `packages/config/src/website.ts` 中定义：
+
+```typescript title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  metadata: {
+    mode: {
+      defaultMode: 'dark',
+      enableSwitch: true,
+    },
+    images: {
+      ogImage: '/og.png',
+      logoLight: '/logo.png',
+      logoDark: '/logo-dark.png',
+    },
+    social: {
+      github: 'https://github.com/your-org',
+      twitter: 'https://x.com/your-handle',
+      discord: 'https://discord.gg/your-invite',
+    },
+  },
+  // 其他配置部分...
+};
+```
+
+此配置定义：
+
+* 默认主题和暗黑模式设置
+* Logo 和 Open Graph 图像路径
+* 社交平台的官方账号链接
+
+### 2. 翻译文件
+
+基本网站元数据（如名称、标题和描述）在翻译文件中定义：
+
+<Tabs items={['messages/en.json', 'messages/zh.json']}>
+  <Tab value="messages/en.json">
+    ```json title="messages/en.json"
+    {
+      "Metadata": {
+        "name": "AeloKit",
+        "title": "AeloKit - Modern SaaS Starter Template",
+        "description": "AeloKit is a modern SaaS starter template built with Next.js, TypeScript, and Tailwind CSS"
+      },
+      // 其他翻译...
+    }
+    ```
+  </Tab>
+
+  <Tab value="messages/zh.json">
+    ```json title="messages/zh.json"
+    {
+      "Metadata": {
+        "name": "AeloKit",
+        "title": "AeloKit - 现代 SaaS 起始模板",
+        "description": "AeloKit 是一个使用 Next.js、TypeScript 和 Tailwind CSS 构建的现代 SaaS 起始模板"
+      },
+      // 其他翻译...
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### 3. 元数据构建
+
+`apps/web/src/lib/metadata.ts` 中的 `constructMetadata` 函数可以为每个页面创建元数据对象：
+
+```typescript title="apps/web/src/lib/metadata.ts"
+export function constructMetadata({
+  title,
+  description,
+  image,
+  noIndex = false,
+  locale,
+  pathname,
+}: {
+  title?: string;
+  description?: string;
+  image?: string;
+  noIndex?: boolean;
+  locale?: Locale;
+  pathname?: string;
+} = {}): Metadata {
+  // 元数据构建逻辑...
+}
+```
+
+此函数处理：
+
+* 从翻译文件的配置中设置元数据的默认值
+* 配置 Open Graph 和 Twitter 卡片元数据
+* 设置网站图标和图标信息
+* 管理规范 URL 和爬虫指令
+
+## 自定义网站元数据
+
+### 基本网站信息
+
+要更改基本网站信息（如名称、标题和描述）：
+
+1. 编辑 `messages/en.json` 文件：
+
+```json title="messages/en.json"
+{
+  "Metadata": {
+    "name": "您的网站名称",
+    "title": "您的网站标题 - 标语",
+    "description": "您网站的详细描述，用于 SEO 目的"
+  }
+}
+```
+
+对于多语言网站，使用适当的翻译更新每个语言文件：
+
+```json title="messages/zh.json"
+{
+  "Metadata": {
+    "name": "您的网站名称",
+    "title": "您的网站标题 - 标语",
+    "description": "您网站的详细描述，用于 SEO 目的"
+  }
+}
+```
+
+### 自定义社交图像
+
+要更改 Open Graph 图像和Logo：
+
+1. 将您的图片放在 `public` 目录中 (如果替换原始文件，则不用更新路径)
+2. 如有必要，在 `packages/config/src/website.ts` 中更新路径：
+
+```typescript title="packages/config/src/website.ts"
+metadata: {
+  // 其他设置...
+  images: {
+    ogImage: '/your-og-image.png',  // 用于社交分享
+    logoLight: '/your-logo-light.png',  // 明亮模式的Logo
+    logoDark: '/your-logo-dark.png',  // 暗黑模式的Logo
+  },
+}
+```
+
+推荐尺寸：
+
+* **OG 图像**：1200×630 像素，在社交平台上获得最佳显示效果
+* **Logo**：至少 512×512 像素，适用于高分辨率显示
+
+### 社交媒体链接
+
+在网站配置中更新您的社交媒体官方账号链接：
+
+```typescript title="packages/config/src/website.ts"
+metadata: {
+  // 其他设置...
+  social: {
+    github: 'https://github.com/YourUsername',
+    twitter: 'https://x.com/YourHandle',
+    discord: 'https://discord.gg/YourInvite',
+    // 根据需要添加其他社交平台
+  },
+}
+```
+
+### 网站图标和应用图标 (Favicon)
+
+要替换默认的网站图标和应用图标：
+
+1. 使用 [Real Favicon Generator](https://realfavicongenerator.net/) 等工具生成完整的图标集
+2. 将生成的文件放在 `public` 目录中 (如果替换原始文件，则不用更新路径)
+
+### 规范 URL
+
+对于具有多个 URL 或防止重复内容问题的页面，设置规范 URL：
+
+```tsx
+export const metadata = constructMetadata({
+  title: '示例页面',
+  description: '描述',
+  pathname: '/preferred-path',
+  locale: 'zh',
+});
+```
+
+### 无索引页面
+
+对于您不希望搜索引擎索引的页面：
+
+```tsx
+export const metadata = constructMetadata({
+  title: '私人页面',
+  description: '此页面不适用于搜索引擎',
+  noIndex: true,
+});
+```
+
+## 页面特定元数据
+
+### 向 MDX 页面添加元数据
+
+在您的 MDX 内容页面中 (博客文章、文档等)，您可以在前言中定义元数据：
+
+```mdx title="content/blog/example-post.mdx"
+---
+title: 示例博客文章
+description: 这是一个带有自定义元数据的示例博客文章
+image: /images/blog/example-post.png
+---
+
+内容在这里...
+```
+
+元数据系统将在渲染页面时自动使用这些值。
+
+### 程序化元数据
+
+对于其他的功能性页面，您可以使用 `constructMetadata` 函数：
+
+```tsx title="apps/web/src/app/[locale]/example/page.tsx"
+import { constructMetadata } from '@/lib/metadata';
+
+export const metadata = constructMetadata({
+  title: '示例页面',
+  description: '这是一个带有自定义元数据的示例页面',
+  image: '/images/example-page.png',
+});
+```
+
+## 最佳实践
+
+* **保持标题简洁**：目标是标题少于 60 个字符，以在搜索结果中获得最佳显示
+* **描述性元描述**：编写 150-160 个字符的引人注目的描述
+* **使用高质量图像**：为 OG 和 Twitter 卡片创建专业、相关的图像
+* **包含关键词**：在标题和描述中自然地包含相关关键词
+* **持续更新**：保持元数据与您的内容更改同步
+* **移动优化**：确保您的元数据在移动设备上看起来良好
+
+## 下一步
+
+现在您了解了如何在 AeloKit 模板中自定义元数据，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Image className="text-green-500" />} title="图像" href="/docs/images">
+    配置网站各种图片
+  </Card>
+
+  <Card icon={<GlobeIcon className="text-purple-500" />} title="国际化" href="/docs/i18n">
+    配置多语言功能
+  </Card>
+
+  <Card icon={<Layout className="text-amber-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+</Cards>

@@ -1,0 +1,67 @@
+---
+title: Sidebar Configuration
+description: Customize dashboard sidebar navigation
+icon: SidebarOpen
+---
+
+Define the left sidebar navigation menu for the admin pages. Each item is a [NestedMenuItem](/docs/config#nestedmenuitem).
+
+```tsx title="src/config/sidebar-config.tsx"
+export function getSidebarLinks(): NestedMenuItem[] {
+  const t = useTranslations('Dashboard');
+
+  return [
+    {
+      title: t('dashboard.title'),
+      icon: <LayoutDashboardIcon className="size-4 shrink-0" />,
+      href: Routes.Dashboard,
+      external: false,
+    },
+    {
+      title: t('admin.title'),
+      icon: <SettingsIcon className="size-4 shrink-0" />,
+      authorizeOnly: ['admin'],
+      items: [
+        {
+          title: t('admin.users.title'),
+          icon: <UsersRoundIcon className="size-4 shrink-0" />,
+          href: Routes.AdminUsers,
+          external: false,
+        },
+        // More admin items...
+      ],
+    },
+    // More sidebar sections...
+  ];
+}
+```
+
+Sidebar configuration is similar to navbar configuration, but specifically designed for the dashboard area. It supports:
+
+* Top-level links with icons
+* Nested expandable menus
+* Role-based visibility via the `authorizeOnly` property
+
+The sidebar is ideal for providing different menus based on user roles. For example, regular users can only see the dashboard, while admins can see user management pages.
+
+## Next Steps
+
+Now that you understand sidebar configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<MenuSquare className="text-green-500" />} title="Navbar Configuration" href="/docs/config/navbar">
+    Configure header navigation menu
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure links in the website footer
+  </Card>
+
+  <Card icon={<CircleUser className="text-purple-500" />} title="Avatar Configuration" href="/docs/config/avatar">
+    Configure user avatar dropdown menu
+  </Card>
+</Cards>

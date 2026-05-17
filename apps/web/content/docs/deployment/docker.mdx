@@ -1,0 +1,230 @@
+---
+title: Docker Deployment
+description: Learn how to deploy the project using Docker
+icon: Container
+---
+
+This document will help you deploy the AeloKit project using Docker. Docker provides a consistent deployment environment, simplifying application distribution and execution.
+
+## Prerequisites
+
+Before deploying the project, make sure you have:
+
+1. [Docker](https://docs.docker.com/get-docker/) installed
+2. [Docker Compose](https://docs.docker.com/compose/install/) installed (optional, for multi-container deployment)
+3. [Environment variables](/docs/env) configured for your website's production environment
+
+## Quick Start
+
+### Build with Docker
+
+The project root directory already contains a `Dockerfile`, you can build the image directly:
+
+```bash
+docker build -t aelokit-app .
+```
+
+### Run Container
+
+```bash
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_BASE_URL="https://your-domain.com" \
+  -e DATABASE_URL="your-database-url" \
+  -e BETTER_AUTH_SECRET="your-auth-secret" \
+  aelokit-app
+```
+
+## Docker Compose Deployment
+
+The project provides a `docker-compose.yml` file that can start the complete application stack with one command:
+
+```bash
+docker-compose up -d
+```
+
+This will start:
+- AeloKit application
+- PostgreSQL database (if configured)
+
+### docker-compose.yml Example
+
+```yaml title="docker-compose.yml"
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      - DATABASE_URL=postgresql://postgres:password@db:5432/aelokit
+      - BETTER_AUTH_SECRET=your-secret-key
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=aelokit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+## Environment Variable Configuration
+
+### Using .env File
+
+Create a `.env` file and pass it to Docker Compose:
+
+```bash
+docker-compose --env-file .env up -d
+```
+
+### Using Docker Secrets
+
+For production environments, it's recommended to use Docker Secrets to manage sensitive information:
+
+```yaml
+secrets:
+  database_url:
+    file: ./secrets/database_url.txt
+  auth_secret:
+    file: ./secrets/auth_secret.txt
+
+services:
+  app:
+    secrets:
+      - database_url
+      - auth_secret
+```
+
+## Production Deployment Recommendations
+
+### Image Optimization
+
+The Dockerfile is already optimized for production:
+
+```dockerfile title="Dockerfile"
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+# Runtime stage
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Health Check
+
+Add a health check to ensure the application is running properly:
+
+```yaml
+services:
+  app:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+### Resource Limits
+
+Set resource limits to prevent containers from using too many resources:
+
+```yaml
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+```
+
+## Deploy to Cloud Platforms
+
+### Deploy to AWS ECS
+
+1. Push the image to Amazon ECR
+2. Create an ECS task definition
+3. Configure ECS service and load balancer
+
+### Deploy to Google Cloud Run
+
+```bash
+gcloud run deploy aelokit \
+  --image gcr.io/your-project/aelokit \
+  --platform managed \
+  --region us-central1
+```
+
+### Deploy to Azure Container Instances
+
+```bash
+az container create \
+  --resource-group myResourceGroup \
+  --name aelokit \
+  --image your-registry.azurecr.io/aelokit \
+  --ports 3000
+```
+
+## Common Issues
+
+### Container Fails to Start
+
+* Check Docker logs: `docker logs <container-id>`
+* Verify environment variables are correctly configured
+* Ensure the port is not already in use
+
+### Database Connection Issues
+
+* Confirm the database container is running
+* Check network configuration and connection string
+* Verify database credentials
+
+### Performance Issues
+
+* Increase container resource limits
+* Use multi-stage builds to reduce image size
+* Enable Docker cache to speed up builds
+
+## Next Steps
+
+Now that you understand how to deploy AeloKit using Docker, explore other related topics:
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Vercel Deployment" href="/docs/deployment/vercel">
+    Deploy the website to Vercel
+  </Card>
+
+  <Card icon={<Cloud className="text-green-500" />} title="Cloudflare Deployment" href="/docs/deployment/cloudflare">
+    Deploy the website to Cloudflare
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure the database
+  </Card>
+</Cards>

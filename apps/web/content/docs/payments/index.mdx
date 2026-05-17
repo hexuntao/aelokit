@@ -1,0 +1,79 @@
+---
+title: Payment
+description: Learn how to set up and use payments in AeloKit
+icon: CreditCard
+---
+
+AeloKit supports multiple payment providers, allowing you to choose the right payment solution for your needs.
+
+## Payment Providers
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Stripe" description="The world's most popular payment platform, supporting one-time payments and subscriptions" href="/docs/payment/stripe" />
+
+  <Card icon={<CreditCard className="text-green-500" />} title="Creem" description="Payment platform for indie developers, with built-in tax compliance and subscription management" href="/docs/payment/creem" />
+</Cards>
+
+## Custom Payment Providers
+
+AeloKit supports extending with new payment providers:
+
+1. Create a new file in the `src/payment/provider` directory
+2. Implement the `PaymentProvider` interface from `types.ts`
+3. Update the payment provider selection logic in `index.ts`
+
+Example implementation:
+
+```tsx title="src/payment/provider/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  getSubscriptionsParams
+} from '@/payment/types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // Initialize your payment provider
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // Implementation for creating checkout session
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // Implementation for creating customer portal
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // Implementation for handling webhook events
+  }
+}
+```
+
+Then update the payment provider selection in `index.ts`:
+
+```tsx title="src/payment/index.ts"
+import { MyProvider } from './provider/my-provider';
+
+export const initializePaymentProvider = (): PaymentProvider => {
+  if (!paymentProvider) {
+    if (websiteConfig.payment.provider === 'stripe') {
+      paymentProvider = new StripeProvider();
+    } else if (websiteConfig.payment.provider === 'creem') {
+      paymentProvider = new CreemProvider();
+    } else if (websiteConfig.payment.provider === 'my-provider') {
+      paymentProvider = new MyProvider();
+    } else {
+      throw new Error(
+        `Unsupported payment provider: ${websiteConfig.payment.provider}`
+      );
+    }
+  }
+
+  return paymentProvider;
+};
+```

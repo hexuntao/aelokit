@@ -1,0 +1,215 @@
+---
+title: Storage
+description: Learn how to set up and use cloud storage for file uploads and media processing
+icon: HardDrive
+---
+
+AeloKit uses Amazon S3 compatible storage services (such as [Cloudflare R2](https://www.cloudflare.com/products/r2/)) for file storage.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Create Cloudflare R2 Bucket (Recommended)
+
+    1. Create a Cloudflare account at [cloudflare.com](https://cloudflare.com)
+    2. Create a new R2 bucket:
+       * Choose a globally unique bucket name (e.g., `your-project-name`)
+       * Select a region close to your target audience
+       * Configure other options according to your needs
+  </Step>
+
+  <Step>
+    ### Enable Public Access
+
+    Allow public access to the bucket:
+
+    * `Settings` > `Public Development URL`, click `Enable`
+    * Save the public access URL as `STORAGE_PUBLIC_URL`
+    * Set up a custom domain for the bucket's public access (recommended to use a custom domain for better security)
+  </Step>
+
+  <Step>
+    ### Create API Token
+
+    Create a new API token:
+
+    * `Storage & databases` > `R2 object storage` > `API Tokens` > `Manage`, click `Create User API Token`
+    * Set permissions to `Object Read & Write` for the bucket
+    * Create the API token and obtain `Access Key ID` and `Secret Access Key`
+  </Step>
+
+  <Step>
+    ### Set Environment Variables
+
+    Set the following environment variables:
+
+    ```bash title=".env"
+    STORAGE_REGION=auto
+    STORAGE_BUCKET_NAME=YOUR-BUCKET-NAME
+    STORAGE_ACCESS_KEY_ID=YOUR-ACCESS-KEY
+    STORAGE_SECRET_ACCESS_KEY=YOUR-SECRET-KEY
+    STORAGE_ENDPOINT=https://xxx.r2.cloudflarestorage.com
+    STORAGE_PUBLIC_URL=https://your-custom-domain.com
+    ```
+  </Step>
+</Steps>
+
+### S3 Compatible Alternatives
+
+AeloKit is compatible with any S3 compatible storage service, including:
+
+* **[Amazon S3](https://aws.amazon.com/s3/)** - Amazon's storage service
+* **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html)** - Very cost-effective option
+* **[Google Cloud Storage](https://cloud.google.com/storage)** - High performance with Google infrastructure
+* **[Digital Ocean Spaces](https://www.digitalocean.com/products/spaces/)** - Simple pricing and integration with DigitalOcean infrastructure
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration Documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#storage">
+    Set environment variables
+  </Card>
+</Callout>
+
+***
+
+## Usage
+
+### Basic File Operations
+
+AeloKit provides simple utilities for common file operations:
+
+```tsx
+import { uploadFile, deleteFile } from '@/storage';
+
+// Upload file to storage
+const { url, key } = await uploadFile(
+  fileBuffer,
+  'original-filename.jpg',
+  'image/jpeg',
+  'uploads/images'
+);
+
+// Delete file from storage
+await deleteFile(key);
+```
+
+### Browser-side File Upload
+
+To upload files directly from the browser, use the `uploadFileFromBrowser` function:
+
+```tsx
+'use client';
+
+import { uploadFileFromBrowser } from '@/storage/client';
+
+// In your React component
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+
+  try {
+    const { url, key } = await uploadFileFromBrowser(file, 'uploads/images');
+    console.log('File uploaded:', url);
+  } catch (error) {
+    console.error('Upload failed:', error);
+  }
+}
+```
+
+## Storage System Architecture
+
+<Files>
+  <Folder name="packages/storage/src" defaultOpen>
+    <Folder name="config" defaultOpen>
+      <File name="storage-config.ts" />
+    </Folder>
+    <Folder name="providers" defaultOpen>
+      <File name="s3.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## Extending New Storage Providers
+
+AeloKit supports extending new storage service providers:
+
+1. Create a new file in the `packages/storage/src/providers` directory
+
+2. Implement the `StorageProvider` interface:
+
+```tsx title="packages/storage/src/providers/custom-provider.ts"
+import {
+  PresignedUploadUrlParams,
+  StorageProvider,
+  UploadFileParams,
+  UploadFileResult
+} from '../types';
+
+export class CustomStorageProvider implements StorageProvider {
+  constructor() {
+    // Initialize your storage provider
+  }
+
+  public getProviderName(): string {
+    return 'CustomProvider';
+  }
+
+  async uploadFile(params: UploadFileParams): Promise<UploadFileResult> {
+    // Implementation for uploading file
+    return { url: 'https://example.com/file.jpg', key: 'file.jpg' };
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    // Implementation for deleting file
+  }
+}
+```
+
+3. Register the new provider in `registry.ts`:
+
+```tsx title="packages/storage/src/registry.ts"
+import { CustomStorageProvider } from './providers/custom-provider';
+
+export function getStorageProvider(): StorageProvider {
+  const provider = websiteConfig.storage.provider;
+  
+  switch (provider) {
+    case 's3':
+      return new S3Provider();
+    case 'custom':
+      return new CustomStorageProvider();
+    default:
+      throw new Error(`Unsupported storage provider: ${provider}`);
+  }
+}
+```
+
+## References
+
+* [Cloudflare R2 Documentation](https://developers.cloudflare.com/r2/)
+* [Amazon S3 Documentation](https://docs.aws.amazon.com/s3/)
+* [s3mini Library Documentation](https://github.com/example/s3mini)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Payment" href="/docs/payment">
+    Configure website payment features
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure database
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

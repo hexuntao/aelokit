@@ -1,0 +1,69 @@
+---
+title: Credits Configuration
+description: Define credit plans and credit options
+icon: Coins
+---
+
+Extend the credit packages defined in `website.tsx` by adding translated content.
+
+```tsx title="src/config/credits-config.tsx"
+// Return credit packages with translated content
+export function getCreditPackages(): Record<string, CreditPackage> {
+  const t = useTranslations('CreditPackages');
+  const creditsConfig = websiteConfig.credits;
+  const packages: Record<string, CreditPackage> = {};
+
+  // Add translated content for each package
+  if (creditsConfig.packages.basic) {
+    packages.basic = {
+      ...creditsConfig.packages.basic,
+      name: t('basic.name'),
+      description: t('basic.description'),
+    };
+  }
+  ...
+}
+```
+
+Each credit package in the `packages` object can have the following properties:
+
+| Property      | Type       | Description                                              |
+| ------------- | ---------- | -------------------------------------------------------- |
+| `id`          | `string`   | Unique identifier for the package                        |
+| `name`        | `string?`  | Display name of the package                              |
+| `description` | `string?`  | Description of the package                               |
+| `popular`     | `boolean`  | Whether this package is recommended                      |
+| `credits`     | `number`   | Number of credits included in the package                |
+| `price`       | `object`   | Price information including priceId, amount, currency, allowPromotionCode |
+| `expireDays`  | `number?`  | Credit validity period in days, optional, undefined means no expiration |
+| `disabled`    | `boolean?` | Whether to disable this package in the UI, optional      |
+
+<Callout type="warning">
+  Q: What is the difference between **credit packages** in `website.tsx` and **credit packages** in `credits-config.tsx`?
+
+  A: The `website.tsx` file defines the basic information of credit packages, excluding locale-specific information, while the `credits-config.tsx` file displays these credit packages by adding translated content.
+
+  The reason for separating them is that `credits-config.tsx` can only be used in client components, while `website.tsx` can be used in both server and client components.
+</Callout>
+
+## Next Steps
+
+Now that you understand credit package configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<DollarSign className="text-green-500" />} title="Price Configuration" href="/docs/config/price">
+    Configure product pricing plans
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure links in the website footer
+  </Card>
+
+  <Card icon={<SidebarOpen className="text-amber-500" />} title="Sidebar Configuration" href="/docs/config/sidebar">
+    Configure the dashboard navigation menu
+  </Card>
+</Cards>

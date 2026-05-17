@@ -1,0 +1,120 @@
+---
+title: Chatbox
+description: Learn how to set up and use the chatbox in AeloKit
+icon: MessageSquare
+---
+
+AeloKit has integrated [Crisp Chatbox](https://crisp.chat/en/) to enable real-time messaging on your website.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Register a Crisp Account
+
+    If you don't have an account yet, please [register a Crisp account](https://crisp.chat/en/).
+  </Step>
+
+  <Step>
+    ### Get Website ID
+
+    Go to [Crisp Console](https://app.crisp.chat/) > `Settings` > `Workspace Settings` > `Setup & Integrations`. Copy the `Website ID` and set it in your environment variables file:
+
+    ```bash title=".env"
+    NEXT_PUBLIC_CRISP_WEBSITE_ID=YOUR-CRISP-WEBSITE-ID
+    ```
+  </Step>
+
+  <Step>
+    ### Enable Crisp Chat in Configuration
+
+    In the `packages/config/src/website.ts` configuration file, set `enableCrispChat` to `true` (default is `false`):
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      features: {
+        enableCrispChat: true,
+      },
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are currently configuring your environment, you can now return to the **Environment Configuration Guide** to continue. The rest of this guide can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#chatbox">
+    Set environment variables
+  </Card>
+</Callout>
+
+***
+
+## Usage
+
+When `enableCrispChat` is enabled and the environment variable is set, the Crisp chatbox will automatically load on your website without any additional code.
+
+If you need to customize or render the chatbox on demand, you can directly import and use the component:
+
+```tsx title="apps/web/src/app/layout.tsx"
+import CrispChat from '@/components/layout/crisp-chat';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="zh">
+      <body>
+        <CrispChat />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Crisp Configuration Options
+
+### Set User Information
+
+You can set Crisp user information after the user logs in:
+
+```tsx
+import { useSession } from '@/lib/auth-client';
+
+// In your component
+const { data: session } = useSession();
+
+if (session?.user && window.$crisp) {
+  window.$crisp.push(['set', 'user:email', session.user.email]);
+  window.$crisp.push(['set', 'user:nickname', session.user.name]);
+}
+```
+
+### Customize Chatbox Appearance
+
+You can customize the chatbox color, position, and welcome message through the Crisp console.
+
+## References
+
+* [Crisp Official Website](https://crisp.chat/en/)
+* [How to Install Crisp Chat on Next.js?](https://help.crisp.chat/en/article/how-do-i-install-crisp-live-chat-on-nextjs-xh9yse/)
+* [Crisp JavaScript API](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email Service" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="User Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="Storage Service" href="/docs/storage">
+    Configure storage service
+  </Card>
+</Cards>

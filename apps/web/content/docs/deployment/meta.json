@@ -1,0 +1,6 @@
+{
+  "title": "Deployment",
+  "description": "Deploy your AeloKit application",
+  "icon": "Cloud",
+  "pages": ["vercel"]
+}

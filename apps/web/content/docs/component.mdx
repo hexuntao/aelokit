@@ -1,0 +1,146 @@
+---
+title: Component Library
+description: Learn about the available UI component libraries in AeloKit
+icon: Component
+---
+
+AeloKit includes multiple UI component libraries, providing a rich set of pre-built components.
+
+## Shadcn UI
+
+[Shadcn UI](https://ui.shadcn.com/) is the primary component library, providing high-quality, customizable React components.
+
+### Available Components
+
+* Button - Button component
+* Card - Card component
+* Dialog - Dialog component
+* Dropdown Menu - Dropdown menu
+* Form - Form component
+* Input - Input component
+* Select - Select component
+* Table - Table component
+* Tabs - Tabs component
+* Toast - Toast component
+
+### Using Components
+
+```tsx
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+
+export function MyComponent() {
+  return (
+    <Card>
+      <CardHeader>Title</CardHeader>
+      <CardContent>
+        <Button>Click Me</Button>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Magic UI
+
+[Magic UI](https://magicui.design/) provides animation and visual effect components.
+
+### Available Components
+
+* Animated Gradient - Animated gradient background
+* Border Beam - Border beam effect
+* Meteors - Meteor effect
+* Number Ticker - Number ticker animation
+* Text Reveal - Text reveal animation
+
+## Tailark
+
+[Tailark](https://tailark.com/) provides marketing and landing page components.
+
+### Available Components
+
+* Hero Section - Hero section
+* Features - Feature showcase
+* Pricing - Pricing table
+* Testimonials - Testimonials
+* CTA - Call to action
+
+## Dice UI
+
+[Dice UI](https://www.diceui.com/) provides additional utility components.
+
+## Component Locations
+
+<Files>
+  <Folder name="apps/web/src/components" defaultOpen>
+    <Folder name="ui" defaultOpen>
+      <File name="button.tsx" />
+      <File name="card.tsx" />
+      <File name="dialog.tsx" />
+    </Folder>
+    <Folder name="magicui" defaultOpen>
+      <File name="animated-gradient.tsx" />
+      <File name="border-beam.tsx" />
+    </Folder>
+    <Folder name="tailark" defaultOpen>
+      <Folder name="preview" defaultOpen>
+        <Folder name="hero-section" />
+        <Folder name="features" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+## Adding New Components
+
+### Adding Shadcn UI Components
+
+```bash
+npx shadcn@latest add [component-name]
+```
+
+### Creating Custom Components
+
+1. Create a new file in the `apps/web/src/components` directory
+2. Implement the component
+3. Export the component
+
+```tsx title="apps/web/src/components/custom/my-component.tsx"
+export function MyComponent() {
+  return <div>My Component</div>;
+}
+```
+
+## Best Practices
+
+1. **Reuse Components**: Prioritize using existing components
+2. **Stay Consistent**: Use a consistent design language
+3. **Accessibility**: Ensure components are accessible
+4. **Responsive**: Support different screen sizes
+5. **Type Safety**: Use TypeScript types
+
+## References
+
+* [Shadcn UI Documentation](https://ui.shadcn.com/docs)
+* [Magic UI Documentation](https://magicui.design/docs)
+* [Tailark Documentation](https://tailark.com/docs)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="Themes" href="/docs/themes">
+    Configure themes and appearance
+  </Card>
+
+  <Card icon={<Layout className="text-green-500" />} title="Landing Page" href="/docs/landingpage">
+    Create landing pages
+  </Card>
+
+  <Card icon={<Settings className="text-amber-500" />} title="Site Configuration" href="/docs/config/website">
+    Configure core site settings
+  </Card>
+
+  <Card icon={<Type className="text-purple-500" />} title="Fonts" href="/docs/fonts">
+    Customize fonts
+  </Card>
+</Cards>

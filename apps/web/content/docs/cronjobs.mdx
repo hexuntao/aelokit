@@ -1,0 +1,188 @@
+---
+title: Scheduled Tasks
+description: Learn how to set up and use scheduled tasks in AeloKit
+icon: Clock
+---
+
+AeloKit requires a daily scheduled task to distribute user credits and handle credit expiration. You can configure this through GitHub Actions (recommended) or external services like cron-job.org.
+
+<Callout type="warn">
+  If you have enabled the credits system, you need to set up scheduled tasks to distribute credits to users and handle credit expiration.
+
+  <Card icon={<Coins className="text-amber-500" />} title="Credits" href="/docs/credits">
+    Learn more about credits
+  </Card>
+</Callout>
+
+## Option 1: GitHub Actions (Recommended)
+
+GitHub Actions runs the `pnpm run distribute-credits` script directly in the CI environment, avoiding HTTP request timeout issues and eliminating the need for external services.
+
+The template includes a workflow file `.github/workflows/distribute-credits.yml` that runs daily at UTC 00:10 by default, and also supports manual triggering via `workflow_dispatch`.
+
+<Steps>
+  <Step>
+    ### Verify the Workflow File
+
+    Ensure `.github/workflows/distribute-credits.yml` exists in your repository. If you cloned from the template, this file should already be included. The workflow content is as follows:
+
+    ```yaml title=".github/workflows/distribute-credits.yml"
+    name: Distribute Credits
+    on:
+      schedule:
+        - cron: '10 0 * * *'
+      workflow_dispatch:
+    jobs:
+      distribute:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+          - name: Install pnpm
+            uses: pnpm/action-setup@v4
+          - name: Setup Node
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20'
+              cache: 'pnpm'
+          - name: Install dependencies
+            run: pnpm install --frozen-lockfile
+          - name: Run credit distribution
+            env:
+              DATABASE_URL: ${{ secrets.DATABASE_URL }}
+              DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+              FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+            run: pnpm run distribute-credits
+    ```
+  </Step>
+
+  <Step>
+    ### Add GitHub Secrets
+
+    Go to GitHub repository > `Settings` > `Secrets and variables` > `Actions`, and add the following secrets:
+
+    | Secret                | Required | Description                         |
+    | --------------------- | ---- | -------------------------- |
+    | `DATABASE_URL`        | Yes    | PostgreSQL database connection string        |
+    | `DISCORD_WEBHOOK_URL` | No    | Discord Webhook URL for sending notifications |
+    | `FEISHU_WEBHOOK_URL`  | No    | Feishu Webhook URL for sending notifications       |
+  </Step>
+
+  <Step>
+    ### Push and Verify
+
+    Push the workflow file to the repository's default branch, then go to the **Actions** tab to confirm the workflow appears.
+
+    To test immediately, select the "Distribute Credits" workflow and click **Run workflow** to trigger it manually. Execution logs and status can be viewed on the same page.
+  </Step>
+</Steps>
+
+## Option 2: cron-job.org (Alternative)
+
+[cron-job.org](https://cron-job.org/) is a free external cron job scheduler that triggers the credit distribution API via HTTP requests.
+
+<Steps>
+  <Step>
+    ### Create an Account
+
+    Register an account at [cron-job.org](https://cron-job.org/).
+  </Step>
+
+  <Step>
+    ### Create a Cron Job
+
+    Go to [Cron Job Dashboard](https://console.cron-job.org/) > `Cronjobs`, click `CREATE CRONJOB`.
+  </Step>
+
+  <Step>
+    ### Configure Basic Settings
+
+    In the `Cron Job Common` section, set `Title` and `URL`, and set `Execution schedule` to run once daily at your preferred time (e.g., `00:00`). The URL format is:
+
+    ```
+    https://{YOUR-DOMAIN}/api/distribute-credits
+    ```
+ </Step>
+
+  <Step>
+    ### Configure Advanced Settings
+
+    In the `Cron Job Advance` section, set `Username` and `Password`, and set `Timeout` to `30` seconds.
+
+    <Callout type="warn">
+      The username and password here are not your cron-job.org account credentials, but the Basic Auth credentials for accessing the API. Please keep them secure.
+    </Callout>
+
+   </Step>
+
+  <Step>
+    ### Set Environment Variables
+
+    Add the authentication credentials configured above to your environment variables file:
+
+    ```bash title=".env"
+    CRON_JOBS_USERNAME=YOUR-USERNAME
+    CRON_JOBS_PASSWORD=YOUR-PASSWORD
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration** documentation and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#payment">
+    Set environment variables
+  </Card>
+</Callout>
+
+***
+
+## File Structure
+
+<Files>
+  <Folder name=".github" defaultOpen>
+    <Folder name="workflows" defaultOpen>
+      <File name="distribute-credits.yml" />
+    </Folder>
+  </Folder>
+
+  <Folder name="src" defaultOpen>
+    <Folder name="app" defaultOpen>
+      <Folder name="api" defaultOpen>
+        <Folder name="distribute-credits" defaultOpen>
+          <File name="route.ts" />
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+* `.github/workflows/distribute-credits.yml` — GitHub Actions scheduled credit distribution workflow (Option 1)
+* `src/app/api/distribute-credits/route.ts` — HTTP-based credit distribution API route (Option 2, for cron-job.org to call)
+
+## References
+
+* [GitHub Actions - Scheduled Events](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule)
+* [cron-job.org](https://cron-job.org/)
+
+## Next Steps
+
+After configuring scheduled tasks, you can continue configuring the following related services:
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Payment" href="/docs/payment">
+    Configure payment service
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="Storage" href="/docs/storage">
+    Configure storage service
+  </Card>
+</Cards>

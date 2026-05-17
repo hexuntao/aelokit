@@ -1,0 +1,33 @@
+{
+  "name": "@repo/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./hooks": "./src/hooks/index.ts",
+    "./constants": "./src/constants/index.ts",
+    "./types": "./src/types/index.ts",
+    "./context": "./src/context/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/react": "^19.2.9",
+    "typescript": "^5.9.3"
+  }
+}

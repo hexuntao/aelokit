@@ -1,0 +1,347 @@
+---
+title: Landing Page
+description: Learn how to create beautiful, responsive landing pages using built-in marketing components
+icon: Layout
+---
+
+This documentation introduces how to create and customize landing pages in the AeloKit template using built-in marketing components from Tailark.
+
+## Core Features
+
+AeloKit comes with a set of built-in marketing components that allow you to quickly create responsive landing pages. These components include:
+
+* Hero
+* Feature Showcase
+* Pricing Table
+* Testimonials
+* CTA (Call-To-Action)
+* And more
+
+All these components are based on the [Tailark](https://tailark.com/) open source project, which provides high-quality UI components built with Shadcn/UI and TailwindCSS.
+
+## Available Component Categories
+
+The AeloKit template includes all marketing components from Tailark, organized into the following categories:
+
+| Category                                           | Description                          |
+| ------------------------------------------------- | ------------------------------------ |
+| Hero                                              | Eye-catching page header             |
+| Logo Cloud                                        | Display partner or client logos      |
+| Features                                          | Highlight key product features       |
+| Integrations                                      | Showcase third-party integrations    |
+| Content                                           | General content display              |
+| Stats                                             | Display key metrics and statistics   |
+| Team                                              | Showcase your team members           |
+| Testimonials                                      | Display customer reviews and ratings |
+| CTA                                               | Encourage user action                |
+| Footer                                            | Page footer with links and info      |
+| Pricing                                           | Display your pricing plans           |
+| Comparator                                        | Compare different features or plans  |
+| FAQs                                              | Answer common questions              |
+| Login                                             | Login-related components             |
+| Sign-up                                           | Registration-related components      |
+| Forgot Password                                   | Password recovery interface          |
+| Contact                                           | Contact forms and information        |
+
+Each category contains multiple component variants, giving you plenty of options to choose from.
+
+## How to Use Marketing Components
+
+Components are located in the `apps/web/src/components/tailark/preview` directory, organized by category. Each category folder contains multiple component variants that you can use in your landing pages.
+
+### Browse Available Components
+
+To view all available components, you can explore the `apps/web/src/components/tailark/preview` directory:
+
+<Files>
+  <Folder name="apps/web/src/components/tailark/preview" defaultOpen>
+    <Folder name="hero-section" />
+
+    <Folder name="logo-cloud" />
+
+    <Folder name="features" />
+
+    <Folder name="integrations" />
+
+    <Folder name="content" />
+
+    <Folder name="stats" />
+
+    <Folder name="team" />
+
+    <Folder name="testimonials" />
+
+    <Folder name="call-to-action" />
+
+    <Folder name="footer" />
+
+    <Folder name="pricing" />
+
+    <Folder name="comparator" />
+
+    <Folder name="faqs" />
+
+    <Folder name="login" />
+
+    <Folder name="sign-up" />
+
+    <Folder name="forgot-password" />
+
+    <Folder name="contact" />
+
+    <File name="layout.tsx" />
+  </Folder>
+</Files>
+
+Each category folder contains numbered variants (e.g., `one`, `two`, `three`, etc.), and each variant has a `page.tsx` file that implements the component.
+
+### Adding Components to Landing Pages
+
+To use components in your landing page:
+
+1. Browse the `apps/web/src/components/tailark/preview` directory to find the component you want to use
+2. Open the corresponding `page.tsx` file to view the implementation
+3. Copy the component code from the file
+4. Paste it into your landing page component
+5. Customize the content and styling as needed
+
+<Callout type="warning">
+  We do not recommend directly importing components from the `apps/web/src/components/tailark/preview` directory in your code. These components are regularly synced with the official Tailark components, which may introduce conflicts during code synchronization. The recommended approach is to copy components to your own directory, as described in the next section.
+</Callout>
+
+For example, to use the first Hero variant:
+
+```tsx
+// Your landing page component
+import { HeroSectionOne } from '@/components/landing/hero-section-one';
+
+export default function LandingPage() {
+  return (
+    <main>
+      <HeroSectionOne />
+      {/* Add more components here */}
+    </main>
+  );
+}
+```
+
+### Using the Components Directory
+
+For better organization and internationalization support, AeloKit provides a dedicated `apps/web/src/components/blocks` directory where you can place custom components copied from the `apps/web/src/components/tailark/preview` directory.
+
+<Files>
+  <Folder name="apps/web/src/components/blocks" defaultOpen>
+    <Folder name="hero" />
+
+    <Folder name="features" />
+
+    <Folder name="testimonials" />
+
+    <Folder name="pricing" />
+
+    <Folder name="stats" />
+
+    <Folder name="logo-cloud" />
+
+    <Folder name="calltoaction" />
+
+    <Folder name="faqs" />
+
+    <Folder name="integration" />
+  </Folder>
+</Files>
+
+This directory structure mirrors the categories in the `apps/web/src/components/tailark/preview` directory and already contains some built-in, internationalized components. When adding new components from the `apps/web/src/components/tailark/preview` directory, we recommend the following workflow:
+
+1. Find and select the desired component from the `apps/web/src/components/tailark/preview` directory
+2. Copy the component code from the `page.tsx` file
+3. Create a new file in the corresponding category folder in `apps/web/src/components/blocks`
+4. Adjust the component to support internationalization (see [Internationalization section](#internationalization))
+
+For example, if you selected a Hero component from the `apps/web/src/components/tailark/preview` directory, you should place the customized version at:
+
+```
+apps/web/src/components/blocks/hero/your-hero-component.tsx
+```
+
+Using this organized approach provides several benefits:
+
+* Keeps all landing page components in a dedicated location
+* Makes it easier to maintain and update components
+* Ensures proper separation from the original preview components
+* Allows you to adjust components for internationalization in a structured way
+* Promotes reuse across different parts of the application
+
+<Callout type="info">
+  Best Practice for Using Components
+
+  While you can directly use components from the `blocks` directory, the most recommended approach is to copy them to your own directory (e.g., `components-home` or `components-landing`) and customize them there.
+</Callout>
+
+### Creating a Complete Landing Page
+
+A typical landing page combines multiple components to create a cohesive user experience. Here's an example of how to build a landing page using components from the blocks directory:
+
+```tsx
+import HeroSection from '@/components/blocks/hero/hero';
+import Features from '@/components/blocks/features/features';
+import Testimonials from '@/components/blocks/testimonials/testimonials';
+import Pricing from '@/components/blocks/pricing/pricing';
+import CallToAction from '@/components/blocks/calltoaction/cta';
+import Footer from '@/components/blocks/footer/footer';
+
+export default function LandingPage() {
+  return (
+    <main>
+      <HeroSection />
+      <Features />
+      <Testimonials />
+      <Pricing />
+      <CallToAction />
+    </main>
+  );
+}
+```
+
+This approach allows you to mix and match different components to create a unique landing page that suits your needs.
+
+## Internationalization
+
+Tailark marketing components do not support internationalization by default. To internationalize your landing page, you need to extract text content into language-specific resource files.
+
+### Extracting Text for Translation
+
+After you've completed component selection and customization, follow these steps to make your landing page multilingual:
+
+1. Identify all text content in the components you're using
+2. Extract this text into language-specific resource files (e.g., `messages/en.json` and `messages/zh.json`)
+3. Replace hardcoded text with translation function calls
+
+Here's an example of how to internationalize a Hero:
+
+```tsx
+// Before internationalization
+<TextEffect as="h1" className="...">
+  Your Custom Headline Here
+</TextEffect>
+
+// After internationalization
+import { useTranslations } from 'next-intl';
+
+function InternationalizedHeroSection() {
+  const t = useTranslations('LandingPage.Hero');
+
+  return (
+    <TextEffect as="h1" className="...">
+      {t('headline')}
+    </TextEffect>
+  );
+}
+```
+
+### Translation Resource Files
+
+Create translation files for each supported language:
+
+```json
+// messages/en.json
+{
+  "LandingPage": {
+    "Hero": {
+      "headline": "Your Custom Headline Here",
+      "subheading": "Your custom subheading text goes here.",
+      "ctaPrimary": "Get Started",
+      "ctaSecondary": "Learn More"
+    }
+  }
+}
+
+// messages/zh.json
+{
+  "LandingPage": {
+    "Hero": {
+      "headline": "您的自定义标题在这里",
+      "subheading": "您的自定义副标题文本在这里。",
+      "ctaPrimary": "开始使用",
+      "ctaSecondary": "了解更多"
+    }
+  }
+}
+```
+
+### Built-in Internationalized Components
+
+The `apps/web/src/components/blocks` directory already contains several built-in internationalized components that you can use as references. These components:
+
+1. Import the `useTranslations` method from next-intl
+2. Use translation keys for all text content to get the corresponding translated text
+3. Use `LocaleLink` instead of the regular Next.js `Link` to properly localize URLs
+4. Maintain the same visual design and functionality as the preview counterpart
+
+For example, here's a simplified version of an internationalized Hero component:
+
+```tsx
+import { useTranslations } from 'next-intl';
+import { LocaleLink } from '@/i18n/navigation';
+import { TextEffect } from '@/components/tailark/motion/text-effect';
+import { Button } from '@/components/ui/button';
+
+export default function HeroSection() {
+  const t = useTranslations('HomePage.hero');
+
+  return (
+    <section>
+      <h1>
+        <TextEffect preset="fade-in-blur">
+          {t('title')}
+        </TextEffect>
+      </h1>
+      <p>{t('description')}</p>
+      <Button asChild>
+        <LocaleLink href="/get-started">
+          {t('cta')}
+        </LocaleLink>
+      </Button>
+    </section>
+  );
+}
+```
+
+By following this approach, you can create a fully multilingual landing page that adapts to the user's preferred language.
+
+## Best Practices
+
+When creating landing pages, consider these best practices:
+
+1. **Start with a plan**: Sketch out the landing page structure before implementation
+2. **Focus on user flow**: Arrange component order to guide users through the conversion funnel
+3. **Maintain consistency**: Use consistent colors, fonts, and styles throughout
+4. **Optimize performance**: Compress image sizes and reduce unnecessary animations
+5. **Mobile-first**: Ensure your landing page looks great on all devices
+6. **Test load times**: Verify your page loads quickly, especially above-the-fold content
+7. **Clear CTAs**: Make your primary CTAs prominent and compelling
+8. **Simplify navigation**: Keep navigation minimal to focus attention on your content
+9. **A/B testing**: If possible, test different versions to see which performs better
+10. **Track metrics**: Set up analytics to measure landing page effectiveness
+
+## Next Steps
+
+Now that you understand how to create and customize landing pages in AeloKit, explore these related topics:
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="Themes" href="/docs/themes">
+    Configure themes and appearance settings
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="Fonts" href="/docs/fonts">
+    Customize typography for landing pages
+  </Card>
+
+  <Card icon={<Image className="text-amber-500" />} title="Images" href="/docs/images">
+    Configure various website images
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="Website Config" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

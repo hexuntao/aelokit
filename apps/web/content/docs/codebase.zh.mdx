@@ -1,0 +1,90 @@
+---
+title: 代码库
+description: AeloKit 项目代码库概述
+icon: Github
+---
+
+## 概述
+
+AeloKit 是一个现代化的 SaaS 起始模板，基于 Next.js、TypeScript 和 Tailwind CSS 构建。项目使用 pnpm workspace + Turborepo 管理，采用 Monorepo 架构。
+
+## 项目特点
+
+* **现代技术栈**：Next.js 16、React 19、TypeScript、Tailwind CSS
+* **Monorepo 架构**：pnpm workspace + Turborepo 管理多包
+* **完整的 SaaS 功能**：认证、支付、积分、邮件、通知等
+* **国际化支持**：基于 next-intl 的多语言支持
+* **文档系统**：基于 Fumadocs 的文档和博客系统
+* **丰富的 UI 组件**：shadcn/ui、Magic UI、Tailark 等
+
+## 核心包
+
+### 领域包
+
+| 包名 | 描述 |
+| --- | --- |
+| `@repo/config` | 跨 app 共享的核心 SaaS 静态配置和配置类型 |
+| `@repo/shared` | 跨 app/package 共享的纯工具函数、常量、类型 |
+| `@repo/env` | 跨 app/package 共享的环境变量验证 |
+| `@repo/i18n` | 跨 app/package 共享的国际化路由和消息 |
+| `@repo/db` | 跨 app/package 共享的 Drizzle 数据库层 |
+| `@repo/auth` | 跨 app/package 共享的认证核心层 |
+| `@repo/payment` | 跨 app/package 共享的支付领域包 |
+| `@repo/credits` | 跨 app/package 共享的积分领域包 |
+| `@repo/mail` | 跨 app/package 共享的事务邮件领域包 |
+| `@repo/newsletter` | 跨 app/package 共享的邮件订阅领域包 |
+| `@repo/notification` | 跨 app/package 共享的系统通知领域包 |
+| `@repo/storage` | 跨 app/package 共享的对象存储领域包 |
+| `@repo/analytics` | 跨 app/package 共享的统计分析领域包 |
+
+### 应用
+
+| 应用 | 描述 |
+| --- | --- |
+| `apps/web` | 当前完整 SaaS 单体应用 |
+
+## 常用命令
+
+```bash
+# 安装依赖
+pnpm install
+
+# 开发
+pnpm dev
+
+# 构建
+pnpm build
+
+# 代码检查
+pnpm lint
+
+# 格式化
+pnpm format
+
+# 类型检查
+pnpm typecheck
+
+# 数据库操作
+pnpm --filter @repo/db db:generate
+pnpm --filter @repo/db db:migrate
+pnpm --filter @repo/db db:push
+pnpm --filter @repo/db db:studio
+```
+
+## 下一步
+
+现在您了解了 AeloKit 的代码库结构，探索这些相关主题：
+
+<Cards>
+  <Card icon={<FolderTree className="text-blue-500" />} title="项目结构" href="/docs/structure">
+    了解模板项目结构
+  </Card>
+
+  <Card icon={<FileKey className="text-green-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Rocket className="text-amber-500" />} title="开始使用" href="/docs/start">
+    AeloKit 模板入门文档
+  </Card>
+</Cards>

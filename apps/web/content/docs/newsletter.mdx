@@ -1,0 +1,221 @@
+---
+title: Newsletter
+description: Learn how to set up and use Resend or Beehiiv for newsletter management
+icon: Newspaper
+---
+
+AeloKit supports [Resend](https://resend.com) and [Beehiiv](https://beehiiv.com) for newsletter management.
+
+## Setup
+
+<Tabs items={["Resend", "Beehiiv"]}>
+  <Tab value="Resend">
+    <Steps>
+      <Step>
+        ### Create a Resend Account
+
+        Create a Resend account at [resend.com](https://resend.com).
+      </Step>
+
+      <Step>
+        ### Get the API Key
+
+        Click `API Keys` > `Create API Key`, set permissions to `Send emails` or `Full access`. Copy the `API Key` and add it to your environment file:
+
+        ```bash title=".env"
+        RESEND_API_KEY=YOUR-RESEND-API-KEY
+        ```
+      </Step>
+
+      <Step>
+        ### Update Website Configuration
+
+        ```ts title="packages/config/src/website.ts"
+        export const websiteConfig = {
+          // ...other config
+          newsletter: {
+            enable: true,
+            provider: 'resend',
+            autoSubscribeAfterSignUp: false,
+          },
+          // ...other config
+        }
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab value="Beehiiv">
+    <Steps>
+      <Step>
+        ### Create a Beehiiv Account
+
+        Create a Beehiiv account at [beehiiv.com](https://beehiiv.com).
+      </Step>
+
+      <Step>
+        ### Get API Key and Publication ID
+
+        Go to `Settings` > `API` to generate an API key. Get your `Publication ID` from the URL or settings page. Add the credentials to your environment file:
+
+        ```bash title=".env"
+        BEEHIIV_API_KEY=YOUR-BEEHIIV-API-KEY
+        BEEHIIV_PUBLICATION_ID=YOUR-BEEHIIV-PUBLICATION-ID
+        ```
+      </Step>
+
+      <Step>
+        ### Update Website Configuration
+
+        ```ts title="packages/config/src/website.ts"
+        export const websiteConfig = {
+          // ...other config
+          newsletter: {
+            enable: true,
+            provider: 'beehiiv',
+            autoSubscribeAfterSignUp: false,
+          },
+          // ...other config
+        }
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration** documentation and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#newsletter">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Usage
+
+```tsx
+import { subscribe, unsubscribe, isSubscribed } from '@/newsletter';
+
+// Subscribe a user to the newsletter
+const success = await subscribe('user@example.com');
+
+// Unsubscribe a user from the newsletter
+const success = await unsubscribe('user@example.com');
+
+// Check if a user is subscribed to the newsletter
+const subscribed = await isSubscribed('user@example.com');
+```
+
+## Extending with a New Newsletter Service
+
+AeloKit supports extending with new newsletter service providers:
+
+1. Create a new file in the `packages/newsletter/src/providers` directory (e.g., `custom-provider.ts`).
+2. Implement the `NewsletterProvider` interface:
+
+```tsx title="packages/newsletter/src/providers/custom-provider.ts"
+import type {
+  CheckSubscribeStatusParams,
+  NewsletterProvider,
+  SubscribeNewsletterParams,
+  UnsubscribeNewsletterParams,
+} from '../types';
+
+export class CustomNewsletterProvider implements NewsletterProvider {
+  constructor() {
+    // Initialize your newsletter service provider
+  }
+
+  public getProviderName(): string {
+    return 'CustomProvider';
+  }
+
+  async subscribe({ email }: SubscribeNewsletterParams): Promise<boolean> {
+    // Implementation for subscribing a user
+    return true;
+  }
+
+  async unsubscribe({ email }: UnsubscribeNewsletterParams): Promise<boolean> {
+    // Implementation for unsubscribing a user
+    return true;
+  }
+
+  async checkSubscribeStatus({ email }: CheckSubscribeStatusParams): Promise<boolean> {
+    // Implementation for checking subscription status
+    return true;
+  }
+}
+```
+
+3. Register the new provider in `registry.ts`:
+
+```tsx title="packages/newsletter/src/registry.ts"
+import { CustomNewsletterProvider } from './providers/custom-provider';
+
+export function getNewsletterProvider(): NewsletterProvider {
+  const provider = websiteConfig.newsletter.provider;
+  
+  switch (provider) {
+    case 'resend':
+      return new ResendNewsletterProvider();
+    case 'beehiiv':
+      return new BeehiivNewsletterProvider();
+    case 'custom':
+      return new CustomNewsletterProvider();
+    default:
+      throw new Error(`Unsupported newsletter service provider: ${provider}`);
+  }
+}
+```
+
+## Newsletter System Architecture
+
+<Files>
+  <Folder name="packages/newsletter/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="resend.ts" />
+      <File name="beehiiv.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## FAQ
+
+### Which provider should I choose?
+
+* **Choose Resend**: if you already use Resend for transactional emails and want a simple, unified solution for email sending and subscription management.
+* **Choose Beehiiv**: if you need advanced subscription features like analytics, monetization, referral programs, and growth tools, suitable for professional content creators.
+
+### Auto-Subscribe Feature
+
+Set `autoSubscribeAfterSignUp: true` to automatically subscribe users to the newsletter after sign-up.
+
+## References
+
+* [Resend Documentation](https://resend.com/docs)
+* [Beehiiv API Documentation](https://developers.beehiiv.com/)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics service
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="Storage" href="/docs/storage">
+    Configure storage service
+  </Card>
+</Cards>

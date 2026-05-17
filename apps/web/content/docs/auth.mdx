@@ -1,0 +1,274 @@
+---
+title: Authentication
+description: Learn how to set up and use authentication with Better Auth in AeloKit
+icon: Lock
+---
+
+AeloKit uses [Better Auth](https://www.better-auth.com) for authentication. The template provides a flexible and secure system that supports multiple authentication methods, session management, and role-based access control.
+
+## Setup
+
+<Steps>
+  <Step>
+    ### Generate Better Auth Secret
+
+    The `BETTER_AUTH_SECRET` is a random string used for encryption and generating hashes. You can generate a secret using the OpenSSL command:
+
+    ```bash
+    openssl rand -base64 32
+    ```
+
+    After generating the secret, add it to your environment variables file:
+
+    ```bash
+    BETTER_AUTH_SECRET="YOUR-BETTER-AUTH-SECRET"
+    ```
+  </Step>
+
+  <Step>
+    ### Configure GitHub OAuth
+
+    To enable GitHub authentication, you need to register your application:
+
+    1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+    2. Click on `OAuth Apps`, then click `New OAuth App`
+    3. Fill out the registration form:
+       * **Application name**: Your application name (e.g., `AeloKit`)
+       * **Homepage URL**: Your website address, e.g., `https://YOUR-DOMAIN.com` (or `http://localhost:3000` for local development)
+       * **Application description**: A brief description of your application
+       * **Authorization callback URL**: Set to `https://YOUR-DOMAIN.com/api/auth/callback/github` (or `http://localhost:3000/api/auth/callback/github` for local development)
+    4. Click `Register application`
+    5. After registration, you will see the `GitHub OAuth Client ID`
+    6. Click `Generate a new client secret` to create a GitHub OAuth client secret
+    7. Copy both values and add them to your environment variables file:
+
+    ```bash
+    GITHUB_CLIENT_ID="YOUR-GITHUB-CLIENT-ID"
+    GITHUB_CLIENT_SECRET="YOUR-GITHUB-CLIENT-SECRET"
+    ```
+
+    8. Ensure `auth.enableGithubLogin` is set to `true` in the `website.ts` file
+
+    ```ts title="packages/config/src/website.ts"
+    auth: {
+      enableGithubLogin: true,
+    }
+    ```
+
+    <Callout type="info">
+      Create **two separate** OAuth applications in GitHub: one for production and one for development.
+
+      Never use the same OAuth application in both environments, as they require different callback URLs.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Configure Google OAuth
+
+    To enable Google authentication, follow these steps to obtain client credentials:
+
+    1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+    2. Create a new project or select an existing one
+    3. Navigate to `Credentials` in the left sidebar
+    4. Click `Create Credentials` and select `OAuth client ID`
+    5. If this is your first time, you may need to configure the OAuth consent screen:
+       * **User type**: Select `External`
+       * Fill in the required information (app name, user support email, developer contact information)
+       * Add authorized domains, including your website domain
+       * Click `Save and Continue` in each section
+    6. Return to `Credentials` and create an `OAuth Client ID`:
+       * **Application type**: Web application
+       * **Name**: Your website name
+       * **Authorized JavaScript origins**: Add your domain (e.g., `https://YOUR-DOMAIN.com` or `http://localhost:3000`)
+       * **Authorized redirect URIs**: Add `https://YOUR-DOMAIN.com/api/auth/callback/google` (or `http://localhost:3000/api/auth/callback/google` for local development)
+    7. Click `Create`, copy the provided client ID and client secret, and add them to your environment variables file:
+
+    ```bash
+    GOOGLE_CLIENT_ID="YOUR-GOOGLE-CLIENT-ID"
+    GOOGLE_CLIENT_SECRET="YOUR-GOOGLE-CLIENT-SECRET"
+    ```
+
+    8. Ensure `auth.enableGoogleLogin` is set to `true` in the `website.ts` file
+
+    ```ts title="packages/config/src/website.ts"
+    auth: {
+      enableGoogleLogin: true,
+    }
+    ```
+
+    <Callout type="info">
+      1. It is recommended to create two separate OAuth applications in Google Cloud Console: one for production and one for development.
+         Do not use the same OAuth application in both environments, as they require different callback URLs.
+      2. If Google login fails during local development, check if your proxy is working properly and ensure TUN mode is enabled (Clash Verge is recommended).
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Configure Email Registration
+
+    To enable email registration, follow these steps:
+
+    1. Configure the email service as required in the [Email Configuration](/docs/email#setup) documentation
+    2. Update the `website.ts` file to enable email registration and set the email provider and default sender email address, for example:
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...other config
+      auth: {
+        enableCredentialLogin: true,
+      },
+      mail: {
+        provider: 'resend', // The email provider to use
+        fromEmail: 'support@example.com', // Default sender email address
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up your environment, you can now return to the **Environment Configuration documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#authentication">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Client-Side Usage
+
+### Accessing Session Data
+
+In client components, you can access the user's session data using the `useSession` hook:
+
+```tsx
+'use client';
+
+import { useSession } from '@/lib/auth-client';
+
+export function ProfileButton() {
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (session) {
+    return (
+      <div>
+        <p>Welcome, {session.user.name}!</p>
+        <button onClick={() => signOut()}>Sign out</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => signIn.social({ provider: 'google' })}>
+      Sign in
+    </button>
+  );
+}
+```
+
+### Authentication Operations
+
+The auth client provides methods for common authentication operations:
+
+```tsx
+import { signIn, signOut } from '@/lib/auth-client';
+
+// Sign in with email and password
+signIn.emailAndPassword({
+  email: 'user@example.com',
+  password: 'password123',
+});
+
+// Sign in with a social provider
+signIn.social({
+  provider: 'google',
+});
+
+// Sign out
+signOut();
+```
+
+## Server-Side Usage
+
+### Protecting Routes for Logged-in Users
+
+In server components, you can protect routes by checking the session:
+
+```tsx
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+
+export default async function ProtectedPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    redirect('/auth/login');
+  }
+
+  return <div>Protected content</div>;
+}
+```
+
+### Protecting Routes for Admin Users
+
+For admin-only routes, you can check the user role in the session:
+
+```tsx
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+
+export default async function AdminPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user || session.user.role !== 'admin') {
+    redirect('/auth/login');
+  }
+
+  return <div>Admin content</div>;
+}
+```
+
+## Authentication Schema
+
+Authentication-related tables are defined in `packages/db/src/auth.schema.ts` and are automatically managed by Better Auth:
+
+* **user** - User table
+* **session** - Session table
+* **account** - Account table (for social login)
+* **verification** - Verification table (for email verification)
+
+## References
+
+* [Better Auth Documentation](https://www.better-auth.com/docs)
+* [Better Auth | GitHub Login](https://www.better-auth.com/docs/authentication/github)
+* [Better Auth | Google Login](https://www.better-auth.com/docs/authentication/google)
+* [Better Auth | Email Password Login](https://www.better-auth.com/docs/authentication/email-password)
+* [Better Auth | Session Management](https://www.better-auth.com/docs/concepts/session-management)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Mailbox className="text-green-500" />} title="Newsletter" href="/docs/newsletter">
+    Set up email list subscription
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="Database" href="/docs/database">
+    Configure database
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

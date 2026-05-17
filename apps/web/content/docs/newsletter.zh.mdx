@@ -1,0 +1,221 @@
+---
+title: 邮件订阅
+description: 学习如何设置和使用 Resend 或 Beehiiv 进行邮件订阅管理
+icon: Newspaper
+---
+
+AeloKit 支持 [Resend](https://resend.com) 和 [Beehiiv](https://beehiiv.com) 来管理邮件订阅。
+
+## 设置
+
+<Tabs items={["Resend", "Beehiiv"]}>
+  <Tab value="Resend">
+    <Steps>
+      <Step>
+        ### 创建 Resend 账户
+
+        在 [resend.com](https://resend.com) 创建 Resend 账户。
+      </Step>
+
+      <Step>
+        ### 获取 API 密钥
+
+        点击 `API Keys` > `Create API Key`，设置权限为 `Send emails` 或 `Full access`。复制 `API Key`，并添加到环境变量文件：
+
+        ```bash title=".env"
+        RESEND_API_KEY=YOUR-RESEND-API-KEY
+        ```
+      </Step>
+
+      <Step>
+        ### 更新网站配置
+
+        ```ts title="packages/config/src/website.ts"
+        export const websiteConfig = {
+          // ...其他配置
+          newsletter: {
+            enable: true,
+            provider: 'resend',
+            autoSubscribeAfterSignUp: false,
+          },
+          // ...其他配置
+        }
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab value="Beehiiv">
+    <Steps>
+      <Step>
+        ### 创建 Beehiiv 账户
+
+        在 [beehiiv.com](https://beehiiv.com) 创建 Beehiiv 账户。
+      </Step>
+
+      <Step>
+        ### 获取 API 密钥和 Publication ID
+
+        进入 `Settings` > `API` 生成 API 密钥。从 URL 或设置页面获取您的 `Publication ID`。将凭据添加到环境变量文件：
+
+        ```bash title=".env"
+        BEEHIIV_API_KEY=YOUR-BEEHIIV-API-KEY
+        BEEHIIV_PUBLICATION_ID=YOUR-BEEHIIV-PUBLICATION-ID
+        ```
+      </Step>
+
+      <Step>
+        ### 更新网站配置
+
+        ```ts title="packages/config/src/website.ts"
+        export const websiteConfig = {
+          // ...其他配置
+          newsletter: {
+            enable: true,
+            provider: 'beehiiv',
+            autoSubscribeAfterSignUp: false,
+          },
+          // ...其他配置
+        }
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#newsletter">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 使用方法
+
+```tsx
+import { subscribe, unsubscribe, isSubscribed } from '@/newsletter';
+
+// 为用户订阅邮件列表
+const success = await subscribe('user@example.com');
+
+// 为用户取消订阅邮件列表
+const success = await unsubscribe('user@example.com');
+
+// 检查用户是否已订阅邮件列表
+const subscribed = await isSubscribed('user@example.com');
+```
+
+## 扩展新的邮件订阅服务
+
+AeloKit 支持扩展新的邮件订阅服务提供商：
+
+1. 在 `packages/newsletter/src/providers` 目录中创建新文件（例如 `custom-provider.ts`）。
+2. 实现 `NewsletterProvider` 接口：
+
+```tsx title="packages/newsletter/src/providers/custom-provider.ts"
+import type {
+  CheckSubscribeStatusParams,
+  NewsletterProvider,
+  SubscribeNewsletterParams,
+  UnsubscribeNewsletterParams,
+} from '../types';
+
+export class CustomNewsletterProvider implements NewsletterProvider {
+  constructor() {
+    // 初始化您的邮件订阅服务提供商
+  }
+
+  public getProviderName(): string {
+    return 'CustomProvider';
+  }
+
+  async subscribe({ email }: SubscribeNewsletterParams): Promise<boolean> {
+    // 订阅用户的实现
+    return true;
+  }
+
+  async unsubscribe({ email }: UnsubscribeNewsletterParams): Promise<boolean> {
+    // 取消订阅用户的实现
+    return true;
+  }
+
+  async checkSubscribeStatus({ email }: CheckSubscribeStatusParams): Promise<boolean> {
+    // 检查订阅状态的实现
+    return true;
+  }
+}
+```
+
+3. 在 `registry.ts` 中注册新的提供商：
+
+```tsx title="packages/newsletter/src/registry.ts"
+import { CustomNewsletterProvider } from './providers/custom-provider';
+
+export function getNewsletterProvider(): NewsletterProvider {
+  const provider = websiteConfig.newsletter.provider;
+  
+  switch (provider) {
+    case 'resend':
+      return new ResendNewsletterProvider();
+    case 'beehiiv':
+      return new BeehiivNewsletterProvider();
+    case 'custom':
+      return new CustomNewsletterProvider();
+    default:
+      throw new Error(`不支持的邮件订阅服务提供商: ${provider}`);
+  }
+}
+```
+
+## 邮件订阅系统架构
+
+<Files>
+  <Folder name="packages/newsletter/src" defaultOpen>
+    <Folder name="providers" defaultOpen>
+      <File name="resend.ts" />
+      <File name="beehiiv.ts" />
+    </Folder>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+## 常见问题
+
+### 应该选择哪个提供商？
+
+* **选择 Resend**：如果您已经使用 Resend 发送事务性邮件，并希望有一个简单统一的解决方案来处理邮件发送和订阅管理。
+* **选择 Beehiiv**：如果您需要高级订阅功能，如数据分析、变现、推荐计划和增长工具，适合专业内容创作者。
+
+### 自动订阅功能
+
+设置 `autoSubscribeAfterSignUp: true` 可以在用户注册后自动订阅邮件列表。
+
+## 参考资料
+
+* [Resend 文档](https://resend.com/docs)
+* [Beehiiv API 文档](https://developers.beehiiv.com/)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="邮件" href="/docs/email">
+    配置邮件服务
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="统计分析" href="/docs/analytics">
+    配置统计分析服务
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="存储" href="/docs/storage">
+    配置存储服务
+  </Card>
+</Cards>

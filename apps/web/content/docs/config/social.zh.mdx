@@ -1,0 +1,48 @@
+---
+title: 社交配置
+description: 管理社交媒体链接和分享选项
+icon: Share2
+---
+管理网站上显示的社交媒体链接，每个项目都是 [MenuItem](/docs/config#menuitem)。
+
+```tsx title="src/config/social-config.tsx"
+export function getSocialLinks(): MenuItem[] {
+  const socialLinks: MenuItem[] = [];
+
+  if (websiteConfig.metadata.social?.github) {
+    socialLinks.push({
+      title: 'GitHub',
+      href: websiteConfig.metadata.social.github,
+      icon: <GitHubIcon className="size-4 shrink-0" />,
+    });
+  }
+
+  // 基于配置的其他社交链接...
+
+  return socialLinks;
+}
+```
+
+它根据 `website.tsx` 配置中提供的 URL 动态生成社交媒体链接，确保配置和向用户显示的内容之间的一致性。
+
+## 下一步
+
+现在您了解了社交媒体配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+
+  <Card icon={<Footprints className="text-green-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚中的链接
+  </Card>
+
+  <Card icon={<CircleUser className="text-purple-500" />} title="头像配置" href="/docs/config/avatar">
+    配置用户头像下拉菜单
+  </Card>
+
+  <Card icon={<CreditCard className="text-purple-500" />} title="价格配置" href="/docs/config/price">
+    配置您的订阅计划和定价
+  </Card>
+</Cards>

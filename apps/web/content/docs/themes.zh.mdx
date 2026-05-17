@@ -1,0 +1,75 @@
+---
+title: 主题
+description: 学习如何自定义 AeloKit 网站的主题
+icon: Palette
+---
+
+本文档涵盖了 AeloKit 模板中的主题系统，并介绍如何自定义您自己的主题。
+
+## 自定义主题
+
+对于主题自定义，您可以直接修改基础主题变量，或者使用主题生成器创建自定义主题。
+
+基础主题变量在 `apps/web/src/styles/globals.css` 的 `:root` 选择器中定义，您可以修改它来更改所有主题的默认外观：
+
+```css title="apps/web/src/styles/globals.css"
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  /* 根据需要修改其他变量 */
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  /* 根据需要修改暗黑模式变量 */
+}
+```
+
+### 主题生成器
+
+您可以使用以下主题生成器创建自己的自定义主题，然后将 CSS 变量复制到您的 `globals.css` 文件中，或使用 shadcn cli 来添加并更改您的 `globals.css` 文件：
+
+```bash
+pnpm dlx shadcn@latest add https://tweakcn.com/r/themes/twitter.json
+```
+
+* [shadcn/ui 主题生成器](https://ui.shadcn.com/themes)
+* [tweakcn 主题生成器](https://tweakcn.com/editor/theme)
+* [ui.pub 主题生成器](https://ui.pub/x/theme-gen)
+
+## 常见问题
+
+### 在线切换主题
+
+如果需要在线切换主题功能，可以参考这篇文章了解更多细节：[How to Add a Theme Selector to Your Next.js App](https://ouassim.tech/notes/how-to-add-a-theme-selector-to-your-nextjs-app)
+
+## 最佳实践
+
+* **颜色对比**：确保文本颜色与背景颜色有足够的对比度以便于访问
+* **测试两种模式**：如果开启明暗模式，确保在两种模式下测试新主题
+* **限制主题选项**：提供少量精心设计的主题，而不是许多相似的选项
+* **主题一致性**：在不同主题之间保持一致的样式，以避免 UI 异常
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用主题，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Image className="text-blue-500" />} title="图片" href="/docs/images">
+    配置网站各种图片
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="字体" href="/docs/fonts">
+    配置自定义字体
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+</Cards>

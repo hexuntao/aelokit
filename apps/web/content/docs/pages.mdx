@@ -1,0 +1,134 @@
+---
+title: Pages
+description: Learn about the available pages and routes in the AeloKit template
+icon: FileText
+---
+
+This document introduces the page and route structure available in the AeloKit template.
+
+## Marketing Pages
+
+| Route | Description |
+| --- | --- |
+| `/` | Home page |
+| `/pricing` | Pricing page |
+| `/features` | Features showcase page |
+| `/blog` | Blog list page |
+| `/blog/[slug]` | Blog post detail page |
+| `/docs` | Documentation homepage |
+| `/docs/[...slug]` | Documentation page |
+
+## Authentication Pages
+
+| Route | Description |
+| --- | --- |
+| `/auth/login` | Login page |
+| `/auth/register` | Registration page |
+| `/auth/forgot-password` | Forgot password page |
+| `/auth/reset-password` | Reset password page |
+
+## Dashboard Pages
+
+| Route | Description |
+| --- | --- |
+| `/dashboard` | User dashboard homepage |
+| `/dashboard/settings` | User settings page |
+| `/dashboard/settings/profile` | Profile settings |
+| `/dashboard/settings/billing` | Billing and subscription management |
+| `/dashboard/settings/notifications` | Notification settings |
+
+## Admin Pages
+
+| Route | Description | Permission |
+| --- | --- | --- |
+| `/admin` | Admin dashboard | Admin only |
+| `/admin/users` | User management | Admin only |
+| `/admin/analytics` | Analytics | Admin only |
+
+## API Routes
+
+| Route | Description |
+| --- | --- |
+| `/api/webhooks/stripe` | Stripe Webhook handler |
+| `/api/auth/[...all]` | Authentication API routes |
+| `/api/subscribe` | Email subscription API |
+
+## Creating New Pages
+
+### Creating Marketing Pages
+
+1. Create a new folder in the `apps/web/src/app/[locale]/` directory
+2. Add a `page.tsx` file
+3. Implement the page component
+
+```tsx title="apps/web/src/app/[locale]/new-page/page.tsx"
+export default function NewPage() {
+  return (
+    <div>
+      <h1>New Page</h1>
+      <p>This is the new page content.</p>
+    </div>
+  );
+}
+```
+
+### Creating Dashboard Pages
+
+1. Create a new folder in the `apps/web/src/app/[locale]/dashboard/` directory
+2. Add a `page.tsx` file
+3. Implement the page component
+
+```tsx title="apps/web/src/app/[locale]/dashboard/new-feature/page.tsx"
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+
+export default function NewFeaturePage() {
+  return (
+    <DashboardLayout>
+      <h1>New Feature</h1>
+      <p>This is the new feature page content.</p>
+    </DashboardLayout>
+  );
+}
+```
+
+## Page Layouts
+
+AeloKit provides multiple layout components:
+
+* `MarketingLayout` - Marketing page layout
+* `DashboardLayout` - Dashboard page layout
+* `DocsLayout` - Documentation page layout
+
+### Using Layouts
+
+```tsx
+import { MarketingLayout } from '@/components/layout/marketing-layout';
+
+export default function Page() {
+  return (
+    <MarketingLayout>
+      {/* Page content */}
+    </MarketingLayout>
+  );
+}
+```
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Landing Page" href="/docs/landingpage">
+    Create a landing page
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Settings className="text-amber-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Globe className="text-purple-500" />} title="Internationalization" href="/docs/i18n">
+    Configure multi-language support
+  </Card>
+</Cards>

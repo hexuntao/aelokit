@@ -1,0 +1,244 @@
+---
+title: Analytics
+description: Learn how to set up and use various analytics tools in the AeloKit template
+icon: BarChart
+---
+
+AeloKit supports multiple analytics tools to track website traffic and user behavior.
+
+## Setup
+
+### Vercel Analytics
+
+[Vercel Analytics](https://vercel.com/analytics) provides detailed analytics of your website visitors without compromising user privacy.
+
+1. Enable in Vercel project dashboard > `Analytics` tab > `Web Analytics` section
+2. Enable in website configuration:
+
+```ts title="packages/config/src/website.ts"
+analytics: {
+  enableVercelAnalytics: true,
+}
+```
+
+### Vercel Speed Insights
+
+[Speed Insights](https://vercel.com/docs/speed-insights) helps you monitor and improve website performance.
+
+1. Enable in Vercel project dashboard > `Analytics` tab > `Speed Insights` section
+2. Enable in website configuration:
+
+```ts title="packages/config/src/website.ts"
+analytics: {
+  enableSpeedInsights: true,
+}
+```
+
+### Google Analytics
+
+[Google Analytics](https://analytics.google.com/) provides website tracking and analytics capabilities.
+
+1. Create a Google Analytics account and add a new website
+2. Get the measurement ID (starts with "G-")
+3. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID="G-XXXXXXXXXX"
+```
+
+### Umami
+
+[Umami](https://umami.is/) is a privacy-focused alternative to Google Analytics.
+
+1. Create an account at [umami.is](https://umami.is/) or self-host
+2. Create a new website and get the website ID and script URL
+3. Add environment variables:
+
+```bash title=".env"
+NEXT_PUBLIC_UMAMI_WEBSITE_ID="YOUR-WEBSITE-ID"
+NEXT_PUBLIC_UMAMI_SCRIPT="https://cloud.umami.is/script.js"
+```
+
+<Callout type="warn">
+  For self-hosted Umami instances, use your custom script URL instead of the default.
+</Callout>
+
+### Plausible
+
+[Plausible](https://plausible.io/) is a lightweight, open-source, and privacy-focused analytics tool.
+
+1. Create an account at [plausible.io](https://plausible.io/) or self-host
+2. Add a website and get the domain
+3. Add environment variables:
+
+```bash title=".env"
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN="YOUR-DOMAIN"
+NEXT_PUBLIC_PLAUSIBLE_SCRIPT="https://plausible.io/js/script.js"
+```
+
+<Callout type="warn">
+  For self-hosted Plausible instances, use your custom script URL instead of the default.
+</Callout>
+
+### PostHog
+
+[PostHog](https://posthog.com/) provides detailed insights into website traffic and user behavior.
+
+1. Create a PostHog account and new project
+2. Get the project API key and server domain
+3. Add environment variables:
+
+```bash title=".env"
+NEXT_PUBLIC_POSTHOG_KEY="YOUR-PROJECT-KEY"
+NEXT_PUBLIC_POSTHOG_HOST="YOUR-HOST"
+```
+
+### Ahrefs
+
+[Ahrefs](https://ahrefs.com/) provides detailed insights into website traffic and backlinks.
+
+1. Create an Ahrefs account and new website
+2. Get the website ID from [Web Analytics](https://app.ahrefs.com/dashboard?tab=webAnalytics)
+3. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_AHREFS_WEBSITE_ID="YOUR-WEBSITE-ID"
+```
+
+### OpenPanel
+
+[OpenPanel](https://openpanel.dev/) is an open-source product analytics platform.
+
+1. Create an OpenPanel account and new project
+2. Get the client ID
+3. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_OPENPANEL_CLIENT_ID="YOUR-CLIENT-ID"
+```
+
+### DataFast
+
+[DataFast](https://datafa.st/) is a simple, privacy-focused analytics tool focused on traffic and revenue tracking.
+
+1. Create a DataFast account and add a website
+2. Get the website ID and domain
+3. Add environment variables:
+
+```bash title=".env"
+NEXT_PUBLIC_DATAFAST_WEBSITE_ID="YOUR-WEBSITE-ID"
+NEXT_PUBLIC_DATAFAST_DOMAIN="YOUR-DOMAIN"
+```
+
+<Callout type="info">
+  To enable DataFast revenue tracking, set `enableDatafastRevenueTrack: true` in `packages/config/src/website.ts`.
+</Callout>
+
+### Clarity
+
+[Clarity](https://clarity.microsoft.com) provides heatmaps and session recordings to understand user behavior.
+
+1. Create a Clarity account and new project
+2. Get the project ID
+3. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_CLARITY_PROJECT_ID="YOUR-PROJECT-ID"
+```
+
+### Seline
+
+[Seline](https://seline.com/) focuses on subscription businesses and conversion tracking.
+
+1. Create a Seline account and set up a project
+2. Get the token
+3. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_SELINE_TOKEN="YOUR-TOKEN"
+```
+
+## Analytics System Architecture
+
+<Files>
+  <Folder name="packages/analytics/src" defaultOpen>
+    <File name="index.ts" />
+    <File name="client.ts" />
+    <File name="server.ts" />
+    <File name="events.ts" />
+    <File name="types.ts" />
+  </Folder>
+</Files>
+
+### Core Modules
+
+* **client.ts** - Client-side analytics initialization
+* **server.ts** - Server-side analytics initialization
+* **events.ts** - Event name definitions
+* **types.ts** - Type definitions
+
+## Adding New Analytics
+
+1. Create a new file in `packages/analytics/src` directory (e.g., `my-analytics.ts`)
+2. Implement the analytics component:
+
+```tsx title="packages/analytics/src/my-analytics.ts"
+'use client';
+
+import Script from 'next/script';
+
+export function MyAnalytics() {
+  if (process.env.NODE_ENV !== 'production') {
+    return null;
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_MY_ANALYTICS_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return (
+    <Script
+      strategy="afterInteractive"
+      src="https://example.com/analytics.js"
+      data-api-key={apiKey}
+    />
+  );
+}
+```
+
+3. Add it to the client or server analytics module
+
+4. Add environment variable:
+
+```bash title=".env"
+NEXT_PUBLIC_MY_ANALYTICS_API_KEY="YOUR-API-KEY"
+```
+
+## References
+
+* [Vercel Analytics Documentation](https://vercel.com/docs/analytics)
+* [Google Analytics Documentation](https://developers.google.com/analytics)
+* [Umami Documentation](https://umami.is/docs)
+* [Plausible Documentation](https://plausible.io/docs)
+* [PostHog Documentation](https://posthog.com/docs)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Set up email functionality
+  </Card>
+
+  <Card icon={<Mailbox className="text-green-500" />} title="Newsletter" href="/docs/newsletter">
+    Set up email list subscription
+  </Card>
+
+  <Card icon={<CreditCard className="text-amber-500" />} title="Payment" href="/docs/payment">
+    Configure payment features for your website
+  </Card>
+
+  <Card icon={<LayoutDashboard className="text-purple-500" />} title="Database" href="/docs/database">
+    Configure the database
+  </Card>
+</Cards>

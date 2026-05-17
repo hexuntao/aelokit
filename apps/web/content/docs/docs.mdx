@@ -1,0 +1,168 @@
+---
+title: Documentation
+description: Learn how to create and customize documentation sites using Nextra
+icon: BookOpen
+---
+
+AeloKit uses [Nextra](https://nextra.site/) as the documentation system, providing a beautiful, responsive documentation interface.
+
+## Core Features
+
+* **MDX Support**: Use React components in Markdown
+* **Full-text Search**: Built-in search functionality
+* **Syntax Highlighting**: Automatic code block highlighting
+* **Table of Contents**: Auto-generated page navigation
+* **Dark Mode**: Built-in dark mode support
+* **Internationalization**: Multi-language documentation support
+
+## Documentation Structure
+
+Documentation content is located in the `apps/web/content/docs` directory:
+
+<Files>
+  <Folder name="apps/web/content/docs" defaultOpen>
+    <Folder name="config" defaultOpen>
+      <File name="website.mdx" />
+      <File name="navbar.mdx" />
+      <File name="footer.mdx" />
+    </Folder>
+    <File name="index.mdx" />
+    <File name="env.mdx" />
+    <File name="database.mdx" />
+    <File name="auth.mdx" />
+  </Folder>
+</Files>
+
+### Document Metadata
+
+Each document file starts with frontmatter:
+
+```mdx
+---
+title: Document Title
+description: Document Description
+icon: IconName
+---
+```
+
+### Documentation Configuration
+
+Documentation configuration is defined in `apps/web/src/app/[locale]/docs/layout.tsx`:
+
+```tsx
+const docsOptions: DocsLayoutProps = {
+  nav: {
+    title: 'AeloKit',
+    type: 'docs',
+  },
+  sidebar,
+  toc: {
+    backToTop: true,
+  },
+};
+```
+
+## Creating New Documents
+
+1. Create a new `.mdx` file in the `apps/web/content/docs` directory
+2. Add frontmatter metadata
+3. Write document content
+4. Add document entry in `meta.json`
+
+### Example Document
+
+```mdx
+---
+title: New Feature
+description: Description of the new feature
+icon: Star
+---
+
+## Overview
+
+This is documentation for a new feature.
+
+## Usage
+
+Usage instructions go here.
+```
+
+### Adding to Navigation
+
+Add the new document in `meta.json`:
+
+```json
+{
+  "title": "New Feature",
+  "href": "/new-feature"
+}
+```
+
+## Internationalization
+
+Documentation supports multiple languages:
+
+* `docs.mdx` - English documentation
+* `docs.zh.mdx` - Chinese documentation
+
+### Translating Documents
+
+1. Copy existing document file
+2. Add language suffix (e.g., `.zh.mdx`)
+3. Translate content
+4. Keep the same file path
+
+## Custom Components
+
+Documents can use custom React components:
+
+```mdx
+import { Callout } from 'nextra/components';
+
+<Callout type="info">
+  This is an informational message.
+</Callout>
+```
+
+### Available Components
+
+* `Callout` - Callout box
+* `Cards` - Card grid
+* `Card` - Single card
+* `Steps` - Step guide
+* `Step` - Single step
+* `Tabs` - Tabs
+* `Tab` - Single tab
+
+## Best Practices
+
+1. **Keep it concise**: Documentation should be clear and concise
+2. **Use examples**: Provide code examples and screenshots
+3. **Organize structure**: Use heading hierarchy
+4. **Update timely**: Keep documentation in sync with code
+5. **Link related**: Link to related documentation
+
+## References
+
+* [Nextra Documentation](https://nextra.site/docs)
+* [MDX Documentation](https://mdxjs.com/docs/)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<PenLine className="text-blue-500" />} title="Blog" href="/docs/blog">
+    Configure blog functionality
+  </Card>
+
+  <Card icon={<Layout className="text-green-500" />} title="Landing Page" href="/docs/landingpage">
+    Create landing pages
+  </Card>
+
+  <Card icon={<Globe className="text-amber-500" />} title="Internationalization" href="/docs/i18n">
+    Configure multi-language support
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

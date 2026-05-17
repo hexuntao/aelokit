@@ -1,0 +1,35 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./auth-schema": "./src/auth.schema.ts",
+    "./app-schema": "./src/app.schema.ts",
+    "./types": "./src/types.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@repo/env": "workspace:*",
+    "drizzle-orm": "^0.39.3",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "@next/env": "^16.1.6",
+    "@types/node": "^25.0.10",
+    "drizzle-kit": "^0.30.4",
+    "typescript": "^5.9.3"
+  }
+}

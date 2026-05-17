@@ -1,0 +1,385 @@
+---
+title: Internationalization
+description: Learn how to set up and use internationalization
+icon: Globe
+---
+
+AeloKit template comes with internationalization support by default, allowing you to easily create localized UI components, email templates, and more, providing a better experience for global users.
+
+## Configuration
+
+Here's how to configure internationalization in the `packages/config/src/website.ts` configuration file:
+
+| Property        | Type                                                                 | Description                                          |
+| --------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `defaultLocale` | `string`                                                             | Default language locale (e.g., 'en')                 |
+| `locales`       | `Record<string, { flag?: string; name: string; hreflang?: string }>` | Available languages with flag emoji and display name |
+
+```tsx title="packages/config/src/website.ts"
+export const websiteConfig = {
+  // ...other config
+  i18n: {
+    defaultLocale: 'en',
+    locales: {
+      en: {
+        flag: '🇺🇸',
+        name: 'English',
+        hreflang: 'en',
+      },
+      zh: {
+        flag: '🇨🇳',
+        name: '中文',
+        hreflang: 'zh-CN',
+      },
+    },
+  },
+  // ...other config
+};
+```
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#internationalization">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Internationalization System Architecture
+
+The internationalization system in AeloKit is designed with the following components:
+
+<Files>
+  <Folder name="packages" defaultOpen>
+    <Folder name="i18n" defaultOpen>
+      <File name="src/messages.ts" />
+
+      <File name="src/navigation.ts" />
+
+      <File name="src/request.ts" />
+
+      <File name="src/routing.ts" />
+    </Folder>
+  </Folder>
+
+  <Folder name="messages" defaultOpen>
+    <File name="en.json" />
+
+    <File name="zh.json" />
+  </Folder>
+</Files>
+
+## Core Features
+
+* Multi-language support integrated with [next-intl](https://next-intl.dev)
+* Internationalized routes with language prefixes, no prefix for the default language
+* Support for UI components in different languages
+* Support for email templates in different languages
+* Correct URL generation for different languages
+* Automatic language detection based on user preferences
+* Built-in language switcher components in two styles: `LocaleSelector` and `LocaleSwitcher`
+
+## Translation Files
+
+AeloKit uses JSON files in the `messages` directory for translations, with one file per language, following the `[locale].json` naming convention.
+
+The structure of these files is hierarchical, allowing you to organize translations by feature or component:
+
+```json title="messages/en.json"
+{
+  "Metadata": {
+    "name": "AeloKit",
+    "title": "AeloKit - Modern SaaS Starter Template",
+    "description": "AeloKit is a modern SaaS starter template built with Next.js, TypeScript, and Tailwind CSS"
+  },
+  "Common": {
+    "login": "Log in",
+    "logout": "Log out",
+    "signUp": "Sign up",
+    "language": "Switch language"
+  },
+  "Mail": {
+    "verifyEmail": {
+      "title": "Hi, {name}.",
+      "body": "Please click the link below to verify your email address.",
+      "confirmEmail": "Confirm email",
+      "subject": "Verify your email"
+    }
+  }
+}
+```
+
+## Usage
+
+### Using Translations in React Components
+
+Use the `useTranslations` hook to access translations in React components:
+
+```tsx
+import { useTranslations } from 'next-intl';
+
+export function MyComponent() {
+  const t = useTranslations();
+
+  return (
+    <div>
+      <h1>{t('Common.login')}</h1>
+      <p>{t('Common.signUp')}</p>
+    </div>
+  );
+}
+```
+
+For translations with parameters:
+
+```tsx
+<p>{t('Mail.verifyEmail.title', { name: 'John' })}</p>
+```
+
+### Using Translations in Server Components
+
+For server components, use the `getTranslations` function to access translations:
+
+```tsx
+import { getTranslations } from 'next-intl/server';
+
+export async function MyServerComponent() {
+  const t = await getTranslations();
+
+  return (
+    <div>
+      <h1>{t('Common.login')}</h1>
+    </div>
+  );
+}
+```
+
+### Localized Links and Navigation
+
+Use the `LocaleLink` component to create links that respect the current language setting:
+
+```tsx
+import { LocaleLink } from '@/i18n/navigation';
+
+<LocaleLink href="/about">About Us</LocaleLink>
+```
+
+For programmatic navigation, use the `useLocaleRouter` hook:
+
+```tsx
+import { useLocaleRouter } from '@/i18n/navigation';
+
+const router = useLocaleRouter();
+router.push('/dashboard');
+```
+
+### Localized Email Templates
+
+AeloKit template supports defining multi-language email templates and sending localized emails:
+
+```tsx title="packages/mail/src/templates/verify-email.tsx"
+import type { BaseEmailProps } from '@/mail/types';
+import { createTranslator } from 'use-intl/core';
+
+interface VerifyEmailProps extends BaseEmailProps {
+  url: string;
+  name: string;
+}
+
+export function VerifyEmail({
+  url,
+  name,
+  locale,
+  messages,
+}: VerifyEmailProps) {
+  const t = createTranslator({
+    locale,
+    messages,
+    namespace: 'Mail.verifyEmail',
+  });
+
+  return (
+    <EmailLayout locale={locale} messages={messages}>
+      <Text>{t('title', { name })}</Text>
+      <Text>{t('body')}</Text>
+      <EmailButton href={url}>{t('confirmEmail')}</EmailButton>
+    </EmailLayout>
+  );
+}
+```
+
+Sending localized emails:
+
+```tsx
+await sendEmail({
+  to: 'user@example.com',
+  template: 'verifyEmail',
+  context: {
+    name: 'John Doe',
+    url: 'https://example.com/verify?token=abc123',
+  },
+  locale: 'zh', // Specify language for this email
+});
+```
+
+### Language Switcher Components
+
+AeloKit comes with two different language switcher components, providing flexibility for language selection on your website:
+
+* LocaleSelector (`apps/web/src/components/layout/locale-selector.tsx`)
+* LocaleSwitcher (`apps/web/src/components/layout/locale-switcher.tsx`)
+
+Both components use the `Select` component from the UI library to provide a dropdown selection interface. You can use either component based on your needs, or create a custom implementation.
+
+## Customizing Languages
+
+### Adding a New Language
+
+1. **Create a new translation file**:
+
+   Create a new JSON file in the `messages` directory, named after your language code (e.g., `fr.json`).
+
+   You can copy the structure from `en.json` and translate all values:
+
+   ```json title="messages/fr.json"
+   {
+     "Metadata": {
+       "name": "AeloKit",
+       "title": "AeloKit - Le meilleur modèle SaaS",
+       "description": "AeloKit est un modèle SaaS moderne construit avec Next.js"
+     },
+     // ... rest of translations
+   }
+   ```
+
+2. **Update website configuration**:
+
+   Add the new language to your `website.ts` configuration:
+
+   ```tsx title="packages/config/src/website.ts"
+   i18n: {
+     defaultLocale: 'en',
+     locales: {
+       en: {
+         flag: '🇺🇸',
+         name: 'English',
+         hreflang: 'en',
+       },
+       zh: {
+         flag: '🇨🇳',
+         name: '中文',
+         hreflang: 'zh-CN',
+       },
+       fr: {
+         flag: '🇫🇷',
+         name: 'Français',
+         hreflang: 'fr',
+       },
+     },
+   },
+   ```
+
+3. **Handling incomplete translations**:
+
+   The system automatically merges translations with the default language, so any missing translations will fall back to the default language (typically English).
+
+### Supporting Only One Language
+
+If you only want to support one language in your application:
+
+1. Keep only the language you want to support in the configuration file:
+
+   ```tsx title="packages/config/src/website.ts"
+   i18n: {
+     defaultLocale: 'en',
+     locales: {
+       en: {
+         flag: '🇺🇸',
+         name: 'English',
+         hreflang: 'en',
+       },
+       // Remove or comment out other languages
+     },
+   },
+   ```
+
+2. Keep only the corresponding language file in the `messages` directory (e.g., `en.json`).
+
+3. Both `LocaleSelector` and `LocaleSwitcher` components will automatically detect that only one language is configured and will not render in the UI. This ensures your UI remains clean without unnecessary language selection controls when they are not needed.
+
+## Development Tools
+
+### i18n-ally VSCode Extension
+
+For a smoother development experience when working with internationalization, we strongly recommend installing the [i18n-ally](https://marketplace.visualstudio.com/items?itemName=Lokalise.i18n-ally) extension for your IDE (Visual Studio Code, Cursor, etc.).
+
+This extension provides several benefits for multi-language application development:
+
+* **Inline translation preview**: View translations directly in your code
+* **Missing translation detection**: Highlight keys that are missing translations in certain languages
+* **Quick translation creation**: Add new translations quickly with keyboard shortcuts
+* **Translation management**: Easily sort, rename, and refactor translation keys
+* **Multi-framework support**: Compatible with many i18n frameworks including [next-intl](https://next-intl.dev)
+* **Auto-completion**: Suggest completable translation keys as you type
+* **Hover information**: View translations in all languages when hovering over a key
+
+The extension integrates seamlessly with AeloKit's internationalization architecture and can significantly improve your workflow when managing multi-language translations.
+
+## Best Practices
+
+1. **Use namespace-based keys**: Use namespaces to organize translations, making them easier to maintain.
+2. **Use parameters for dynamic content**: Use parameters for dynamic content instead of string concatenation.
+3. **Keep translations concise**: Avoid verbose translations that might break UI layouts, keep translations concise.
+4. **Consider context**: Provide context in your keys to help translators understand how the text is used.
+5. **Test all languages**: Always test your application in all supported languages to ensure a good experience.
+
+## Common Issues
+
+1. After changing the default language, compilation fails with `[Error: Failed to collect page data for /api/search] { type: 'Error' }`
+
+Cause: The internationalization system in AeloKit template uses English as the default language by default, so files in the `content` directory use `xx.mdx` naming for English and `xx.zh.mdx` naming for Chinese.
+
+If you change the default language to Chinese, you need to rename all files in the `content` directory: change the original `xx.mdx` to `xx.en.mdx`, and change the original `xx.zh.mdx` to `xx.mdx`.
+
+You can run the following command in your terminal to batch rename all MDX files in the documentation:
+
+```bash
+find content -name "*.mdx" -type f | while read file; do
+    if [[ "$file" == *.zh.mdx ]]; then
+        # Change .zh.mdx to .mdx
+        mv "$file" "${file%.zh.mdx}.mdx"
+    else
+        # Change .mdx to .en.mdx
+        mv "$file" "${file%.mdx}.en.mdx"
+    fi
+done
+```
+
+## Related Documentation
+
+* [Hreflang Tags](https://ahrefs.com/blog/hreflang-tags/)
+* [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+
+## Next Steps
+
+Now that you understand how to use internationalization in AeloKit, you may want to explore these related features:
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email templates with internationalization
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment Configuration" href="/docs/env">
+    Set up environment variables for your application
+  </Card>
+
+  <Card icon={<Palette className="text-green-500" />} title="Themes" href="/docs/themes">
+    Customize your application theme
+  </Card>
+
+  <Card icon={<Layout className="text-amber-500" />} title="Components" href="/docs/components">
+    Create custom components for your pages
+  </Card>
+</Cards>

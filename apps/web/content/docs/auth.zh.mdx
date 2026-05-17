@@ -1,0 +1,274 @@
+---
+title: 身份验证
+description: 学习如何在 AeloKit 中使用 Better Auth 设置和使用身份验证
+icon: Lock
+---
+
+AeloKit 使用 [Better Auth](https://www.better-auth.com) 进行身份验证，模板提供了一个灵活且安全的系统，支持多种身份验证方法、会话管理和基于角色的访问控制。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 生成 Better Auth 密钥
+
+    `BETTER_AUTH_SECRET` 是用于加密和生成哈希的随机字符串，您可以使用 OpenSSL 命令生成密钥：
+
+    ```bash
+    openssl rand -base64 32
+    ```
+
+    生成密钥后，将其添加到环境变量文件中：
+
+    ```bash
+    BETTER_AUTH_SECRET="YOUR-BETTER-AUTH-SECRET"
+    ```
+  </Step>
+
+  <Step>
+    ### 配置 GitHub OAuth
+
+    要启用 GitHub 身份验证，您需要注册您的应用程序：
+
+    1. 进入到 [GitHub 开发者设置](https://github.com/settings/developers)
+    2. 点击 `OAuth Apps`，然后点击 `New OAuth App`
+    3. 填写注册表单：
+       * **应用程序名称**：您的应用程序名称（例如，`AeloKit`）
+       * **主页网址**：您的网站地址，例如，`https://YOUR-DOMAIN.com` （或本地开发的 `http://localhost:3000`）
+       * **应用程序描述**：您应用程序的简要描述
+       * **授权回调 URL**：设置为 `https://YOUR-DOMAIN.com/api/auth/callback/github`（或本地开发的 `http://localhost:3000/api/auth/callback/github`）
+    4. 点击 `Register application`
+    5. 注册后，您将看到 `GitHub OAuth Client ID`
+    6. 点击 `Generate a new client secret` 创建 GitHub OAuth 客户端密钥
+    7. 复制这两个值并将它们添加到环境变量文件中：
+
+    ```bash
+    GITHUB_CLIENT_ID="YOUR-GITHUB-CLIENT-ID"
+    GITHUB_CLIENT_SECRET="YOUR-GITHUB-CLIENT-SECRET"
+    ```
+
+    8. 确保 `website.ts` 文件中 `auth.enableGithubLogin` 设置为 `true`
+
+    ```ts title="packages/config/src/website.ts"
+    auth: {
+      enableGithubLogin: true,
+    }
+    ```
+
+    <Callout type="info">
+      在 GitHub 中创建**两个不同的** OAuth 应用程序：一个用于生产环境，一个用于开发环境。
+
+      永远不要在两个环境中使用相同的 OAuth 应用程序，因为它们需要不同的回调 URL。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### 配置 Google OAuth
+
+    要启用 Google 身份验证，请按照以下步骤获取客户端凭据：
+
+    1. 进入到 [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+    2. 创建新项目或选择现有项目
+    3. 在左侧边栏中进入到 `Credentials`
+    4. 点击 `Create Credentials` 并选择 `OAuth client ID`
+    5. 如果这是您第一次，您可能需要配置 OAuth 同意屏幕：
+       * **用户类型**：选择 `External`
+       * 填写必需信息（应用名称、用户支持电子邮件、开发者联系方式）
+       * 添加授权域，包括网站域名
+       * 在每个部分中点击 `Save and Continue`
+    6. 返回 `Credentials` 并创建 `OAuth Client ID`：
+       * **应用程序类型**：Web 应用程序
+       * **名称**：您的网站名称
+       * **授权的 JavaScript 来源**：添加您的域（例如，`https://YOUR-DOMAIN.com` 或 `http://localhost:3000`）
+       * **授权的重定向 URI**：添加 `https://YOUR-DOMAIN.com/api/auth/callback/google`（或本地开发的 `http://localhost:3000/api/auth/callback/google`）
+    7. 点击 `Create`，复制提供的客户端 ID 和客户端密钥，将它们添加到环境变量文件中：
+
+    ```bash
+    GOOGLE_CLIENT_ID="YOUR-GOOGLE-CLIENT-ID"
+    GOOGLE_CLIENT_SECRET="YOUR-GOOGLE-CLIENT-SECRET"
+    ```
+
+    8. 确保 `website.ts` 文件中 `auth.enableGoogleLogin` 设置为 `true`
+
+    ```ts title="packages/config/src/website.ts"
+    auth: {
+      enableGoogleLogin: true,
+    }
+    ```
+
+    <Callout type="info">
+      1. 推荐在 Google Cloud Console 中创建两个不同的 OAuth 应用程序：一个用于生产环境，一个用于开发环境。
+         不要在两个环境中使用相同的 OAuth 应用程序，因为它们需要不同的回调 URL。
+      2. 如果本地开发时 Google 登录失败，请检查梯子是否正常，并确保开启 TUN 模式 (建议使用 Clash Verge)。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### 配置邮箱注册
+
+    要启用邮箱注册，请按照以下步骤：
+
+    1. 按照[邮件配置](/docs/email#setup)文档的要求配置邮件服务
+    2. 更新 `website.ts` 文件，设置开启邮箱注册，并设置邮件服务商和默认发送者邮箱地址，例如：
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...其他配置
+      auth: {
+        enableCredentialLogin: true,
+      },
+      mail: {
+        provider: 'resend', // 要使用的邮件提供商
+        fromEmail: 'support@example.com', // 默认发送者邮箱地址
+      },
+      // ...其他配置
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在您可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#authentication">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 客户端使用
+
+### 访问会话数据
+
+在客户端组件中，您可以使用 `useSession` hook 访问用户的会话数据：
+
+```tsx
+'use client';
+
+import { useSession } from '@/lib/auth-client';
+
+export function ProfileButton() {
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return <div>加载中...</div>;
+  }
+
+  if (session) {
+    return (
+      <div>
+        <p>欢迎，{session.user.name}！</p>
+        <button onClick={() => signOut()}>退出登录</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => signIn.social({ provider: 'google' })}>
+      登录
+    </button>
+  );
+}
+```
+
+### 身份验证操作
+
+auth 客户端提供常见身份验证操作的方法：
+
+```tsx
+import { signIn, signOut } from '@/lib/auth-client';
+
+// 使用电子邮件和密码登录
+signIn.emailAndPassword({
+  email: 'user@example.com',
+  password: 'password123',
+});
+
+// 使用社交提供商登录
+signIn.social({
+  provider: 'google',
+});
+
+// 退出登录
+signOut();
+```
+
+## 服务器端使用
+
+### 登录用户保护路由
+
+在服务器组件中，您可以通过检查会话来保护路由：
+
+```tsx
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+
+export default async function ProtectedPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    redirect('/auth/login');
+  }
+
+  return <div>受保护的内容</div>;
+}
+```
+
+### 管理员路由保护路由
+
+对于仅限管理员的路由，您可以检查会话中的用户角色：
+
+```tsx
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+
+export default async function AdminPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user || session.user.role !== 'admin') {
+    redirect('/auth/login');
+  }
+
+  return <div>管理员内容</div>;
+}
+```
+
+## 身份验证架构
+
+身份验证相关的表定义在 `packages/db/src/auth.schema.ts` 中，由 Better Auth 自动管理：
+
+* **user** - 用户表
+* **session** - 会话表
+* **account** - 账户表（用于社交登录）
+* **verification** - 验证表（用于邮箱验证）
+
+## 参考资料
+
+* [Better Auth 文档](https://www.better-auth.com/docs)
+* [Better Auth | GitHub 登录](https://www.better-auth.com/docs/authentication/github)
+* [Better Auth | Google 登录](https://www.better-auth.com/docs/authentication/google)
+* [Better Auth | 邮箱密码登录](https://www.better-auth.com/docs/authentication/email-password)
+* [Better Auth | 会话管理](https://www.better-auth.com/docs/concepts/session-management)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="电子邮件" href="/docs/email">
+    配置电子邮件服务
+  </Card>
+
+  <Card icon={<Mailbox className="text-green-500" />} title="邮件订阅" href="/docs/newsletter">
+    设置邮件列表订阅
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+</Cards>

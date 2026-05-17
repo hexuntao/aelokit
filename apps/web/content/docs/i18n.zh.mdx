@@ -1,0 +1,385 @@
+---
+title: 国际化
+description: 学习如何设置和使用国际化
+icon: Globe
+---
+
+AeloKit 模板默认支持国际化，让您可以轻松创建本地化的 UI 组件、邮件模板等，为全球用户提供更好的体验。
+
+## 设置
+
+以下是如何在 `packages/config/src/website.ts` 配置文件中配置国际化：
+
+| Property        | Type                                                                 | Description                                          |
+| --------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| `defaultLocale` | `string`                                                             | Default language locale (e.g., 'en')                 |
+| `locales`       | `Record<string, { flag?: string; name: string; hreflang?: string }>` | Available languages with flag emoji and display name |
+
+```tsx title="packages/config/src/website.ts"
+export const websiteConfig = {
+  // ...其他配置
+  i18n: {
+    defaultLocale: 'en',
+    locales: {
+      en: {
+        flag: '🇺🇸',
+        name: 'English',
+        hreflang: 'en',
+      },
+      zh: {
+        flag: '🇨🇳',
+        name: '中文',
+        hreflang: 'zh-CN',
+      },
+    },
+  },
+  // ...其他配置
+};
+```
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#internationalization">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 国际化系统架构
+
+AeloKit 中的国际化系统设计包含以下组件：
+
+<Files>
+  <Folder name="packages" defaultOpen>
+    <Folder name="i18n" defaultOpen>
+      <File name="src/messages.ts" />
+
+      <File name="src/navigation.ts" />
+
+      <File name="src/request.ts" />
+
+      <File name="src/routing.ts" />
+    </Folder>
+  </Folder>
+
+  <Folder name="messages" defaultOpen>
+    <File name="en.json" />
+
+    <File name="zh.json" />
+  </Folder>
+</Files>
+
+## 核心功能
+
+* 与 [next-intl](https://next-intl.dev) 集成的多语言支持
+* 带有语言前缀的国际化路由，默认语言则不使用语言前缀
+* 支持不同语言的 UI 组件
+* 支持不同语言的邮件模板
+* 正确生成不同语言的 URL
+* 基于用户偏好的自动语言检测
+* 内置两种风格的多语言切换器组件：`LocaleSelector` 和 `LocaleSwitcher`
+
+## 翻译文件
+
+AeloKit 使用 `messages` 目录下的 JSON 文件进行翻译，每种语言对应1个文件，遵循 `[locale].json` 的命名约定。
+
+这些文件的结构是分层的，允许您按功能或组件组织各个模块的翻译：
+
+```json title="messages/en.json"
+{
+  "Metadata": {
+    "name": "AeloKit",
+    "title": "AeloKit - Modern SaaS Starter Template",
+    "description": "AeloKit is a modern SaaS starter template built with Next.js, TypeScript, and Tailwind CSS"
+  },
+  "Common": {
+    "login": "Log in",
+    "logout": "Log out",
+    "signUp": "Sign up",
+    "language": "Switch language"
+  },
+  "Mail": {
+    "verifyEmail": {
+      "title": "Hi, {name}.",
+      "body": "Please click the link below to verify your email address.",
+      "confirmEmail": "Confirm email",
+      "subject": "Verify your email"
+    }
+  }
+}
+```
+
+## 使用方法
+
+### 在 React 组件中使用翻译
+
+通过 `useTranslations` hook 可以在 React 组件中获取翻译内容：
+
+```tsx
+import { useTranslations } from 'next-intl';
+
+export function MyComponent() {
+  const t = useTranslations();
+
+  return (
+    <div>
+      <h1>{t('Common.login')}</h1>
+      <p>{t('Common.signUp')}</p>
+    </div>
+  );
+}
+```
+
+对于带参数的翻译：
+
+```tsx
+<p>{t('Mail.verifyEmail.title', { name: 'John' })}</p>
+```
+
+### 在服务器组件中使用翻译
+
+对于服务器组件，使用 `getTranslations` 函数获取翻译内容：
+
+```tsx
+import { getTranslations } from 'next-intl/server';
+
+export async function MyServerComponent() {
+  const t = await getTranslations();
+
+  return (
+    <div>
+      <h1>{t('Common.login')}</h1>
+    </div>
+  );
+}
+```
+
+### 本地化链接和导航
+
+使用 `LocaleLink` 组件创建符合当前语言设置的链接：
+
+```tsx
+import { LocaleLink } from '@/i18n/navigation';
+
+<LocaleLink href="/about">关于我们</LocaleLink>
+```
+
+对于程序化导航，使用 `useLocaleRouter` hook：
+
+```tsx
+import { useLocaleRouter } from '@/i18n/navigation';
+
+const router = useLocaleRouter();
+router.push('/dashboard');
+```
+
+### 本地化邮件模板
+
+AeloKit 模板支持定义多语言的邮件模板和发送本地化邮件：
+
+```tsx title="packages/mail/src/templates/verify-email.tsx"
+import type { BaseEmailProps } from '@/mail/types';
+import { createTranslator } from 'use-intl/core';
+
+interface VerifyEmailProps extends BaseEmailProps {
+  url: string;
+  name: string;
+}
+
+export function VerifyEmail({
+  url,
+  name,
+  locale,
+  messages,
+}: VerifyEmailProps) {
+  const t = createTranslator({
+    locale,
+    messages,
+    namespace: 'Mail.verifyEmail',
+  });
+
+  return (
+    <EmailLayout locale={locale} messages={messages}>
+      <Text>{t('title', { name })}</Text>
+      <Text>{t('body')}</Text>
+      <EmailButton href={url}>{t('confirmEmail')}</EmailButton>
+    </EmailLayout>
+  );
+}
+```
+
+发送本地化邮件：
+
+```tsx
+await sendEmail({
+  to: 'user@example.com',
+  template: 'verifyEmail',
+  context: {
+    name: 'John Doe',
+    url: 'https://example.com/verify?token=abc123',
+  },
+  locale: 'zh', // 为此邮件指定语言
+});
+```
+
+### 多语言切换组件
+
+AeloKit 内置两种不同的多语言切换组件，为网站支持语言选择能力提供灵活性：
+
+* LocaleSelector (`apps/web/src/components/layout/locale-selector.tsx`)
+* LocaleSwitcher (`apps/web/src/components/layout/locale-switcher.tsx`)
+
+两个组件都使用 UI 库中的 `Select` 组件提供下拉选择界面，您可以根据需要使用任一组件，或者自定义实现。
+
+## 自定义多语言
+
+### 添加新语言
+
+1. **创建新的翻译文件**：
+
+   在 `messages` 目录中创建一个新的 JSON 文件，文件名为您的语言代码（例如 `fr.json`）。
+
+   您可以从 `en.json` 复制结构并翻译所有值：
+
+   ```json title="messages/fr.json"
+   {
+     "Metadata": {
+       "name": "AeloKit",
+       "title": "AeloKit - Le meilleur modèle SaaS",
+       "description": "AeloKit est un modèle SaaS moderne construit avec Next.js"
+     },
+     // ... 其余翻译
+   }
+   ```
+
+2. **更新网站配置**：
+
+   在您的 `website.ts` 配置中添加新语言：
+
+   ```tsx title="packages/config/src/website.ts"
+   i18n: {
+     defaultLocale: 'en',
+     locales: {
+       en: {
+         flag: '🇺🇸',
+         name: 'English',
+         hreflang: 'en',
+       },
+       zh: {
+         flag: '🇨🇳',
+         name: '中文',
+         hreflang: 'zh-CN',
+       },
+       fr: {
+         flag: '🇫🇷',
+         name: 'Français',
+         hreflang: 'fr',
+       },
+     },
+   },
+   ```
+
+3. **处理不完整的翻译**：
+
+   系统自动将翻译与默认语言合并，因此任何缺失的翻译都会回退到默认语言（通常是英语）。
+
+### 仅支持一种语言
+
+如果您只想在应用程序中支持一种语言：
+
+1. 在配置文件中仅保留您想要支持的语言：
+
+   ```tsx title="packages/config/src/website.ts"
+   i18n: {
+     defaultLocale: 'en',
+     locales: {
+       en: {
+         flag: '🇺🇸',
+         name: 'English',
+         hreflang: 'en',
+       },
+       // 删除或注释掉其他语言
+     },
+   },
+   ```
+
+2. 在 `messages` 目录中仅保留相应的语言文件（例如 `en.json`）。
+
+3. `LocaleSelector` 和 `LocaleSwitcher` 组件都会自动检测到只配置了一种语言，就不会在 UI 中渲染。这确保当不需要语言选择控件时，您的 UI 保持简洁，没有不必要的语言选择控件。
+
+## 开发工具
+
+### i18n-ally VSCode 扩展
+
+为了在处理国际化时获得更流畅的开发体验，我们强烈建议为您的 IDE（Visual Studio Code、Cursor 等）安装 [i18n-ally](https://marketplace.visualstudio.com/items?itemName=Lokalise.i18n-ally) 扩展。
+
+这个扩展为多语言应用程序开发提供了几个好处：
+
+* **内联翻译预览**：直接在代码中查看翻译
+* **缺失翻译检测**：突出显示在某些语言中缺失翻译的键
+* **快速翻译创建**：使用键盘快捷键快速添加新翻译
+* **翻译管理**：轻松排序、重命名和重构翻译键
+* **多框架支持**：兼容包括 [next-intl](https://next-intl.dev) 在内的许多 i18n 框架
+* **自动完成**：在您输入时建议可补全的翻译键
+* **悬停信息**：悬停在键上时查看所有语言的翻译
+
+该扩展与 AeloKit 的国际化架构无缝集成，可以显著改善您在管理多语言翻译时的工作流程。
+
+## 最佳实践
+
+1. **使用基于命名空间的键**：使用命名空间组织翻译，使其更易于维护。
+2. **为动态内容使用参数**：为动态内容使用参数而不是字符串连接。
+3. **保持翻译简洁**：避免可能破坏 UI 布局的冗长翻译，保持翻译简洁。
+4. **考虑上下文**：在您的键中提供上下文，帮助翻译者理解文本的使用方式。
+5. **测试所有语言**：始终在所有支持的语言中测试您的应用程序，以确保良好的体验。
+
+## 常见问题
+
+1. 修改默认语言后，编译报错 `[Error: Failed to collect page data for /api/search] { type: 'Error' }`
+
+问题原因：AeloKit 模板的多语言系统默认使用英语作为默认语言，所以`content`目录下的文件如果是英文使用`xx.mdx`命名，如果是中文使用`xx.zh.mdx`命名。
+
+如果修改了默认语言为中文，那么`content`目录下的文件名都要改下命名方式，原来的`xx.mdx`要改为`xx.en.mdx`，而原来的`xx.zh.mdx`要改为`xx.mdx`。
+
+你可以在终端执行下面的命令实现所有文档的MDX文件的批量替换：
+
+```bash
+find content -name "*.mdx" -type f | while read file; do
+    if [[ "$file" == *.zh.mdx ]]; then
+        # 将 .zh.mdx 改为 .mdx
+        mv "$file" "${file%.zh.mdx}.mdx"
+    else
+        # 将 .mdx 改为 .en.mdx
+        mv "$file" "${file%.mdx}.en.mdx"
+    fi
+done
+```
+
+## 相关文档
+
+* [Hreflang 标签](https://ahrefs.com/blog/hreflang-tags/)
+* [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用国际化，您可能想要探索这些相关功能：
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="邮件" href="/docs/email">
+    配置带有国际化的邮件模板
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="环境配置" href="/docs/env">
+    为您的应用程序设置环境变量
+  </Card>
+
+  <Card icon={<Palette className="text-green-500" />} title="主题" href="/docs/themes">
+    自定义您的应用程序主题
+  </Card>
+
+  <Card icon={<Layout className="text-amber-500" />} title="组件" href="/docs/components">
+    为您的页面创建自定义组件
+  </Card>
+</Cards>

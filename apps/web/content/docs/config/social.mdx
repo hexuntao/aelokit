@@ -1,0 +1,48 @@
+---
+title: Social Configuration
+description: Manage social media links and sharing options
+icon: Share2
+---
+Manage social media links displayed on the website, each item is a [MenuItem](/docs/config#menuitem).
+
+```tsx title="src/config/social-config.tsx"
+export function getSocialLinks(): MenuItem[] {
+  const socialLinks: MenuItem[] = [];
+
+  if (websiteConfig.metadata.social?.github) {
+    socialLinks.push({
+      title: 'GitHub',
+      href: websiteConfig.metadata.social.github,
+      icon: <GitHubIcon className="size-4 shrink-0" />,
+    });
+  }
+
+  // Other social links based on configuration...
+
+  return socialLinks;
+}
+```
+
+It dynamically generates social media links based on the URLs provided in the `website.tsx` configuration, ensuring consistency between the configuration and what is displayed to users.
+
+## Next Steps
+
+Now that you understand social media configuration, explore other related topics:
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="Website Configuration" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+
+  <Card icon={<Footprints className="text-green-500" />} title="Footer Configuration" href="/docs/config/footer">
+    Configure links in the website footer
+  </Card>
+
+  <Card icon={<CircleUser className="text-purple-500" />} title="Avatar Configuration" href="/docs/config/avatar">
+    Configure user avatar dropdown menu
+  </Card>
+
+  <Card icon={<CreditCard className="text-purple-500" />} title="Pricing Configuration" href="/docs/config/price">
+    Configure your subscription plans and pricing
+  </Card>
+</Cards>

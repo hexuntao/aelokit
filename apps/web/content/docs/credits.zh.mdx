@@ -1,0 +1,267 @@
+---
+title: 积分
+description: 如何在 AeloKit 中设置和使用积分系统
+icon: Coins
+---
+
+AeloKit 提供了一个灵活、模块化的积分系统，用于奖励用户、启用按使用付费功能，并支持各种商业模式。本文档解释了如何在 AeloKit 中启用、配置和使用积分系统。
+
+## 设置
+
+要在 AeloKit 中设置积分系统，请按照以下步骤配置必要的环境变量：
+
+<Steps>
+  <Step>
+    ### 在配置中启用积分
+
+    打开 `packages/config/src/website.ts` 并找到 `credits` 部分。
+
+    * 设置 `enableCredits: true` 以启用积分系统
+    * 设置 `enablePackagesForFreePlan`，默认只有付费订阅用户可以购买积分套餐，如果设置为 `true`，则免费用户也可以购买积分套餐
+    * 设置 `registerGiftCredits`，配置注册时是否赠送积分，赠送的积分数量和有效期
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...其他配置
+      credits: {
+        enableCredits: true, // 启用积分系统
+        enablePackagesForFreePlan: false, // 不允许免费用户购买积分
+        registerGiftCredits: {
+          enable: true, // 注册时赠送积分
+          amount: 50, // 赠送的积分数量
+          expireDays: 30, // 可选：积分过期天数
+        },
+        packages: {
+          basic: {
+            id: 'basic',
+            amount: 100,
+            price: {
+              priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+              amount: 990,
+              currency: 'USD',
+            },
+            popular: false,
+          },
+          // ...其他套餐
+        },
+      },
+      // ...其他配置
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 配置产品价格计划中的积分
+
+    在 `packages/config/src/website.ts` 中找到 `price.plans` 部分。
+
+    * 设置 `credits.enable` 字段为 `true` 以启用这个价格计划中的积分
+    * 设置 `credits.amount` 字段为积分数量
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...其他配置
+      price: {
+        plans: {
+          free: {
+            id: 'free',
+            isFree: true,
+            credits: {
+              enable: true,
+              amount: 50,
+              expireDays: 30,
+            },
+          },
+          pro: {
+            id: 'pro',
+            // ...其他配置
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+          // ...其他价格计划
+        },
+      },
+      // ...其他配置
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 配置积分套餐
+
+    在 `credits.packages` 下定义积分套餐，默认有 4 个积分套餐。
+
+    * 每个套餐包括 `id`、`积分数量`、`价格`（Stripe priceId）和可选字段如 `popular`、`expireDays`
+    * 货币单位为美元，目前仅支持美元
+
+    ```ts title="packages/config/src/website.ts"
+    packages: {
+      basic: {
+        id: 'basic',
+        amount: 100,
+        price: {
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+          amount: 990,
+          currency: 'USD',
+        },
+        popular: false,
+        expireDays: 30,
+      },
+      standard: {
+        id: 'standard',
+        amount: 200,
+        price: {
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD!,
+          amount: 1490,
+          currency: 'USD',
+        },
+        popular: true,
+        expireDays: 30,
+      },
+      // ...
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### 设置 Stripe 价格 ID
+
+    Stripe 价格 ID 用于将积分套餐链接到 Stripe 产品和价格。
+
+    * 在 Stripe Dashboard 中创建一个新产品，并为每个积分套餐设置价格
+    * 将每个积分套餐的 Stripe 价格 ID 添加到环境变量文件中：
+
+    ```bash title=".env"
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE=price_...
+    ```
+  </Step>
+
+  <Step>
+    ### 设置定时任务
+
+    请参考 [定时任务](/docs/cronjobs) 文档，设置定时发放积分和处理积分过期的任务。
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#payment">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 积分系统架构
+
+积分系统是模块化的，由以下组件组成：
+
+<Files>
+  <Folder name="packages/credits/src" defaultOpen>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="ledger.ts" />
+    <File name="distribute.ts" />
+    <File name="types.ts" />
+  </Folder>
+
+  <Folder name="packages/db/src" defaultOpen>
+    <File name="app.schema.ts" />
+  </Folder>
+</Files>
+
+### 核心模块
+
+* **service.ts** - 积分服务，提供获取余额、消耗积分等核心功能
+* **ledger.ts** - 积分账本，管理积分交易记录
+* **distribute.ts** - 积分分发，处理订阅发放积分等逻辑
+
+### 数据库表
+
+* **userCredit** - 用户积分余额表
+* **creditTransaction** - 积分交易记录表
+
+## 核心功能
+
+* **购买积分**：用户如果积分不足可以购买积分套餐
+* **注册赠送积分**：可选择为新用户赠送初始化积分
+* **积分过期**：为每个套餐或赠品设置积分过期天数
+* **跟踪积分余额**：安全查询和更新当前用户的积分
+* **积分交易**：查看详细的交易历史（购买、使用、过期等）
+* **自定义套餐**：定义任意数量的套餐，具有不同的数量、价格和属性
+* **国际化**：支持翻译的套餐名称和描述
+* **安全 Server Action**：所有积分操作都受到保护和验证
+
+## 使用方法
+
+### 获取积分余额
+
+```tsx
+import { getCreditBalance } from '@/credits';
+
+const balance = await getCreditBalance(userId);
+console.log(`当前积分余额: ${balance}`);
+```
+
+### 消耗积分
+
+```tsx
+import { consumeCredits } from '@/credits';
+
+const success = await consumeCredits({
+  userId: 'user_xxx',
+  amount: 10,
+  description: '生成 AI 图像',
+});
+```
+
+### 获取积分交易记录
+
+```tsx
+import { getCreditTransactions } from '@/credits';
+
+const transactions = await getCreditTransactions({
+  userId: 'user_xxx',
+  limit: 20,
+  offset: 0,
+});
+```
+
+## 最佳实践
+
+1. **仅在需要时启用**：仅当您的产品商业模式需要积分时才设置 `enableCredits: true`
+2. **验证所有操作**：使用提供的 Server Action 进行所有积分操作以确保安全性和验证
+3. **处理过期**：如果您希望积分过期，请为套餐或赠品设置积分过期天数 `expireDays`
+
+## 参考资料
+
+* [积分系统设计最佳实践](https://github.com/aelokit/aelokit)
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用积分，您可能想要探索这些相关功能：
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="支付" href="/docs/payment">
+    配置支付和订阅
+  </Card>
+
+  <Card icon={<KeyRound className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="统计分析" href="/docs/analytics">
+    配置统计分析服务
+  </Card>
+
+  <Card icon={<Mail className="text-purple-500" />} title="电子邮件" href="/docs/email">
+    配置电子邮件服务
+  </Card>
+</Cards>

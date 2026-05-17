@@ -1,0 +1,62 @@
+---
+description:
+globs: *.tsx,*.ts
+alwaysApply: false
+---
+# Project Structure Guide
+
+## Monorepo Structure
+
+This project uses pnpm workspace + Turborepo monorepo.
+
+- `apps/web/`: Current complete SaaS application (the only app at this stage)
+- `packages/`: Future package extraction target (no business packages yet)
+- Root: Workspace orchestration, turbo, CI, engineering docs, AI coding rules
+
+## Core Directories (in apps/web)
+- `apps/web/src/app/`: Next.js app router pages and layouts
+- `apps/web/src/components/`: Reusable React components
+- `apps/web/src/lib/`: Utility functions and shared code
+- `apps/web/src/db/`: Database schema and migrations using Drizzle ORM
+- `apps/web/src/stores/`: Zustand state management
+- `apps/web/src/actions/`: Server actions and API routes
+- `apps/web/src/hooks/`: Custom React hooks
+- `apps/web/src/types/`: TypeScript type definitions
+- `apps/web/src/i18n/`: Internationalization setup
+- `apps/web/src/mail/`: Email templates and mail functionality
+- `apps/web/src/payment/`: Payment integration
+- `apps/web/src/credits/`: Credits system
+- `apps/web/src/analytics/`: Analytics and tracking
+- `apps/web/src/storage/`: File storage integration
+- `apps/web/src/notification/`: Sending Notifications
+- `apps/web/src/newsletter/`: Newsletter subscription management
+
+## Configuration Files (in apps/web)
+- `apps/web/next.config.ts`: Next.js configuration
+- `apps/web/drizzle.config.ts`: Database configuration
+- `apps/web/components.json`: UI components configuration
+- `apps/web/source.config.ts`: Fumadocs source configuration
+- `apps/web/postcss.config.mjs`: PostCSS configuration
+- `apps/web/tsconfig.json`: TypeScript configuration
+- `apps/web/global.d.ts`: Global TypeScript declarations
+
+## Content Management (in apps/web)
+- `apps/web/content/`: MDX content files
+- `apps/web/messages/`: next-intl i18n message files
+
+## Root Configuration
+- `biome.json`: Code formatting and linting rules (workspace-level)
+- `tsconfig.base.json`: Base TypeScript configuration (workspace-level)
+- `turbo.json`: Turborepo task configuration
+- `pnpm-workspace.yaml`: pnpm workspace definition
+
+## Environment
+- `env.example`: Environment variables template (root)
+- `apps/web/.env`: Application environment variables
+
+## Important Rules
+- Current business code only exists in `apps/web`.
+- Do NOT create root `src/`, `content/`, or `messages/` directories.
+- Do NOT create `apps/admin`, `apps/landing`, `apps/docs`, `apps/worker`, `apps/gateway`, `apps/studio` prematurely.
+- Do NOT extract `packages/auth`, `packages/db`, `packages/payment`, `packages/ui` prematurely.
+- Package extraction will be done in Phase 2 according to plan.

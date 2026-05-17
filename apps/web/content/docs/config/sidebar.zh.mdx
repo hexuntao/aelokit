@@ -1,0 +1,67 @@
+---
+title: 侧边栏配置
+description: 自定义仪表盘侧边栏导航
+icon: SidebarOpen
+---
+
+定义后台管理页面的左侧边栏导航菜单，每个项目都是 [NestedMenuItem](/docs/config#nestedmenuitem)。
+
+```tsx title="src/config/sidebar-config.tsx"
+export function getSidebarLinks(): NestedMenuItem[] {
+  const t = useTranslations('Dashboard');
+
+  return [
+    {
+      title: t('dashboard.title'),
+      icon: <LayoutDashboardIcon className="size-4 shrink-0" />,
+      href: Routes.Dashboard,
+      external: false,
+    },
+    {
+      title: t('admin.title'),
+      icon: <SettingsIcon className="size-4 shrink-0" />,
+      authorizeOnly: ['admin'],
+      items: [
+        {
+          title: t('admin.users.title'),
+          icon: <UsersRoundIcon className="size-4 shrink-0" />,
+          href: Routes.AdminUsers,
+          external: false,
+        },
+        // 更多管理项...
+      ],
+    },
+    // 更多侧边栏部分...
+  ];
+}
+```
+
+侧边栏配置类似于导航栏，但专门为仪表盘区域设计。它支持：
+
+* 带图标的顶级链接
+* 带嵌套可展开的菜单
+* 通过 `authorizeOnly` 属性实现菜单只有特定角色可见
+
+侧边栏非常适合根据用户角色提供不同的菜单，例如普通用户只能看到仪表盘，管理员可以看到用户管理页面等。
+
+## 下一步
+
+现在您了解了侧边栏配置，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Layout className="text-blue-500" />} title="网站配置" href="/docs/config/website">
+    配置网站的核心设置
+  </Card>
+
+  <Card icon={<MenuSquare className="text-green-500" />} title="导航栏配置" href="/docs/config/navbar">
+    配置头部导航菜单
+  </Card>
+
+  <Card icon={<Footprints className="text-amber-500" />} title="页脚配置" href="/docs/config/footer">
+    配置网站页脚中的链接
+  </Card>
+
+  <Card icon={<CircleUser className="text-purple-500" />} title="头像配置" href="/docs/config/avatar">
+    配置用户头像下拉菜单
+  </Card>
+</Cards>

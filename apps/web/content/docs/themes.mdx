@@ -1,0 +1,75 @@
+---
+title: Themes
+description: Learn how to customize the theme of your AeloKit website
+icon: Palette
+---
+
+This document covers the theme system in the AeloKit template and introduces how to customize your own theme.
+
+## Customizing Themes
+
+For theme customization, you can directly modify the base theme variables, or use a theme generator to create a custom theme.
+
+The base theme variables are defined in the `:root` selector in `apps/web/src/styles/globals.css`, which you can modify to change the default appearance of all themes:
+
+```css title="apps/web/src/styles/globals.css"
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  /* Modify other variables as needed */
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  /* Modify dark mode variables as needed */
+}
+```
+
+### Theme Generators
+
+You can use the following theme generators to create your own custom theme, then copy the CSS variables to your `globals.css` file, or use the shadcn cli to add and change your `globals.css` file:
+
+```bash
+pnpm dlx shadcn@latest add https://tweakcn.com/r/themes/twitter.json
+```
+
+* [shadcn/ui Theme Generator](https://ui.shadcn.com/themes)
+* [tweakcn Theme Generator](https://tweakcn.com/editor/theme)
+* [ui.pub Theme Generator](https://ui.pub/x/theme-gen)
+
+## FAQ
+
+### Switching Themes Online
+
+If you need online theme switching functionality, you can refer to this article for more details: [How to Add a Theme Selector to Your Next.js App](https://ouassim.tech/notes/how-to-add-a-theme-selector-to-your-nextjs-app)
+
+## Best Practices
+
+* **Color Contrast**: Ensure text colors have sufficient contrast with background colors for accessibility
+* **Test Both Modes**: If light/dark mode is enabled, ensure you test new themes in both modes
+* **Limit Theme Options**: Provide a few well-designed themes rather than many similar options
+* **Theme Consistency**: Maintain consistent styling across different themes to avoid UI anomalies
+
+## Next Steps
+
+Now that you understand how to use themes in AeloKit, explore these related topics:
+
+<Cards>
+  <Card icon={<Image className="text-blue-500" />} title="Images" href="/docs/images">
+    Configure various website images
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="Fonts" href="/docs/fonts">
+    Configure custom fonts
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Config" href="/docs/env">
+    Configure environment variables
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="Website Config" href="/docs/config/website">
+    Configure core website settings
+  </Card>
+</Cards>

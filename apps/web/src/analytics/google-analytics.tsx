@@ -1,0 +1,24 @@
+'use client';
+
+import { clientEnv } from '@repo/env/client';
+import { GoogleAnalytics as NextGoogleAnalytics } from '@next/third-parties/google';
+
+/**
+ * Google Analytics
+ *
+ * https://analytics.google.com
+ * https://example.com/docs/analytics#google
+ * https://nextjs.org/docs/app/building-your-application/optimizing/third-party-libraries#google-analytics
+ */
+export default function GoogleAnalytics() {
+  if (process.env.NODE_ENV !== 'production') {
+    return null;
+  }
+
+  const analyticsId = clientEnv.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID;
+  if (!analyticsId) {
+    return null;
+  }
+
+  return <NextGoogleAnalytics gaId={analyticsId} />;
+}

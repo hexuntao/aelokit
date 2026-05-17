@@ -1,0 +1,331 @@
+---
+title: 页面
+description: 学习如何在 AeloKit 模板中自定义和创建新页面
+icon: File
+---
+
+本文档涵盖了 AeloKit 模板中的页面系统，如何自定义现有页面，以及如何为您的特定需求创建新页面。
+
+## 核心功能
+
+AeloKit 模板包含一个多功能的内容管理系统，允许您：
+
+* 自定义法律页面（Cookie 政策、隐私政策、服务条款）
+* 维护版本发布的更新日志条目
+* 创建营销和信息页面（关于、联系、等待列表）
+* 为您的特定需求添加完全自定义的页面
+
+## 页面结构
+
+AeloKit 中的页面组织为不同的类别：
+
+### 法律页面
+
+法律页面存储在 `content/pages` 目录中，并在 `apps/web/src/app/[locale]/(marketing)/(legal)` 路由中渲染：
+
+* **Cookie 政策**：关于您的网站如何使用 cookie 的信息
+* **隐私政策**：关于您如何处理用户隐私数据的详细信息
+* **服务条款**：使用您的服务的规则和条款
+
+### 更新日志条目
+
+发布说明存储在 `content/changelog` 目录中，并显示在更新日志页面上：
+
+* **更新日志**：每个发布都有自己的 MDX 文件，包含版本详细信息和更改
+
+### 营销页面
+
+营销页面在 `apps/web/src/app/[locale]/(marketing)/(pages)` 路由中渲染：
+
+* **关于**：关于您的公司或项目的信息
+* **联系**：联系表单和信息
+* **等待列表**：早期访问或通知的注册
+
+## 自定义现有页面
+
+### 法律页面
+
+法律页面以 MDX 格式编写，位于 `content/pages` 目录中。每个文件包含前言元数据和内容主体。
+
+**示例：隐私政策 (privacy-policy.mdx)**
+
+```mdx title="content/pages/privacy-policy.mdx"
+---
+title: 隐私政策
+description: 我们对保护您的隐私和个人数据的承诺
+date: "2025-03-10"
+published: true
+---
+
+## 介绍
+
+欢迎阅读我们的隐私政策。本文档解释了当您使用我们的服务时，我们如何收集、使用和保护您的个人信息。
+
+... 更多内容 ...
+```
+
+要自定义法律页面：
+
+1. 打开 `content/pages` 目录中相应的 MDX 文件
+2. 更新前言元数据（标题、描述、日期）
+3. 以 Markdown 格式修改内容
+4. 保存文件
+
+页面将自动更新您的更改。
+
+### 更新日志条目
+
+更新日志条目作为 MDX 文件存储在 `content/changelog` 目录中。
+
+**示例：发布 v1.0.0 (v1-0-0.mdx)**
+
+```mdx title="content/changelog/v1-0-0.mdx"
+---
+title: "初始发布"
+description: "我们的第一个官方发布，包含核心功能和功能"
+date: "2024-03-01"
+version: "v1.0.0"
+published: true
+---
+
+### 核心功能
+
+我们很高兴宣布我们平台的初始发布，包含以下核心功能：
+
+- **用户身份验证**：带有邮箱验证的安全登录和注册
+- **仪表盘**：用于管理您的项目和资源的直观仪表盘
+
+... 更多内容 ...
+```
+
+要添加新发布：
+
+1. 在 `content/changelog` 目录中创建新的 MDX 文件（例如 `v1-1-0.mdx`）
+2. 添加适当的前言元数据（标题、描述、日期、版本、已发布）
+3. 使用 Markdown 编写发布说明
+4. 保存文件
+
+新发布将自动出现在您的更新日志页面上，按日期排序（最新的在前）。
+
+## 创建新页面
+
+您可以为您的特定需求创建完全自定义的页面。有两种方法：
+
+### 1. 基于 MDX 的页面
+
+对于不需要复杂交互性的内容丰富页面：
+
+1. 在 `content/pages` 目录中创建新的 MDX 文件（例如 `faq.mdx`）
+2. 添加适当的文档元数据
+3. 以 Markdown 格式编写您的内容
+4. 在 `apps/web/src/app/[locale]/(marketing)/(pages)/faq/page.tsx` 中创建新的页面组件
+
+以下是页面组件的模板：
+
+```tsx
+import { CustomPage } from '@/components/page/custom-page';
+import { constructMetadata } from '@/lib/metadata';
+import { getPage } from '@/lib/page/get-page';
+import { getUrlWithLocale } from '@/lib/urls/urls';
+import type { NextPageProps } from '@/types/next-page-props';
+import type { Metadata } from 'next';
+import type { Locale } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata | undefined> {
+  const { locale } = await params;
+  const page = await getPage('faq', locale);
+
+  if (!page) {
+    return {};
+  }
+
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+
+  return constructMetadata({
+    title: page.title + ' | ' + t('title'),
+    description: page.description,
+    pathname: '/faq',
+    locale,
+  });
+}
+
+export default async function FAQPage(props: NextPageProps) {
+  const params = await props.params;
+  if (!params) {
+    notFound();
+  }
+
+  const locale = params.locale as string;
+  const page = await getPage('faq', locale);
+
+  if (!page) {
+    notFound();
+  }
+
+  return (
+    <CustomPage
+      title={page.title}
+      description={page.description}
+      date={page.date}
+      content={page.body}
+    />
+  );
+}
+```
+
+### 2. 基于组件的页面
+
+对于需要更复杂交互性的页面：
+
+1. 在 `apps/web/src/app/[locale]/(marketing)/(pages)` 中创建新目录（例如 `pricing`）
+2. 添加导出您的自定义页面组件的 `page.tsx` 文件
+
+自定义页面组件的示例：
+
+```tsx
+import { Button } from '@/components/ui/button';
+import { constructMetadata } from '@/lib/metadata';
+import { getUrlWithLocale } from '@/lib/urls/urls';
+import type { NextPageProps } from '@/types/next-page-props';
+import type { Metadata } from 'next';
+import type { Locale } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata | undefined> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+  const pt = await getTranslations({ locale, namespace: 'PricingPage' });
+
+  return constructMetadata({
+    title: pt('title') + ' | ' + t('title'),
+    description: pt('description'),
+    pathname: '/pricing',
+    locale,
+  });
+}
+
+export default async function PricingPage(props: NextPageProps) {
+  const params = await props.params;
+  const locale = params?.locale as Locale;
+  const t = await getTranslations('PricingPage');
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-4">
+        <h1 className="text-center text-3xl font-bold tracking-tight">
+          {t('title')}
+        </h1>
+        <p className="text-center text-lg text-muted-foreground">
+          {t('subtitle')}
+        </p>
+      </div>
+
+      {/* 您的自定义价格组件 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* 价格卡片在这里 */}
+      </div>
+
+      <div className="text-center mt-12">
+        <Button size="lg">{t('cta')}</Button>
+      </div>
+    </div>
+  );
+}
+```
+
+## 自定义布局
+
+您可以通过修改以下文件来自定义不同页面类型的布局：
+
+* `apps/web/src/app/[locale]/(marketing)/(legal)/layout.tsx` - 用于法律页面
+* `apps/web/src/app/[locale]/(marketing)/(pages)/layout.tsx` - 用于营销页面
+
+这些布局文件控制页面的容器、间距和整体结构。
+
+## 页面路由
+
+页面路由在 `apps/web/src/routes.ts` 文件中定义。路由系统包含几个重要的路由类别，控制应用程序中的访问和导航：
+
+### 受保护的路由
+
+受保护的路由需要用户身份验证才能访问。如果用户尝试在未登录的情况下访问这些路由，他们将自动重定向到登录页面。登录页面将包含一个 `callbackUrl` 参数，以便在身份验证成功后将用户重定向回他们的预期网址。
+
+```tsx title="apps/web/src/routes.ts"
+export const protectedRoutes = [
+  Routes.Dashboard,
+  Routes.SettingsProfile,
+  Routes.SettingsBilling,
+  Routes.SettingsSecurity,
+  Routes.SettingsNotifications,
+];
+```
+
+### 已登录用户不允许访问的路由
+
+这些路由专门为已经登录的用户不允许访问的路由，目前主要是注册和登录2个页面。当已认证的用户尝试访问这些路由时，他们将自动重定向到默认登录重定向页面（默认是仪表盘页面）。
+
+```tsx title="apps/web/src/routes.ts"
+export const routesNotAllowedByLoggedInUsers = [
+  Routes.Login,
+  Routes.Register
+];
+```
+
+### 默认登录重定向
+
+此路由定义了如果没有提供特定的 `callbackUrl`，用户在成功登录后重定向到哪里。默认情况下，它重定向到仪表盘页面，但您也可以在网站配置中配置：
+
+```tsx title="apps/web/src/routes.ts"
+export const DEFAULT_LOGIN_REDIRECT = Routes.Dashboard;
+```
+
+## SEO 优化
+
+AeloKit 包含页面的内置 SEO 功能：
+
+1. 每个页面使用 `generateMetadata` 函数生成适当的元数据
+2. 自动创建规范 URL
+3. 页面标题和描述用于 SEO 元数据
+
+关于元数据配置，请参考 [元数据](/docs/metadata) 文档。
+
+## 最佳实践
+
+* **保持内容更新**：定期审查和更新您的法律页面和文档
+* **使用清晰的结构**：使用适当的标题和部分组织内容
+* **包含元数据**：在前言中始终提供准确的标题、描述和日期
+* **优化图像**：如果在 MDX 内容中包含图像，请压缩图片大小
+* **测试翻译**：如果支持多种语言，请测试所有翻译
+* **移动响应性**：确保所有页面在移动设备上完全响应
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用页面，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="字体" href="/docs/fonts">
+    配置自定义字体
+  </Card>
+
+  <Card icon={<Image className="text-amber-500" />} title="图像" href="/docs/images">
+    配置网站各种图片
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+</Cards>

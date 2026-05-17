@@ -1,0 +1,267 @@
+---
+title: Credits
+description: How to set up and use the credits system in AeloKit
+icon: Coins
+---
+
+AeloKit provides a flexible, modular credits system for rewarding users, enabling pay-as-you-go features, and supporting various business models. This document explains how to enable, configure, and use the credits system in AeloKit.
+
+## Setup
+
+To set up the credits system in AeloKit, follow these steps to configure the necessary environment variables:
+
+<Steps>
+  <Step>
+    ### Enable Credits in Configuration
+
+    Open `packages/config/src/website.ts` and find the `credits` section.
+
+    * Set `enableCredits: true` to enable the credits system
+    * Set `enablePackagesForFreePlan`, by default only paid subscribers can purchase credit packages, if set to `true`, free users can also purchase credit packages
+    * Set `registerGiftCredits` to configure whether to gift credits upon registration, the gifted credit amount and validity period
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...other config
+      credits: {
+        enableCredits: true, // Enable credits system
+        enablePackagesForFreePlan: false, // Do not allow free users to purchase credits
+        registerGiftCredits: {
+          enable: true, // Gift credits upon registration
+          amount: 50, // Gifted credit amount
+          expireDays: 30, // Optional: credit expiration days
+        },
+        packages: {
+          basic: {
+            id: 'basic',
+            amount: 100,
+            price: {
+              priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+              amount: 990,
+              currency: 'USD',
+            },
+            popular: false,
+          },
+          // ...other packages
+        },
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### Configure Credits in Price Plans
+
+    Find the `price.plans` section in `packages/config/src/website.ts`.
+
+    * Set the `credits.enable` field to `true` to enable credits for this price plan
+    * Set the `credits.amount` field to the credit amount
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig = {
+      // ...other config
+      price: {
+        plans: {
+          free: {
+            id: 'free',
+            isFree: true,
+            credits: {
+              enable: true,
+              amount: 50,
+              expireDays: 30,
+            },
+          },
+          pro: {
+            id: 'pro',
+            // ...other config
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+          // ...other price plans
+        },
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### Configure Credit Packages
+
+    Define credit packages under `credits.packages`, there are 4 credit packages by default.
+
+    * Each package includes `id`, `credit amount`, `price` (Stripe priceId) and optional fields like `popular`, `expireDays`
+    * Currency is in USD, currently only USD is supported
+
+    ```ts title="packages/config/src/website.ts"
+    packages: {
+      basic: {
+        id: 'basic',
+        amount: 100,
+        price: {
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC!,
+          amount: 990,
+          currency: 'USD',
+        },
+        popular: false,
+        expireDays: 30,
+      },
+      standard: {
+        id: 'standard',
+        amount: 200,
+        price: {
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD!,
+          amount: 1490,
+          currency: 'USD',
+        },
+        popular: true,
+        expireDays: 30,
+      },
+      // ...
+    }
+    ```
+  </Step>
+
+  <Step>
+    ### Set Stripe Price IDs
+
+    Stripe price IDs are used to link credit packages to Stripe products and prices.
+
+    * Create a new product in Stripe Dashboard and set prices for each credit package
+    * Add the Stripe price ID for each credit package to your environment variables file:
+
+    ```bash title=".env"
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE=price_...
+    ```
+  </Step>
+
+  <Step>
+    ### Set Up Scheduled Tasks
+
+    Please refer to the [Scheduled Tasks](/docs/cronjobs) documentation to set up tasks for scheduled credit distribution and credit expiration handling.
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#payment">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Credits System Architecture
+
+The credits system is modular and consists of the following components:
+
+<Files>
+  <Folder name="packages/credits/src" defaultOpen>
+    <File name="index.ts" />
+    <File name="service.ts" />
+    <File name="ledger.ts" />
+    <File name="distribute.ts" />
+    <File name="types.ts" />
+  </Folder>
+
+  <Folder name="packages/db/src" defaultOpen>
+    <File name="app.schema.ts" />
+  </Folder>
+</Files>
+
+### Core Modules
+
+* **service.ts** - Credit service, provides core functions like getting balance, consuming credits, etc.
+* **ledger.ts** - Credit ledger, manages credit transaction records
+* **distribute.ts** - Credit distribution, handles logic like subscription credit distribution
+
+### Database Tables
+
+* **userCredit** - User credit balance table
+* **creditTransaction** - Credit transaction records table
+
+## Core Features
+
+* **Purchase Credits**: Users can purchase credit packages if they don't have enough credits
+* **Registration Gift Credits**: Optionally gift initial credits to new users
+* **Credit Expiration**: Set credit expiration days for each package or gift
+* **Track Credit Balance**: Securely query and update current user's credits
+* **Credit Transactions**: View detailed transaction history (purchases, usage, expiration, etc.)
+* **Custom Packages**: Define any number of packages with different amounts, prices, and attributes
+* **Internationalization**: Support for translated package names and descriptions
+* **Secure Server Actions**: All credit operations are protected and validated
+
+## Usage
+
+### Get Credit Balance
+
+```tsx
+import { getCreditBalance } from '@/credits';
+
+const balance = await getCreditBalance(userId);
+console.log(`Current credit balance: ${balance}`);
+```
+
+### Consume Credits
+
+```tsx
+import { consumeCredits } from '@/credits';
+
+const success = await consumeCredits({
+  userId: 'user_xxx',
+  amount: 10,
+  description: 'Generate AI image',
+});
+```
+
+### Get Credit Transactions
+
+```tsx
+import { getCreditTransactions } from '@/credits';
+
+const transactions = await getCreditTransactions({
+  userId: 'user_xxx',
+  limit: 20,
+  offset: 0,
+});
+```
+
+## Best Practices
+
+1. **Enable Only When Needed**: Only set `enableCredits: true` if your product's business model requires credits
+2. **Validate All Operations**: Use the provided Server Actions for all credit operations to ensure security and validation
+3. **Handle Expiration**: If you want credits to expire, set the `expireDays` for packages or gifts
+
+## References
+
+* [Credits System Design Best Practices](https://github.com/aelokit/aelokit)
+
+## Next Steps
+
+Now that you understand how to use credits in AeloKit, you may want to explore these related features:
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Payment" href="/docs/payment">
+    Configure payments and subscriptions
+  </Card>
+
+  <Card icon={<KeyRound className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics services
+  </Card>
+
+  <Card icon={<Mail className="text-purple-500" />} title="Email" href="/docs/email">
+    Configure email services
+  </Card>
+</Cards>

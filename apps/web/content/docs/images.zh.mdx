@@ -1,0 +1,213 @@
+---
+title: 图片
+description: 学习如何自定义 AeloKit 模板中的图片
+icon: Image
+---
+
+本文档涵盖了 AeloKit 模板中的图片系统，重点介绍如何配置和自定义 Logo、网站图标和其他图片资源。
+
+## 核心功能
+
+AeloKit 模板包含一个灵活的图片系统，允许您：
+
+* 为明暗模式配置 Logo
+* 设置社交媒体预览图片（Open Graph）
+* 自定义网站图标和浏览器图标
+* 高效组织和访问图片资源
+
+## 图片配置
+
+图片主要在 `packages/config/src/website.ts` 配置文件中配置。
+
+```typescript title="packages/config/src/website.ts"
+export const websiteConfig: WebsiteConfig = {
+  metadata: {
+    // ...其他设置
+    images: {
+      ogImage: '/og.png',            // 社交媒体预览图片
+      logoLight: '/logo.png',        // 明亮模式的 Logo
+      logoDark: '/logo-dark.png',    // 暗黑模式的 Logo
+    },
+    // ...其他配置
+  },
+  // ...其余配置
+};
+```
+
+**配置选项：**
+
+| 属性          | 描述                           |
+| ----------- | ---------------------------- |
+| `ogImage`   | 分享网站时用于社交媒体预览的 Open Graph 图片 |
+| `logoLight` | 在明亮模式下显示的 Logo               |
+| `logoDark`  | 在暗黑模式下显示的 Logo               |
+
+## 图片目录结构
+
+图片资源主要存储在 `public` 目录中，可以直接从浏览器访问。
+
+### 主要图片资源
+
+以下图片资源通常存储在 `public` 目录的根目录中：
+
+* **主要 Logo**：`logo.png`（明亮模式）和 `logo-dark.png`（暗黑模式）
+* **Open Graph 图片**：用于社交媒体预览的 `og.png`
+* **网站图标资源**：各种尺寸的网站图标和浏览器图标
+
+### 其他图片目录
+
+为了更好的组织，您可以在 `public` 文件夹内创建子目录：
+
+* `/public/images/` - 用于一般网站图片
+* `/public/blocks/` - 用于特定组件的图片
+* `/public/svg/` - 用于 SVG 资源
+
+## 自定义 Logo
+
+### Logo 要求
+
+为了在网站上获得最佳显示效果， Logo应该：
+
+* 采用带透明度的 PNG 格式
+* 具有一致的高度（宽度可以变化）
+* 为不同主题准备明亮和暗黑两个版本 (如果不需要，可以只准备一个版本)
+
+### 创建自定义 Logo
+
+为您的网站创建专业 Logo：
+
+1. **使用 Logo创建工具**：推荐 [Ray.so Icon Maker](https://ray.so/icon) 来创建简洁、干净的 Logo
+2. 以带透明度的 PNG 格式导出您的 Logo
+3. 创建两个版本：一个用于明亮模式，一个用于暗黑模式
+4. 将两个文件都放在您的 `/public` 目录中
+
+### 更新 Logo配置
+
+创建自定义 Logo后：
+
+1. 将您的明亮模式 Logo保存为 `/public/logo.png`
+2. 将您的暗黑模式 Logo保存为 `/public/logo-dark.png`
+3. 如果您使用了不同的文件名或位置，可选择在 `website.ts` 中更新路径：
+
+```typescript title="packages/config/src/website.ts"
+images: {
+  // ...其他图片设置
+  logoLight: '/path/to/your-logo.png',
+  logoDark: '/path/to/your-dark-logo.png',
+},
+```
+
+## 自定义网站图标
+
+网站图标是显示在浏览器标签页、书签中以及将您的网站添加到移动设备主屏幕时的小图标。
+
+### 网站图标文件
+
+完整的网站图标集包括几个文件：
+
+* `favicon.ico` - 传统网站图标（16x16、32x32、48x48px）
+* `favicon-16x16.png` - 16x16 像素 PNG 网站图标
+* `favicon-32x32.png` - 32x32 像素 PNG 网站图标
+* `apple-touch-icon.png` - iOS 的 180x180 像素图标
+* `android-chrome-192x192.png` - Android 图标（192x192 像素）
+* `android-chrome-512x512.png` - Android 的更大图标（512x512 像素）
+
+### 创建自定义网站图标
+
+要创建完整的网站图标文件集：
+
+1. 设计一个简单、可识别的 Logo 图片（最好是正方形）
+2. 使用 [Favicon.io 转换器](https://favicon.io/favicon-converter/) 生成完整的网站图标集
+3. 上传 Logo 图片到转换器，下载包含所有网站图标格式的 zip 文件
+4. 解压并将所有文件放在 `public` 目录中
+
+### 网站图标 HTML
+
+网站图标文件通过 AeloKit 模板中的以下标签自动链接到您的 HTML 中，因此您无需手动添加它们。
+
+```html
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+```
+
+这些链接通常包含在应用程序 HTML 的 `<head>` 部分中。
+
+## 创建 Open Graph 图片
+
+Open Graph 图片（`og.png`）在您的网站在社交媒体平台上分享时显示。
+
+### Open Graph 图片指导原则
+
+为了在各平台上获得最佳显示效果：
+
+* 使用 1200×630 像素的尺寸（比例为 1.91:1）
+* 将重要内容保持在中央区域
+* 包含您的 Logo、网站名称，可能还有标语
+* 使用与您品牌一致的颜色
+
+### 更新 Open Graph 图片
+
+1. 使用设计工具创建您的 Open Graph 图片
+2. 将其保存为 `og.png`
+3. 将其放在您的 `public` 目录中
+4. 如果替换原始文件，则不用更新路径，如果不是，则要在 `website.ts` 中更新路径：
+
+```typescript title="packages/config/src/website.ts"
+images: {
+  ogImage: '/your-custom-og.png',
+  // ...其他图片设置
+},
+```
+
+## 最佳实践
+
+* **图片优化**：在将图片添加到项目之前始终压缩图片
+* **响应式图片**：使用 Next.js Image 组件进行自动响应式处理
+* **一致的样式**：在整个网站上保持 Logo 的一致尺寸和样式
+* **替代文本**：为了可访问性，始终包含描述性的替代文本
+* **文件大小**：保持图片文件大小尽可能小以获得更好的性能
+* **格式选择**：尽可能使用 WebP 或 AVIF 格式以获得更好的压缩
+* **图片尺寸**：以最大所需尺寸存储图片，让 Next.js 处理调整大小
+
+## 常见问题
+
+### 网站图片不显示
+
+如果您的网站图片没有正确显示：
+
+1. 验证您的 `website.ts` 配置中的文件路径
+2. 检查图片文件是否存在于正确路径（区分大小写）
+3. 清除浏览器缓存并重新加载页面
+4. 验证图片尺寸和格式是否受支持
+
+### 网站图标不显示
+
+如果您的网站图标没有显示：
+
+1. 检查所有网站图标文件是否在您的 `public` 目录中
+2. 验证 HTML 链接是否正确设置
+3. 强制刷新您的浏览器（Ctrl+F5 或 Cmd+R）
+4. 检查浏览器开发者工具是否有任何 404 错误
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用图片，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="字体" href="/docs/fonts">
+    配置字体
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+</Cards>

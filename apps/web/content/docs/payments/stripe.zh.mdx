@@ -1,0 +1,427 @@
+---
+title: Stripe 支付
+description: 如何设置和使用 Stripe 处理支付和订阅
+---
+
+AeloKit 支持 [Stripe](https://stripe.com) 进行支付管理，处理一次性支付和订阅支付功能。
+
+## 设置
+
+AeloKit 模板默认提供三种价格计划：免费计划、专业版订阅计划（月度/年度）和终身计划（一次性支付），按照以下步骤设置：
+
+<Steps>
+  <Step>
+    ### 创建 Stripe 账户
+
+    在 [stripe.com](https://stripe.com) 创建 Stripe 账户。
+  </Step>
+
+  <Step>
+    ### 获取 API 密钥
+
+    从 Stripe 控制台获取您的 API 密钥：
+
+    * 进入到 Stripe 控制台 > `Developers` > `API keys`
+    * 复制密钥（注意：测试模式以 `sk_test_` 开头，生产模式以 `sk_live_` 开头）
+    * 将其保存到环境变量文件中作为 `STRIPE_SECRET_KEY`
+  </Step>
+
+  <Step>
+    ### 设置 Webhook
+
+    设置 Webhook 并获取您的 Webhook 密钥：
+
+    * 进入到 Stripe 控制台 > `Developers` > `Webhooks`
+    * 点击 `Add endpoint`
+    * 输入 Webhook URL：`https://YOUR-DOMAIN.com/api/webhooks/stripe`
+    * 选择要监听的事件：
+      * `invoice.paid`
+      * `checkout.session.completed`
+      * `customer.subscription.created`
+      * `customer.subscription.updated`
+      * `customer.subscription.deleted`
+    * 点击 `Reveal` 查看 Webhook 签名密钥（以 `whsec_` 开头）
+    * 将其保存到环境变量文件中作为 `STRIPE_WEBHOOK_SECRET`
+
+    <Callout type="info">
+      如果您想在开发环境中测试支付流程，您可以在 [Webhooks](/docs/payment#webhooks) 部分找到更多信息。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### 创建产品和价格计划
+
+    在 Stripe 中创建产品并设置价格计划：
+
+    * 进入到 Stripe 控制台 > `Product Catalog`
+    * **创建专业版订阅计划的产品**：
+      * 点击 `Add product`
+      * 名称：`专业版计划`
+      * 描述：`具有订阅价格的高级功能`
+      * **添加月度价格**：
+        * 点击 `添加价格`
+        * 价格：$9.90（货币选择 USD）
+        * 定期：月度
+        * 保存并复制价格 ID（以 `price_` 开头），这将用于 `NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY`
+      * **添加年度价格**：
+        * 点击 `Add price`
+        * 价格：$99.00（货币选择 USD）
+        * 定期：年度
+        * 保存并复制价格 ID（以 `price_` 开头），这将用于 `NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY`
+    * **创建终身计划的产品**：
+      * 点击 `Add product`
+      * 名称：`终身计划`
+      * 描述：`终身访问的一次性支付`
+      * 添加价格：
+        * 价格：$199.00（货币选择 USD）
+        * 类型：一次性
+        * 保存并复制价格 ID（以 `price_` 开头），这将用于 `NEXT_PUBLIC_STRIPE_PRICE_LIFETIME`
+
+  </Step>
+
+  <Step>
+    ### 添加环境变量
+
+    添加以下环境变量：
+
+    ```bash title=".env"
+    STRIPE_SECRET_KEY=sk_test_...
+    STRIPE_WEBHOOK_SECRET=whsec_...
+
+    # 价格计划
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_LIFETIME=price_...
+    ```
+  </Step>
+
+  <Step>
+    ### 设置客户门户
+
+    设置 Stripe 客户门户：
+
+    * 进入到 Stripe 控制台 > `Settings` > `Billing` > `Customer Portal`
+    * 自定义客户门户界面显示的内容，例如，您可以添加一个自定义的 logo 和标题
+    * 点击 `Save changes` 保存门户配置
+</Step>
+
+  <Step>
+    ### 更新网站配置
+
+    更新 `website.tsx` 文件，在支付配置中使用 Stripe 作为支付提供商，并在[价格配置中配置价格计划](/docs/config/price)：
+
+    ```tsx title="packages/config/src/website.ts"
+    import { PaymentTypes, PlanIntervals } from '@/payment/types';
+
+    export const websiteConfig = {
+      // ...其他配置
+      payment: {
+        provider: 'stripe', // 要使用的支付提供商
+      },
+      price: {
+        plans: {
+          free: {
+            id: 'free',
+            prices: [],
+            isFree: true,
+            isLifetime: false,
+            credits: {
+              enable: true,
+              amount: 50,
+              expireDays: 30,
+            },
+          },
+          pro: {
+            id: 'pro',
+            prices: [
+              {
+                type: PaymentTypes.SUBSCRIPTION,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!,
+                amount: 990,
+                currency: 'USD',
+                interval: PlanIntervals.MONTH,
+              },
+              {
+                type: PaymentTypes.SUBSCRIPTION,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY!,
+                amount: 9900,
+                currency: 'USD',
+                interval: PlanIntervals.YEAR,
+              },
+            ],
+            isFree: false,
+            isLifetime: false,
+            popular: true,
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+          lifetime: {
+            id: 'lifetime',
+            prices: [
+              {
+                type: PaymentTypes.ONE_TIME,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_LIFETIME!,
+                amount: 19900,
+                currency: 'USD',
+                allowPromotionCode: true,
+              },
+            ],
+            isFree: false,
+            isLifetime: true,
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+        },
+      },
+      // ...其他配置
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果您正在设置环境，现在可以回到**环境配置文档**并继续。本文档的其余部分可以稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#payment">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## Webhooks
+
+Stripe Webhooks 对于处理异步事件（如成功支付和订阅更新）至关重要。
+
+### 开发环境
+
+对于本地开发，使用 Stripe CLI 将事件转发到您的本地服务器：
+
+```bash
+pnpm install -g stripe/stripe-cli
+```
+
+登录到 Stripe：
+
+```bash
+stripe login
+```
+
+将事件转发到您的本地服务器：
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+Webhook 密钥在终端中打印，复制它并将其添加到环境变量文件中：
+
+```bash
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+您可以使用 Stripe CLI 触发测试事件，或在网站上测试事件：
+
+```bash
+stripe trigger invoice.paid
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.created
+stripe trigger customer.subscription.updated
+stripe trigger customer.subscription.deleted
+```
+
+### 生产环境
+
+1. 进入到 Stripe 控制台 > 开发者 > Webhooks
+2. 点击 `添加端点`
+3. 输入 Webhook URL：`https://YOUR-DOMAIN.com/api/webhooks/stripe`
+4. 选择要监听的事件：
+   * `invoice.paid`
+   * `checkout.session.completed`
+   * `customer.subscription.created`
+   * `customer.subscription.updated`
+   * `customer.subscription.deleted`
+5. 创建后，点击 `显示` 查看 Webhook 签名密钥
+6. 复制 Webhook 签名密钥（以 `whsec_` 开头）并将其添加到您的环境变量中
+
+## UI 组件
+
+AeloKit 包含用于处理支付的预构建 React 组件：
+
+<Accordions>
+  <Accordion title="CreateCheckoutButton">
+    创建 Stripe 结账会话并将用户重定向到 Stripe 的结账页面。
+
+    ```tsx
+    import { CreateCheckoutButton } from '@/components/pricing/create-checkout-button';
+
+    <CreateCheckoutButton
+      planId="pro"
+      priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!}
+      userId="user_123"
+      variant="default"
+      size="default"
+    >
+      订阅
+    </CreateCheckoutButton>
+    ```
+  </Accordion>
+
+  <Accordion title="CustomerPortalButton">
+    将用户重定向到 Stripe 客户门户以管理他们的订阅。
+
+    ```tsx
+    import { CustomerPortalButton } from '@/components/pricing/customer-portal-button';
+
+    <CustomerPortalButton
+      userId="user_123"
+      variant="outline"
+      size="default"
+    >
+      管理订阅
+    </CustomerPortalButton>
+    ```
+  </Accordion>
+
+  <Accordion title="PricingTable">
+    显示所有价格计划，中间带有间隔，以便于比较。
+
+    ```tsx
+    import { PricingTable } from '@/components/pricing/pricing-table';
+
+    <PricingTable
+      userId="user_123"
+      currentPlanId="pro"
+    />
+    ```
+  </Accordion>
+
+  <Accordion title="PricingCard">
+    显示带有结账按钮的单个价格计划。
+
+    ```tsx
+    import { PricingCard } from '@/components/pricing/pricing-card';
+
+    <PricingCard
+      plan={plan}
+      interval="month"
+      userId="user_123"
+      isCurrentPlan={false}
+    />
+    ```
+  </Accordion>
+</Accordions>
+
+## 扩展新的支付提供商
+
+AeloKit 支持扩展新的支付提供商：
+
+1. 在 `src/payment/provider` 目录中创建新的文件
+2. 从 `types.ts` 实现 `PaymentProvider` 接口
+3. 在 `index.ts` 中更新支付服务提供商选择逻辑
+
+示例实现：
+
+```tsx title="src/payment/provider/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  getSubscriptionsParams
+} from '@/payment/types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // 初始化您的支付服务提供商
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // 创建结账会话的实现
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // 创建客户门户的实现
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // 处理 webhook 事件的实现
+  }
+}
+```
+
+然后在 `index.ts` 中更新支付服务提供商选择：
+
+```tsx title="src/payment/index.ts"
+import { MyProvider } from './provider/my-provider';
+
+export const initializePaymentProvider = (): PaymentProvider => {
+  if (!paymentProvider) {
+    if (websiteConfig.payment.provider === 'stripe') {
+      paymentProvider = new StripeProvider();
+    } else if (websiteConfig.payment.provider === 'my-provider') {
+      paymentProvider = new MyProvider();
+    } else {
+      throw new Error(
+        `不支持的支付提供商: ${websiteConfig.payment.provider}`
+      );
+    }
+  }
+
+  return paymentProvider;
+};
+```
+
+## 测试卡
+
+要测试 Stripe 集成，请使用 Stripe 的测试模式和测试信用卡：
+
+* 4242 4242 4242 4242 - 成功支付
+* 4000 0000 0000 3220 - 需要 3D 安全认证
+* 4000 0000 0000 9995 - 资金不足失败
+
+您可以在 Stripe 文档中找到更多关于 [Stripe 测试卡](https://docs.stripe.com/testing) 的信息。
+
+## 创建发票
+
+AeloKit 已经为一次性支付配置了发票创建功能。
+
+```tsx title="src/payment/provider/stripe.ts"
+// 自动为一次性支付创建发票
+checkoutParams.invoice_creation = {
+  enabled: true,
+};
+```
+
+## 参考资料
+
+* [Stripe 文档](https://docs.stripe.com)
+* [Stripe 支付对象概览](https://youtu.be/CUAY6IQcVQM)
+* [Stripe 最佳实践](https://github.com/t3dotgg/stripe-recommendations)
+
+## 下一步
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="价格配置" href="/docs/config/price">
+    配置订阅计划和价格
+  </Card>
+
+  <Card icon={<KeyRound className="text-green-500" />} title="身份验证" href="/docs/auth">
+    配置用户身份验证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="统计分析" href="/docs/analytics">
+    配置统计分析服务
+  </Card>
+
+  <Card icon={<Mail className="text-purple-500" />} title="邮件" href="/docs/email">
+    配置邮件服务
+  </Card>
+</Cards>

@@ -1,0 +1,120 @@
+---
+title: 聊天框
+description: 了解如何在 AeloKit 中设置和使用聊天框
+icon: MessageSquare
+---
+
+AeloKit 已集成 [Crisp 聊天框](https://crisp.chat/en/)，实现网站实时消息功能。
+
+## 设置
+
+<Steps>
+  <Step>
+    ### 注册 Crisp 账号
+
+    如果还没有账号，请[注册 Crisp 账号](https://crisp.chat/en/)。
+  </Step>
+
+  <Step>
+    ### 获取 Website ID
+
+    前往 [Crisp 控制台](https://app.crisp.chat/) > `Settings` > `Workspace Settings` > `Setup & Integrations`。复制 `Website ID`，并在环境变量文件中设置：
+
+    ```bash title=".env"
+    NEXT_PUBLIC_CRISP_WEBSITE_ID=YOUR-CRISP-WEBSITE-ID
+    ```
+  </Step>
+
+  <Step>
+    ### 在配置中启用 Crisp Chat
+
+    在 `packages/config/src/website.ts` 配置文件中将 `enableCrispChat` 设置为 `true`（默认是 `false`）：
+
+    ```ts title="packages/config/src/website.ts"
+    export const websiteConfig: WebsiteConfig = {
+      features: {
+        enableCrispChat: true,
+      },
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  如果你正在进行环境配置，现在可以返回 **环境配置指南** 继续操作。本指南剩余部分可稍后阅读。
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env#chatbox">
+    设置环境变量
+  </Card>
+</Callout>
+
+***
+
+## 使用方法
+
+当 `enableCrispChat` 启用且环境变量已设置时，Crisp 聊天框会自动加载到您的网站上，无需额外编写代码。
+
+如需自定义或按需渲染聊天框，可直接导入并使用该组件：
+
+```tsx title="apps/web/src/app/layout.tsx"
+import CrispChat from '@/components/layout/crisp-chat';
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="zh">
+      <body>
+        <CrispChat />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Crisp 配置选项
+
+### 设置用户信息
+
+您可以在用户登录后设置 Crisp 用户信息：
+
+```tsx
+import { useSession } from '@/lib/auth-client';
+
+// 在组件中
+const { data: session } = useSession();
+
+if (session?.user && window.$crisp) {
+  window.$crisp.push(['set', 'user:email', session.user.email]);
+  window.$crisp.push(['set', 'user:nickname', session.user.name]);
+}
+```
+
+### 自定义聊天框外观
+
+您可以通过 Crisp 控制台自定义聊天框的颜色、位置和欢迎消息等。
+
+## 参考资料
+
+* [Crisp 官方网站](https://crisp.chat/en/)
+* [如何在 Next.js 上安装 Crisp 聊天？](https://help.crisp.chat/en/article/how-do-i-install-crisp-live-chat-on-nextjs-xh9yse/)
+* [Crisp JavaScript API](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/)
+
+## 下一步
+
+<Cards>
+  <Card icon={<Mail className="text-blue-500" />} title="邮件服务" href="/docs/email">
+    配置邮件服务
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="用户认证" href="/docs/auth">
+    配置用户认证
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="分析统计" href="/docs/analytics">
+    配置分析统计
+  </Card>
+
+  <Card icon={<HardDrive className="text-purple-500" />} title="存储服务" href="/docs/storage">
+    配置存储服务
+  </Card>
+</Cards>

@@ -1,0 +1,230 @@
+---
+title: Docker 部署
+description: 学习如何使用 Docker 部署项目
+icon: Container
+---
+
+本文档将帮助您使用 Docker 部署 AeloKit 项目。Docker 提供了一致的部署环境，简化了应用程序的分发和运行。
+
+## 前提条件
+
+在部署项目之前，请确保您有：
+
+1. 已安装 [Docker](https://docs.docker.com/get-docker/)
+2. 已安装 [Docker Compose](https://docs.docker.com/compose/install/)（可选，用于多容器部署）
+3. 准备好为网站的生产环境配置的[环境变量](/docs/env)
+
+## 快速开始
+
+### 使用 Docker 构建
+
+项目根目录已包含 `Dockerfile`，您可以直接构建镜像：
+
+```bash
+docker build -t aelokit-app .
+```
+
+### 运行容器
+
+```bash
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_BASE_URL="https://your-domain.com" \
+  -e DATABASE_URL="your-database-url" \
+  -e BETTER_AUTH_SECRET="your-auth-secret" \
+  aelokit-app
+```
+
+## Docker Compose 部署
+
+项目提供了 `docker-compose.yml` 文件，可以一键启动完整的应用栈：
+
+```bash
+docker-compose up -d
+```
+
+这将会启动：
+- AeloKit 应用
+- PostgreSQL 数据库（如果配置）
+
+### docker-compose.yml 示例
+
+```yaml title="docker-compose.yml"
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      - DATABASE_URL=postgresql://postgres:password@db:5432/aelokit
+      - BETTER_AUTH_SECRET=your-secret-key
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=aelokit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+## 环境变量配置
+
+### 使用 .env 文件
+
+创建 `.env` 文件并传递给 Docker Compose：
+
+```bash
+docker-compose --env-file .env up -d
+```
+
+### 使用 Docker Secrets
+
+对于生产环境，建议使用 Docker Secrets 管理敏感信息：
+
+```yaml
+secrets:
+  database_url:
+    file: ./secrets/database_url.txt
+  auth_secret:
+    file: ./secrets/auth_secret.txt
+
+services:
+  app:
+    secrets:
+      - database_url
+      - auth_secret
+```
+
+## 生产部署建议
+
+### 镜像优化
+
+Dockerfile 已针对生产环境优化：
+
+```dockerfile title="Dockerfile"
+# 构建阶段
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build
+
+# 运行阶段
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### 健康检查
+
+添加健康检查以确保应用正常运行：
+
+```yaml
+services:
+  app:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+### 资源限制
+
+设置资源限制以防止容器占用过多资源：
+
+```yaml
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+```
+
+## 部署到云平台
+
+### 部署到 AWS ECS
+
+1. 将镜像推送到 Amazon ECR
+2. 创建 ECS 任务定义
+3. 配置 ECS 服务和负载均衡器
+
+### 部署到 Google Cloud Run
+
+```bash
+gcloud run deploy aelokit \
+  --image gcr.io/your-project/aelokit \
+  --platform managed \
+  --region us-central1
+```
+
+### 部署到 Azure Container Instances
+
+```bash
+az container create \
+  --resource-group myResourceGroup \
+  --name aelokit \
+  --image your-registry.azurecr.io/aelokit \
+  --ports 3000
+```
+
+## 常见问题
+
+### 容器无法启动
+
+* 检查 Docker 日志：`docker logs <container-id>`
+* 验证环境变量是否正确配置
+* 确保端口未被占用
+
+### 数据库连接问题
+
+* 确认数据库容器正在运行
+* 检查网络配置和连接字符串
+* 验证数据库凭据
+
+### 性能问题
+
+* 增加容器资源限制
+* 使用多阶段构建减小镜像大小
+* 启用 Docker 缓存加速构建
+
+## 下一步
+
+现在您了解了如何使用 Docker 部署 AeloKit，请探索其他相关主题：
+
+<Cards>
+  <Card icon={<Cloud className="text-blue-500" />} title="Vercel 部署" href="/docs/deployment/vercel">
+    将网站部署到 Vercel
+  </Card>
+
+  <Card icon={<Cloud className="text-green-500" />} title="Cloudflare 部署" href="/docs/deployment/cloudflare">
+    将网站部署到 Cloudflare
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+</Cards>

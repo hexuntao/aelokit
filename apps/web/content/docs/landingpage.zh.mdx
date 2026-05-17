@@ -1,0 +1,347 @@
+---
+title: 落地页
+description: 学习如何使用内置的营销组件创建美观、响应式的落地页
+icon: Layout
+---
+
+本文档介绍如何使用来自 Tailark 的内置营销组件在 AeloKit 模板中创建和自定义落地页。
+
+## 核心功能
+
+AeloKit 内置了一套营销组件，让您可以快速创建响应式的落地页。这些组件包括：
+
+* Hero
+* 功能展示
+* 价格表
+* 推荐
+* CTA (Call-To-Action)
+* 以及更多
+
+所有这些组件都基于 [Tailark](https://tailark.com/) 开源项目，该项目提供使用 Shadcn/UI 和 TailwindCSS 构建的高质量 UI 组件。
+
+## 可用组件类别
+
+AeloKit 模板包含来自 Tailark 的所有营销组件，组织为以下类别：
+
+| 类别                                                | 描述             |
+| ------------------------------------------------- | -------------- |
+| Hero                                              | 引人注目的页面标题      |
+| Logo 云                                            | 显示合作伙伴或客户 Logo |
+| 功能                                                | 突出您产品的关键功能     |
+| 集成                                                | 展示第三方集成        |
+| 内容                                                | 通用内容显示         |
+| 统计                                                | 显示重要指标和统计数据    |
+| 团队                                                | 展示您的团队成员       |
+| 推荐                                                | 显示客户评价和推荐      |
+| CTA                                               | 鼓励用户行动         |
+| 页脚                                                | 带有链接和信息的页脚     |
+| 价格                                                | 展示您的价格计划       |
+| 比较器                                               | 比较不同的产品功能或计划   |
+| 常见问题                                              | 回答常见问题         |
+| 登录                                                | 登录相关组件         |
+| 注册                                                | 注册相关组件         |
+| 忘记密码                                              | 密码恢复界面         |
+| 联系                                                | 联系表单和信息        |
+
+每个类别包含多个组件变体，为您提供大量选择。
+
+## 如何使用营销组件
+
+组件位于 `apps/web/src/components/tailark/preview` 目录中，按类别组织。每个类别文件夹包含多个组件变体，您可以在落地页中使用。
+
+### 浏览可用组件
+
+要查看所有可用组件，您可以探索 `apps/web/src/components/tailark/preview` 目录：
+
+<Files>
+  <Folder name="apps/web/src/components/tailark/preview" defaultOpen>
+    <Folder name="hero-section" />
+
+    <Folder name="logo-cloud" />
+
+    <Folder name="features" />
+
+    <Folder name="integrations" />
+
+    <Folder name="content" />
+
+    <Folder name="stats" />
+
+    <Folder name="team" />
+
+    <Folder name="testimonials" />
+
+    <Folder name="call-to-action" />
+
+    <Folder name="footer" />
+
+    <Folder name="pricing" />
+
+    <Folder name="comparator" />
+
+    <Folder name="faqs" />
+
+    <Folder name="login" />
+
+    <Folder name="sign-up" />
+
+    <Folder name="forgot-password" />
+
+    <Folder name="contact" />
+
+    <File name="layout.tsx" />
+  </Folder>
+</Files>
+
+每个类别文件夹包含编号的变体（例如 `one`、`two`、`three` 等），每个变体都有一个实现组件的 `page.tsx` 文件。
+
+### 将组件添加到落地页
+
+要在落地页中使用组件：
+
+1. 浏览 `apps/web/src/components/tailark/preview` 目录找到您想要使用的组件
+2. 打开相应的 `page.tsx` 文件查看实现
+3. 从文件中复制组件代码
+4. 将其粘贴到您的落地页组件中
+5. 根据需要自定义内容和样式
+
+<Callout type="warning">
+  我们不建议直接在代码中引用 `apps/web/src/components/tailark/preview` 目录中的组件。这些组件定期与官方 Tailark 组件同步，可能在代码同步时引入冲突。推荐将组件复制到您自己的目录使用，如下一节所述。
+</Callout>
+
+例如，要使用第一个Hero变体：
+
+```tsx
+// 您的落地页组件
+import { HeroSectionOne } from '@/components/landing/hero-section-one';
+
+export default function LandingPage() {
+  return (
+    <main>
+      <HeroSectionOne />
+      {/* 在这里添加更多组件 */}
+    </main>
+  );
+}
+```
+
+### 使用组件目录
+
+为了更好的组织和国际化支持，AeloKit 提供了一个专用的 `apps/web/src/components/blocks` 目录，您可以将从 `apps/web/src/components/tailark/preview` 目录复制的自定义组件放在这里。
+
+<Files>
+  <Folder name="apps/web/src/components/blocks" defaultOpen>
+    <Folder name="hero" />
+
+    <Folder name="features" />
+
+    <Folder name="testimonials" />
+
+    <Folder name="pricing" />
+
+    <Folder name="stats" />
+
+    <Folder name="logo-cloud" />
+
+    <Folder name="calltoaction" />
+
+    <Folder name="faqs" />
+
+    <Folder name="integration" />
+  </Folder>
+</Files>
+
+这个目录结构镜像了 `apps/web/src/components/tailark/preview` 目录中的类别，并且已经包含了一些内置的、国际化的组件组件。当从 `apps/web/src/components/tailark/preview` 目录添加新组件时，我们建议以下工作流程：
+
+1. 从 `apps/web/src/components/tailark/preview` 目录中找到并选择所需的组件
+2. 从 `page.tsx` 文件复制组件代码
+3. 在 `apps/web/src/components/blocks` 中相应类别文件夹中创建新文件
+4. 调整组件以支持国际化（参见[国际化部分](#internationalization)）
+
+例如，如果您从 `apps/web/src/components/tailark/preview` 目录选择了一个Hero组件，您应该将自定义版本放在：
+
+```
+apps/web/src/components/blocks/hero/your-hero-component.tsx
+```
+
+使用这种有组织的方法提供了几个好处：
+
+* 将所有落地页组件保持在一个专用位置
+* 使维护和更新组件变得更容易
+* 确保与原始预览组件的适当分离
+* 允许您以结构化的方式调整组件以进行国际化
+* 促进在应用程序的不同部分重用
+
+<Callout type="info">
+  使用组件的最佳实践
+
+  虽然您可以直接使用 `blocks` 目录中的组件，但最推荐的方法是将它们复制到您自己的目录（例如 `components-home` 或 `components-landing`）并在那里自定义它们。
+</Callout>
+
+### 创建完整的落地页
+
+典型的落地页结合多个组件来创建连贯的用户体验。以下是如何使用 blocks 目录中的组件构建落地页的示例：
+
+```tsx
+import HeroSection from '@/components/blocks/hero/hero';
+import Features from '@/components/blocks/features/features';
+import Testimonials from '@/components/blocks/testimonials/testimonials';
+import Pricing from '@/components/blocks/pricing/pricing';
+import CallToAction from '@/components/blocks/calltoaction/cta';
+import Footer from '@/components/blocks/footer/footer';
+
+export default function LandingPage() {
+  return (
+    <main>
+      <HeroSection />
+      <Features />
+      <Testimonials />
+      <Pricing />
+      <CallToAction />
+    </main>
+  );
+}
+```
+
+这种方法允许您混合和匹配不同的组件来创建适合您需求的独特落地页。
+
+## 国际化
+
+Tailark 营销组件默认不支持国际化，要使落地页国际化，您需要将文本内容提取到特定语言的资源文件中。
+
+### 提取文本进行翻译
+
+当您完成组件选择和自定义后，按照以下步骤使您的落地页多语言化：
+
+1. 识别您使用的组件中的所有文本内容
+2. 将此文本提取到特定语言的资源文件中（例如， `messages/en.json` 和 `messages/zh.json`）
+3. 用翻译函数调用替换硬编码文本
+
+以下是如何国际化Hero的示例：
+
+```tsx
+// 国际化之前
+<TextEffect as="h1" className="...">
+  Your Custom Headline Here
+</TextEffect>
+
+// 国际化之后
+import { useTranslations } from 'next-intl';
+
+function InternationalizedHeroSection() {
+  const t = useTranslations('LandingPage.Hero');
+
+  return (
+    <TextEffect as="h1" className="...">
+      {t('headline')}
+    </TextEffect>
+  );
+}
+```
+
+### 翻译资源文件
+
+为每种支持的语言创建翻译文件：
+
+```json
+// messages/en.json
+{
+  "LandingPage": {
+    "Hero": {
+      "headline": "Your Custom Headline Here",
+      "subheading": "Your custom subheading text goes here.",
+      "ctaPrimary": "Get Started",
+      "ctaSecondary": "Learn More"
+    }
+  }
+}
+
+// messages/zh.json
+{
+  "LandingPage": {
+    "Hero": {
+      "headline": "您的自定义标题在这里",
+      "subheading": "您的自定义副标题文本在这里。",
+      "ctaPrimary": "开始使用",
+      "ctaSecondary": "了解更多"
+    }
+  }
+}
+```
+
+### 内置的国际化组件
+
+`apps/web/src/components/blocks` 目录已经包含了几个内置的国际化组件，您可以将其用作参考。这些组件：
+
+1. 从 next-intl 导入 `useTranslations` 方法
+2. 为所有文本内容使用翻译键获取对应的翻译文本
+3. 使用 `LocaleLink` 而不是常规的 Next.js `Link` 来正确本地化 URL
+4. 保持与预览对应组件相同的视觉设计和功能
+
+例如，以下是国际化 Hero 组件的简化版本：
+
+```tsx
+import { useTranslations } from 'next-intl';
+import { LocaleLink } from '@/i18n/navigation';
+import { TextEffect } from '@/components/tailark/motion/text-effect';
+import { Button } from '@/components/ui/button';
+
+export default function HeroSection() {
+  const t = useTranslations('HomePage.hero');
+
+  return (
+    <section>
+      <h1>
+        <TextEffect preset="fade-in-blur">
+          {t('title')}
+        </TextEffect>
+      </h1>
+      <p>{t('description')}</p>
+      <Button asChild>
+        <LocaleLink href="/get-started">
+          {t('cta')}
+        </LocaleLink>
+      </Button>
+    </section>
+  );
+}
+```
+
+通过遵循这种方法，您可以创建一个完全多语言的落地页，适应用户的首选语言。
+
+## 最佳实践
+
+创建落地页时，考虑这些最佳实践：
+
+1. **从计划开始**：在实施之前，勾画出落地页的结构
+2. **专注于用户流程**：安排组件顺序以引导用户完成购买流程
+3. **保持一致性**：在整个过程中使用一致的颜色、字体和样式
+4. **优化性能**：压缩图像大小并减少不必要的动画
+5. **移动优先**：确保您的落地页在所有设备上都看起来很棒
+6. **测试加载时间**：验证您的页面加载快速，特别是首屏内容
+7. **清晰的CTA**：使您的主要 CTA 突出且引人注目
+8. **简化导航**：保持导航最小化以将注意力集中在您的内容上
+9. **A/B 测试**：如果可能，测试不同版本以查看哪个版本效果更好
+10. **跟踪指标**：设置分析以衡量落地页的有效性
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中创建和自定义落地页，探索这些相关主题：
+
+<Cards>
+  <Card icon={<Palette className="text-blue-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+
+  <Card icon={<Type className="text-green-500" />} title="字体" href="/docs/fonts">
+    为落地页自定义排版
+  </Card>
+
+  <Card icon={<Image className="text-amber-500" />} title="图像" href="/docs/images">
+    配置网站各种图片
+  </Card>
+
+  <Card icon={<Layout className="text-purple-500" />} title="网站配置" href="/docs/config/website">
+    配置网站核心设置
+  </Card>
+</Cards>

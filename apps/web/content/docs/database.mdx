@@ -1,0 +1,255 @@
+---
+title: Database
+description: Learn about database options and how to configure the database for your project
+icon: Database
+---
+
+This document covers database creation, initialization, migration, and connecting to the database, as well as how to use Drizzle ORM.
+
+<Callout type="warn">
+  This article mainly introduces the creation and configuration of Postgres databases. If you are using the main branch or cloudflare branch, please refer to this document.
+
+  If you are using the cloudflare-d1 branch, which uses Cloudflare D1 database, please refer to [Cloudflare Deployment (Using D1 Database)](/docs/deployment/cloudflare-d1).
+</Callout>
+
+## Setup
+
+The project uses PostgreSQL as the database system and Drizzle ORM for database access and management.
+
+<Steps>
+  <Step>
+    ### Create Database
+
+    We recommend using a managed PostgreSQL database service, which provides simple setup and management, and usually includes a free tier sufficient for getting started.
+
+    <Tabs items={['Neon (Recommended)', 'Supabase']}>
+      <Tab value="Neon (Recommended)">
+        [Neon](https://neon.tech) is a PostgreSQL database service with excellent developer experience, making it a great choice for small projects.
+
+        1. Create an account at [neon.tech](https://neon.tech)
+        2. Create a new project
+        3. Create a database
+        4. Get the connection string from the dashboard
+        5. Add the connection string as `DATABASE_URL` to your environment variables file
+
+        ```bash
+        # Neon connection string example
+        DATABASE_URL="postgres://user:password@ep-something.us-east-2.aws.neon.tech/database?sslmode=require"
+        ```
+
+        You can find more information about setting up Neon in [this documentation](https://orm.drizzle.team/docs/tutorials/drizzle-with-neon).
+      </Tab>
+
+      <Tab value="Supabase">
+        [Supabase](https://supabase.com) provides a PostgreSQL database with additional features like authentication and storage, making it a great choice for medium to large projects.
+
+        1. Create an account at [supabase.com](https://supabase.com)
+        2. Create a new project
+        3. Click the `Connect` button
+        4. Get the connection string from the `Transaction pooler` section
+        5. Add the connection string as `DATABASE_URL` to your environment variables file
+
+        ```bash
+        # Supabase connection string example
+        DATABASE_URL="postgres://postgres:your-password@db.something.supabase.co:6543/postgres"
+        ```
+
+        You can find more information about setting up Supabase in [this documentation](https://orm.drizzle.team/docs/tutorials/drizzle-with-supabase), or check the connection documentation on Supabase.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### Initialize Database
+
+    AeloKit uses Drizzle ORM to interact with the database. Run the following commands to initialize the database:
+
+    ```bash
+    pnpm db:generate # Generate Drizzle migration files
+    pnpm db:migrate # Migrate the database
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up your environment, you can now return to the **Environment Configuration Documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#database">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Creating a Database (Other Options)
+
+### Other Database Hosting Services
+
+You can find more information about other database options in the [Drizzle ORM documentation](https://orm.drizzle.team/docs/connect-vercel-postgres).
+
+* [Vercel Postgres](https://orm.drizzle.team/docs/connect-vercel-postgres)
+* [Prisma Postgres](https://www.prisma.io/postgres)
+* [AWS RDS](https://aws.amazon.com/rds/) (PostgreSQL)
+* [Google Cloud SQL](https://cloud.google.com/sql) (PostgreSQL)
+* [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
+
+### Self-hosted PostgreSQL
+
+#### Docker
+
+You can run PostgreSQL in a Docker container for local development:
+
+```bash
+docker run --name drizzle-postgres -e POSTGRES_PASSWORD=mypassword -d -p 5432:5432 postgres
+```
+
+Then use this connection string:
+
+```bash
+DATABASE_URL="postgres://postgres:mypassword@localhost:5432/postgres"
+```
+
+You can find more information about setting up PostgreSQL locally in [this documentation](https://orm.drizzle.team/docs/guides/postgresql-local-setup).
+
+#### Local Installation
+
+Install PostgreSQL directly on your machine:
+
+1. Download from [postgres.org](https://www.postgresql.org/download/) or use a package manager
+2. Install and set a password
+3. Create a database
+
+Then use this connection string:
+
+```bash
+DATABASE_URL="postgres://your-username:your-password@localhost:5432/database-name"
+```
+
+## Database Schema
+
+The database schema is located in `packages/db/src/schema.ts`, using Drizzle's schema definition syntax:
+
+```typescript title="packages/db/src/schema.ts"
+import * as authSchema from './auth.schema';
+import * as appSchema from './app.schema';
+
+export * from './auth.schema';
+export * from './app.schema';
+
+export const schema = {
+  ...authSchema,
+  ...appSchema,
+} as const;
+```
+
+### Application Schema
+
+Application-related table definitions are in `packages/db/src/app.schema.ts`:
+
+* **payment** - Payment records table, storing subscription, one-time payment, and credit purchase information
+* **userCredit** - User credit balance table
+* **creditTransaction** - Credit transaction records table
+
+## Using Other Database Providers
+
+Drizzle ORM supports multiple database providers. If you want to use a different provider:
+
+1. Install the appropriate Drizzle adapter package
+2. Update `packages/db/src/index.ts` to use the correct driver
+3. Adjust the schema in `packages/db/src/schema.ts` if necessary
+
+#### Example: Using MySQL
+
+```typescript title="packages/db/src/index.ts"
+// 1. Install: pnpm add drizzle-orm mysql2
+// 2. Update packages/db/src/index.ts
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+
+const connection = await mysql.createConnection(process.env.DATABASE_URL!);
+const db = drizzle(connection);
+
+export default db;
+```
+
+#### Example: Using SQLite
+
+```typescript title="packages/db/src/index.ts"
+// 1. Install: pnpm add drizzle-orm better-sqlite3
+// 2. Update packages/db/src/index.ts
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+
+const sqlite = new Database('sqlite.db');
+const db = drizzle(sqlite);
+
+export default db;
+```
+
+For more information about Drizzle ORM and its adapters, refer to the [Drizzle ORM documentation](https://orm.drizzle.team/docs/overview).
+
+<Callout type="warn">
+  If you use a different database type, you need to update the `packages/auth/src/server.ts` file to use the correct driver, refer to the [Better Auth documentation](https://www.better-auth.com/docs/installation#configure-database).
+
+  If you are using Cloudflare D1 database, please refer to the documentation [Cloudflare Deployment (Using D1 Database)](/docs/deployment/cloudflare-d1).
+</Callout>
+
+## Connecting to the Database
+
+You can run `pnpm db:studio` to open the database studio, allowing you to view and manage database data in the development environment.
+
+## Common Issues
+
+### Connection Issues
+
+If you encounter problems connecting to the database:
+
+1. Check if your `DATABASE_URL` format is correct
+2. Ensure your IP is allowed in the database firewall settings
+3. Verify the database user has the correct permissions
+4. Check for any network restrictions
+
+### Schema Migration Issues
+
+If you encounter problems with database migration:
+
+1. Check your schema definition for errors
+2. Ensure your migration scripts are formatted correctly
+3. Try running the migration manually to see detailed errors
+
+### Database Cost Issues
+
+If you are using the Neon database service, you may need to pay attention to setting up AutoScaling to avoid excessive billing charges.
+
+## References
+
+* [Neon](https://neon.tech/docs)
+* [Supabase](https://supabase.com/docs)
+* [Drizzle ORM](https://orm.drizzle.team/docs/overview)
+* [Supabase | Connecting with Drizzle](https://supabase.com/docs/guides/database/drizzle)
+* [Database Connections with Drizzle](https://orm.drizzle.team/docs/connect-overview)
+* [Drizzle with Neon Postgres](https://orm.drizzle.team/docs/tutorials/drizzle-with-neon)
+* [Drizzle with Supabase Postgres](https://orm.drizzle.team/docs/tutorials/drizzle-with-supabase)
+* [Drizzle with Vercel Edge Functions](https://orm.drizzle.team/docs/tutorials/drizzle-with-vercel-edge-functions)
+* [Drizzle | How to set up PostgreSQL locally](https://orm.drizzle.team/docs/guides/postgresql-local-setup)
+* [Using Neon in Cloudflare Workers](https://neon.com/docs/guides/cloudflare-workers)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<Shield className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<Mail className="text-blue-500" />} title="Email" href="/docs/email">
+    Configure email service
+  </Card>
+
+  <Card icon={<Mailbox className="text-amber-500" />} title="Newsletter" href="/docs/newsletter">
+    Configure email list subscription
+  </Card>
+
+  <Card icon={<FileKey className="text-purple-500" />} title="Environment Configuration" href="/docs/env">
+    Configure environment variables
+  </Card>
+</Cards>

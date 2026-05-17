@@ -1,0 +1,452 @@
+---
+title: 文档
+description: 学习如何创建、管理和自定义您的文档
+icon: FileText
+---
+
+AeloKit 内置一个基于 [Fumadocs](https://fumadocs.dev) 构建的文档系统。文档系统支持多语言内容、自定义组件和丰富的内容格式，适用于产品文档、教程和知识库文章。
+
+## 文档系统架构
+
+文档系统使用 [Fumadocs](https://fumadocs.vercel.app/) 构建，这是一个用于构建文档站点的框架，并已实现国际化。
+
+<Files>
+  <Folder name="content" defaultOpen>
+    <Folder name="docs" />
+  </Folder>
+
+  <Folder name="apps/web/src" defaultOpen>
+    <Folder name="app/[locale]/docs" defaultOpen>
+      <Folder name="[[...slug]]" defaultOpen>
+        <File name="page.tsx" />
+      </Folder>
+
+      <File name="layout.tsx" />
+
+      <File name="loading.tsx" />
+    </Folder>
+
+    <Folder name="components/docs" defaultOpen>
+      <File name="index.tsx" />
+
+      <File name="lazy.ts" />
+
+      <File name="wrapper.tsx" />
+
+      <File name="dynamic-codeblock.tsx" />
+    </Folder>
+
+    <Folder name="lib" defaultOpen>
+      <Folder name="docs" defaultOpen>
+        <File name="i18n.ts" />
+      </Folder>
+
+      <File name="source.ts" />
+    </Folder>
+  </Folder>
+
+  <File name="source.config.ts" />
+</Files>
+
+## 数据源配置
+
+文档系统在 `source.config.ts` 文件中使用 Fumadocs MDX 配置数据源：
+
+```typescript title="source.config.ts"
+import { defineDocs, frontmatterSchema, metaSchema } from 'fumadocs-mdx/config';
+import { z } from 'zod';
+
+// 文档集合
+export const docs = defineDocs({
+  dir: 'content/docs',
+  docs: {
+    schema: frontmatterSchema.extend({
+      preview: z.string().optional(),
+      index: z.boolean().default(false),
+    }),
+  },
+  meta: {
+    schema: metaSchema.extend({
+      description: z.string().optional(),
+    }),
+  },
+});
+```
+
+然后在 `apps/web/src/lib/source.ts` 中加载数据源：
+
+```typescript title="apps/web/src/lib/source.ts"
+import { type InferPageType, loader } from 'fumadocs-core/source';
+import * as LucideIcons from 'lucide-react';
+import { createElement } from 'react';
+import { docs } from '../../../.source';
+import { docsI18nConfig } from './i18n';
+
+/**
+ * 将内容源转换为统一接口
+ * .source 文件夹由 `fumadocs-mdx` 生成
+ */
+export const source = loader({
+  baseUrl: '/docs',
+  i18n: docsI18nConfig,
+  source: docs.toFumadocsSource(),
+  icon(iconName) {
+    if (!iconName) {
+      return undefined;
+    }
+
+    const IconComponent = (LucideIcons as Record<string, any>)[iconName];
+    if (IconComponent) {
+      return createElement(IconComponent);
+    }
+
+    console.warn(`Icon not found: ${iconName}`);
+    return undefined;
+  },
+});
+```
+
+## 创建文档内容
+
+### 添加新文档页面
+
+1. 在 `content/docs` 目录中创建新的 MDX 文件：
+
+```mdx title="content/docs/getting-started.mdx"
+---
+title: 入门文档
+description: 设置 AeloKit 项目的快速入门文档
+icon: Rocket
+---
+
+# 入门文档
+
+这是一个帮助您开始使用 AeloKit 的文档。
+
+## 安装
+
+首先，您需要安装依赖项...
+```
+
+2. 前言中的 `icon` 属性支持所有 [Lucide](https://lucide.dev/) 图标，并将显示在文档标题旁边。
+
+### 组织文档
+
+Fumadocs 允许您使用分层结构组织文档：
+
+```
+content/
+  docs/
+    getting-started.mdx
+    features/
+      auth.mdx
+      database.mdx
+    deployment/
+      hosting.mdx
+      ci-cd.mdx
+```
+
+您可以使用元文件自定义侧边栏顺序和分组：
+
+```json title="content/docs/meta.json"
+{
+  "title": "文档",
+  "pages": [
+    "getting-started",
+    {
+      "title": "功能特性",
+      "pages": ["features/auth", "features/database"]
+    },
+    {
+      "title": "部署",
+      "pages": ["deployment/hosting", "deployment/ci-cd"]
+    }
+  ],
+  "description": "项目的完整文档",
+  "root": true,
+  "icon": "BookOpen"
+}
+```
+
+### 嵌套文档结构
+
+对于嵌套文档，创建特定于文件夹的元文件：
+
+```json title="content/docs/features/meta.json"
+{
+  "title": "功能特性",
+  "pages": ["auth", "database"],
+  "description": "了解关键功能",
+  "root": false,
+  "icon": "Star"
+}
+```
+
+## 多语言支持
+
+AeloKit 文档系统完全支持国际化。您可以使用以下文件命名约定创建多语言内容：
+
+1. **默认语言（例如英语）**：`filename.mdx`
+2. **其他语言（例如中文）**：`filename.zh.mdx`
+
+### 多语言文档示例
+
+英语文档页面：
+
+```mdx title="content/docs/getting-started.mdx"
+---
+title: Getting Started
+description: Quick start guide for setting up your AeloKit project
+icon: Rocket
+---
+
+英语内容...
+```
+
+同一页面的中文版本：
+
+```mdx title="content/docs/getting-started.zh.mdx"
+---
+title: 入门文档
+description: AeloKit项目的快速设置文档
+icon: Rocket
+---
+
+中文内容...
+```
+
+### 多语言元文件
+
+元文件也支持多语言：
+
+```json title="content/docs/meta.zh.json"
+{
+  "title": "文档",
+  "pages": [
+    "getting-started",
+    {
+      "title": "功能特性",
+      "pages": ["features/auth", "features/database"]
+    }
+  ],
+  "description": "完整的项目文档",
+  "root": true,
+  "icon": "BookOpen"
+}
+```
+
+## 文档组件
+
+AeloKit 包含由 Fumadocs 提供支持的各种文档组件：
+
+<Accordions>
+  <Accordion title="提示">
+    Highlight important information:
+
+    ```jsx
+    <Callout title="Important">
+      This is an important note for users.
+    </Callout>
+    ```
+
+    预览：
+
+    <Callout title="Important">
+      This is an important note for users.
+    </Callout>
+  </Accordion>
+
+  <Accordion title="选项卡">
+    Group related content in tabs:
+
+    ```jsx
+    <Tabs items={['JavaScript', 'TypeScript']}>
+      <Tab value="JavaScript">
+        JavaScript code examples...
+      </Tab>
+      <Tab value="TypeScript">
+        TypeScript code examples...
+      </Tab>
+    </Tabs>
+    ```
+
+    预览：
+
+    <Tabs items={['JavaScript', 'TypeScript']}>
+      <Tab value="JavaScript">
+        JavaScript code examples...
+      </Tab>
+
+      <Tab value="TypeScript">
+        TypeScript code examples...
+      </Tab>
+    </Tabs>
+  </Accordion>
+
+  <Accordion title="步骤">
+    Create step-by-step guides:
+
+    ```jsx
+    <Steps>
+      <Step>
+        <h4>Step 1: Installation</h4>
+        <p>Install the dependencies</p>
+      </Step>
+      <Step>
+        <h4>Step 2: Configuration</h4>
+        <p>Configure your application</p>
+      </Step>
+    </Steps>
+    ```
+
+    预览：
+
+    <Steps>
+      <Step>
+        <h4>
+          Step 1: Installation
+        </h4>
+
+        <p>
+          Install the dependencies
+        </p>
+      </Step>
+
+      <Step>
+        <h4>
+          Step 2: Configuration
+        </h4>
+
+        <p>
+          Configure your application
+        </p>
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="文件树">
+    Display file structures:
+
+    ```jsx
+    <Files>
+      <Folder name="app" defaultOpen>
+        <File name="page.tsx" />
+        <File name="layout.tsx" />
+      </Folder>
+      <File name="package.json" />
+    </Files>
+    ```
+
+    预览：
+
+    <Files>
+      <Folder name="app" defaultOpen>
+        <File name="page.tsx" />
+
+        <File name="layout.tsx" />
+      </Folder>
+
+      <File name="package.json" />
+    </Files>
+  </Accordion>
+
+  <Accordion title="卡片">
+    Create interactive card layouts:
+
+    ```jsx
+    <Cards>
+      <Card icon={<BookOpen />} title="Guide" href="/docs/guide">
+        Learn the basics
+      </Card>
+      <Card icon={<Settings />} title="Configuration" href="/docs/config">
+        Customize your setup
+      </Card>
+    </Cards>
+    ```
+
+    预览：
+
+    <Cards>
+      <Card icon={<BookOpen />} title="Guide" href="/docs/guide">
+        Learn the basics
+      </Card>
+
+      <Card icon={<Settings />} title="Configuration" href="/docs/config">
+        Customize your setup
+      </Card>
+    </Cards>
+  </Accordion>
+</Accordions>
+
+### 创建自定义组件
+
+要为您的文档创建自定义组件，您可以修改 `apps/web/src/components/docs/index.tsx` 中的 MDX 组件。
+
+## 自定义文档布局
+
+您可以通过编辑 `apps/web/src/app/[locale]/docs/layout.tsx` 来自定义文档布局。此文件控制导航、侧边栏和文档页面的整体结构。
+
+## 构建过程
+
+文档系统使用 Fumadocs MDX 的构建过程：
+
+1. **开发**：在开发过程中按需处理内容
+2. **构建**：运行 `pnpm run content` 生成优化的文档源
+3. **生成的文件**：`.source` 目录包含生成的 TypeScript 文件和您的内容
+
+## 高级配置
+
+有关文档系统的更高级自定义，您可以参考 Fumadocs 文档：
+
+<Cards>
+  <Card icon={<PanelLeft className="text-blue-500" />} title="Fumadocs UI" href="https://fumadocs.vercel.app/docs/ui">
+    了解文档布局自定义
+  </Card>
+
+  <Card icon={<LayoutDashboard className="text-green-500" />} title="Fumadocs 组件" href="https://fumadocs.vercel.app/docs/components">
+    改善文档的其他组件
+  </Card>
+
+  <Card icon={<Globe className="text-amber-500" />} title="国际化" href="https://fumadocs.vercel.app/docs/ui/internationalization">
+    文档的高级 i18n 功能
+  </Card>
+
+  <Card icon={<FileText className="text-purple-500" />} title="Markdown" href="https://fumadocs.vercel.app/docs/ui/markdown">
+    了解 Markdown 功能和语法
+  </Card>
+</Cards>
+
+## 最佳实践
+
+1. **一致的结构**：在文档页面中保持一致的结构
+2. **清晰的标题**：使用遵循逻辑层次结构的描述性标题
+3. **代码示例**：在适当的地方包含实用的代码示例
+4. **视觉效果**：使用图表、截图或交互式组件来解释复杂概念
+5. **交叉链接**：链接相关的文档页面以帮助用户导航您的内容
+6. **版本控制**：考虑为不同的软件版本进行文档版本控制
+7. **可访问性**：确保您的文档对所有用户都是可访问的
+8. **搜索优化**：使用清晰的标题和描述使内容可被发现
+9. **元文件**：使用 meta.json 文件来组织和构建您的文档侧边栏
+10. **图标一致性**：在整个文档中使用一致的图标
+
+## 下一步
+
+现在您了解了如何在 AeloKit 中使用文档系统，您可能想要探索这些相关功能：
+
+<Cards>
+  <Card icon={<BookOpen className="text-blue-500" />} title="博客" href="/docs/blog">
+    配置博客内容
+  </Card>
+
+  <Card icon={<Globe className="text-green-500" />} title="i18n" href="/docs/i18n">
+    配置多语言功能
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="网站配置" href="/docs/config">
+    配置网站设置
+  </Card>
+
+  <Card icon={<Palette className="text-pink-500" />} title="主题" href="/docs/themes">
+    配置主题和外观设置
+  </Card>
+</Cards>

@@ -1,0 +1,245 @@
+---
+title: 介绍
+description: 介绍 AeloKit - 开源 AI 工作空间构建套件
+icon: Album
+---
+
+![AeloKit](/og.png)
+
+## 什么是 AeloKit？
+
+欢迎使用 AeloKit，**一个 OpenAI 风格的开源全栈套件**，用于构建可自托管、生产就绪的 AI 聊天和 Agent 工作空间。
+
+从样板代码到生产环境——快速构建您的 AI 工作空间。
+
+无论您是初学者还是经验丰富的开发者，本文档都将指导您完成项目的配置、开发和部署。
+
+本文档假设您对 Next.js 和 Monorepo 有一定的了解。如果您不熟悉，请参考[官方文档](#官方文档)，因为我们不会在本文档中涵盖基础知识。
+
+让我们开始吧！
+
+## 价值主张
+
+<Cards>
+  <Card icon={<Layers className="text-blue-500" />} title="已连接的产品基础">
+    认证、仪表板结构、计费、积分、邮件、存储、通知、分析、文档、配置、环境验证和部署约定已组织为生产级基础。
+  </Card>
+
+  <Card icon={<Bot className="text-violet-500" />} title="Agent 就绪的代码组织">
+    应用程序为可替换的模型访问、可组合的工具/函数调用、清晰的对话状态以及未来的评估、可观测性、成本控制和权限边界而设计。
+  </Card>
+
+  <Card icon={<LayoutDashboard className="text-cyan-500" />} title="平静的工作空间体验">
+    默认界面注重留白、层次结构、可读的消息、引用、附件、会话管理和响应式布局，让用户专注于内容和行动。
+  </Card>
+</Cards>
+
+## 适用人群
+
+<Cards>
+  <Card icon={<Rocket className="text-amber-500" />} title="创始人">
+    构建商业 AI 聊天或 Agent 工作空间的创始人。
+  </Card>
+
+  <Card icon={<Code className="text-green-500" />} title="开发者">
+    想要可自托管的 SaaS 基础，无需从零组装每个产品原语的开发者。
+  </Card>
+
+  <Card icon={<Users className="text-purple-500" />} title="代理机构">
+    为客户交付可重复 AI 工作空间的代理机构和顾问。
+  </Card>
+
+  <Card icon={<Building2 className="text-indigo-500" />} title="平台团队">
+    使用真实认证、计费、存储和运维界面原型化 Agent 工作流的内部平台团队。
+  </Card>
+</Cards>
+
+## 技术栈
+
+<Cards>
+  <Card icon={<Package className="text-blue-500" />} title="Turborepo + pnpm" href="https://turbo.build/">
+    Monorepo 构建系统和快速、磁盘空间高效的包管理器。
+  </Card>
+
+  <Card icon={<LayoutDashboard className="text-blue-500" />} title="Next.js 16" href="https://nextjs.org/">
+    使用 React 19 构建全栈 Web 应用程序的 React 框架。
+  </Card>
+
+  <Card icon={<DatabaseIcon className="text-amber-500" />} title="Drizzle ORM" href="https://orm.drizzle.team/">
+    帮助您以类型安全的方式访问数据库的 ORM 工具。
+  </Card>
+
+  <Card icon={<Palette className="text-cyan-500" />} title="Tailwind CSS" href="https://tailwindcss.com/">
+    实用优先的 CSS 框架，包含可组合的实用类来构建任何设计。
+  </Card>
+
+  <Card icon={<Box className="text-violet-500" />} title="Shadcn/ui / Magic UI / Animate UI / Tailark" href="https://ui.shadcn.com/">
+    预构建的组件和块，您可以使用它们来构建您的 SaaS 网站。
+  </Card>
+
+  <Card icon={<Shield className="text-green-500" />} title="Better Auth" href="https://better-auth.com/">
+    现代、安全、易于使用且与框架无关的身份验证解决方案。
+  </Card>
+
+  <Card icon={<SendIcon className="text-red-500" />} title="Resend" href="https://resend.com/">
+    现代的电子邮件服务，允许您从应用程序发送电子邮件。
+  </Card>
+
+  <Card icon={<BookOpen className="text-purple-500" />} title="Fumadocs" href="https://fumadocs.vercel.app/">
+    一个为开发者设计的美观文档框架，灵活且高性能。
+  </Card>
+
+  <Card icon={<CreditCard className="text-emerald-500" />} title="Stripe / Creem" href="https://stripe.com/">
+    支持 Stripe 和 Creem 的支付集成，处理订阅、终身计划和积分包。
+  </Card>
+
+  <Card icon={<Cloud className="text-indigo-500" />} title="S3 兼容存储" href="https://aws.amazon.com/s3/">
+    S3 兼容的对象存储服务，支持文件上传和管理。
+  </Card>
+
+  <Card icon={<ShieldCheck className="text-cyan-500" />} title="Zod" href="https://zod.dev/">
+    一个用于 TypeScript 的架构验证库。
+  </Card>
+
+  <Card icon={<Globe className="text-green-500" />} title="Next-Intl" href="https://next-intl.dev/">
+    支持路由、消息和本地化的 Next.js 国际化库。
+  </Card>
+
+  <Card icon={<ShieldCheck className="text-red-500" />} title="Next-Safe-Action" href="https://next-safe-action.dev/">
+    内置验证和错误处理的 Next.js 类型安全后台操作的库。
+  </Card>
+</Cards>
+
+## Monorepo 结构
+
+AeloKit 采用 **Turborepo + pnpm workspace** 的 Monorepo 架构，将不同领域的逻辑拆分到独立的包中：
+
+<Files>
+  <Folder name="apps">
+    <Folder name="web">
+      <File name="完整的 SaaS 应用程序" />
+    </Folder>
+  </Folder>
+  <Folder name="packages">
+    <File name="config/ - 共享配置和类型" />
+    <File name="env/ - 环境变量验证" />
+    <File name="i18n/ - 国际化路由和消息" />
+    <File name="db/ - Drizzle 数据库层" />
+    <File name="auth/ - 认证核心" />
+    <File name="payment/ - 支付领域包" />
+    <File name="credits/ - 积分领域包" />
+    <File name="mail/ - 事务邮件包" />
+    <File name="newsletter/ - 邮件订阅包" />
+    <File name="notification/ - 系统通知包" />
+    <File name="storage/ - 对象存储包" />
+    <File name="analytics/ - 统计分析包" />
+    <File name="shared/ - 共享工具函数" />
+  </Folder>
+</Files>
+
+<Callout type="info">
+  Monorepo 结构的优势：清晰的领域边界、代码复用、独立版本管理、更好的类型安全和更易于维护。
+</Callout>
+
+## 本文档的范围
+
+本文档将指导您配置、运行和部署 AeloKit，并在必要时提供底层技术官方文档的链接。要完全掌握模板的功能和上线成功的 AI 工作空间，了解这些技术至关重要，因此请务必阅读它们的文档。
+
+对于与 [AeloKit 模板](https://github.com/aelokit/aelokit) 密切相关的任何内容，本文档都有详细的介绍！
+
+### 官方文档
+
+要了解底层技术的更多细节，请参考它们的官方文档：
+
+* Turborepo: [Turborepo 文档](https://turbo.build/repo/docs)
+* pnpm: [pnpm 文档](https://pnpm.io/)
+* Next.js: [Next.js 文档](https://nextjs.org/docs)
+* Drizzle: [Drizzle 文档](https://orm.drizzle.team/docs)
+* Tailwind CSS: [Tailwind CSS 文档](https://tailwindcss.com/docs)
+* Radix UI: [Radix UI 文档](https://www.radix-ui.com/primitives/docs)
+* Shadcn/ui: [Shadcn/ui 文档](https://ui.shadcn.com/docs)
+* Magic UI: [Magic UI 文档](https://magicui.design/docs)
+* Animate UI: [Animate UI 文档](https://animate-ui.com/docs)
+* Dice UI: [Dice UI 文档](https://www.diceui.com/docs)
+* Tailark: [Tailark 文档](https://tailark.com/)
+* Better Auth: [Better Auth 文档](https://better-auth.com/docs)
+* Resend: [Resend 文档](https://resend.com/docs)
+* Fumadocs: [Fumadocs 文档](https://fumadocs.vercel.app/docs)
+* Stripe: [Stripe 文档](https://stripe.com/docs)
+* Zod: [Zod 文档](https://zod.dev/)
+* Nuqs: [Nuqs 文档](https://nuqs.dev/docs)
+* Zustand: [Zustand 文档](https://zustand-demo.pmnd.rs/)
+* Next-Intl: [Next-Intl 文档](https://next-intl.dev/)
+* Next-Safe-Action: [Next-Safe-Action 文档](https://next-safe-action.dev/)
+
+<Callout type="info">
+  为了获得更集成的开发体验，我们建议将这些文档链接添加到您的 Cursor 文档面板中。这样您就可以快速参考文档而无需离开编辑器。请参阅我们的 [IDE 设置](/docs/ide#documentation) 文档，了解如何将这些文档资源添加到 Cursor 的说明。
+</Callout>
+
+## 快速开始
+
+```bash
+# 安装依赖
+pnpm install
+
+# 复制环境变量配置
+cp env.example .env
+
+# 启动开发服务器
+pnpm dev
+```
+
+打开 Next.js 打印的本地 URL 即可访问 Web 应用。
+
+<Callout type="warn">
+  请勿提交密钥。应用程序代码应通过 `@repo/env/server` 或 `@repo/env/client` 读取业务环境变量，而不是直接使用 `process.env`。
+</Callout>
+
+## 常用命令
+
+```bash
+# Monorepo 级命令
+pnpm dev          # 启动开发服务器
+pnpm build        # 构建所有包
+pnpm lint         # 代码检查
+pnpm typecheck    # 类型检查
+
+# Web 应用命令
+pnpm --filter @repo/web dev      # 启动 web 开发服务器
+pnpm --filter @repo/web build    # 构建 web 应用
+
+# 数据库命令
+pnpm --filter @repo/db db:generate   # 生成迁移文件
+pnpm --filter @repo/db db:migrate    # 执行迁移
+pnpm --filter @repo/db db:studio     # 打开 Drizzle Studio
+```
+
+## 获取帮助
+
+如果您遇到困难，以下是一些获取帮助的方法：
+
+* 阅读 [AeloKit 文档](/docs)
+* 查看 [GitHub Issues](https://github.com/aelokit/aelokit/issues)
+* 查看 [GitHub Discussions](https://github.com/aelokit/aelokit/discussions)
+
+## 下一步
+
+现在您已经了解了 AeloKit，以下是一些后续步骤：
+
+<Cards>
+  <Card icon={<Rocket className="text-blue-500" />} title="入门文档" href="/docs/start">
+    AeloKit 模板入门文档
+  </Card>
+
+  <Card icon={<Code className="text-amber-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Database className="text-purple-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<AppWindowMac className="text-green-500" />} title="项目结构" href="/docs/structure">
+    了解 Monorepo 项目结构
+  </Card>
+</Cards>

@@ -1,0 +1,427 @@
+---
+title: Stripe Payments
+description: How to set up and use Stripe for payment and subscription processing
+---
+
+AeloKit supports [Stripe](https://stripe.com) for payment management, handling both one-time payments and subscription functionality.
+
+## Setup
+
+AeloKit template provides three pricing plans by default: Free plan, Pro subscription plan (monthly/yearly), and Lifetime plan (one-time payment). Follow these steps to set up:
+
+<Steps>
+  <Step>
+    ### Create a Stripe Account
+
+    Create a Stripe account at [stripe.com](https://stripe.com).
+  </Step>
+
+  <Step>
+    ### Get API Keys
+
+    Get your API keys from the Stripe dashboard:
+
+    * Go to Stripe Dashboard > `Developers` > `API keys`
+    * Copy the secret key (note: test mode keys start with `sk_test_`, production mode keys start with `sk_live_`)
+    * Save it to your environment variables file as `STRIPE_SECRET_KEY`
+  </Step>
+
+  <Step>
+    ### Set Up Webhook
+
+    Set up a webhook and get your webhook secret:
+
+    * Go to Stripe Dashboard > `Developers` > `Webhooks`
+    * Click `Add endpoint`
+    * Enter the webhook URL: `https://YOUR-DOMAIN.com/api/webhooks/stripe`
+    * Select the events to listen to:
+      * `invoice.paid`
+      * `checkout.session.completed`
+      * `customer.subscription.created`
+      * `customer.subscription.updated`
+      * `customer.subscription.deleted`
+    * Click `Reveal` to view the webhook signing secret (starts with `whsec_`)
+    * Save it to your environment variables file as `STRIPE_WEBHOOK_SECRET`
+
+    <Callout type="info">
+      If you want to test the payment flow in a development environment, you can find more information in the [Webhooks](/docs/payment#webhooks) section.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Create Products and Pricing Plans
+
+    Create products and set up pricing plans in Stripe:
+
+    * Go to Stripe Dashboard > `Product Catalog`
+    * **Create Pro subscription plan product**:
+      * Click `Add product`
+      * Name: `Pro Plan`
+      * Description: `Premium features with subscription pricing`
+      * **Add monthly price**:
+        * Click `Add price`
+        * Price: $9.90 (select USD as currency)
+        * Recurring: Monthly
+        * Save and copy the price ID (starts with `price_`), this will be used for `NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY`
+      * **Add yearly price**:
+        * Click `Add price`
+        * Price: $99.00 (select USD as currency)
+        * Recurring: Yearly
+        * Save and copy the price ID (starts with `price_`), this will be used for `NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY`
+    * **Create Lifetime plan product**:
+      * Click `Add product`
+      * Name: `Lifetime Plan`
+      * Description: `One-time payment for lifetime access`
+      * Add price:
+        * Price: $199.00 (select USD as currency)
+        * Type: One-time
+        * Save and copy the price ID (starts with `price_`), this will be used for `NEXT_PUBLIC_STRIPE_PRICE_LIFETIME`
+
+  </Step>
+
+  <Step>
+    ### Add Environment Variables
+
+    Add the following environment variables:
+
+    ```bash title=".env"
+    STRIPE_SECRET_KEY=sk_test_...
+    STRIPE_WEBHOOK_SECRET=whsec_...
+
+    # Pricing plans
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY=price_...
+    NEXT_PUBLIC_STRIPE_PRICE_LIFETIME=price_...
+    ```
+  </Step>
+
+  <Step>
+    ### Set Up Customer Portal
+
+    Set up the Stripe customer portal:
+
+    * Go to Stripe Dashboard > `Settings` > `Billing` > `Customer Portal`
+    * Customize the customer portal interface display, for example, you can add a custom logo and title
+    * Click `Save changes` to save the portal configuration
+</Step>
+
+  <Step>
+    ### Update Website Configuration
+
+    Update the `website.tsx` file to use Stripe as the payment provider in the payment configuration, and configure pricing plans in the [price configuration](/docs/config/price):
+
+    ```tsx title="packages/config/src/website.ts"
+    import { PaymentTypes, PlanIntervals } from '@/payment/types';
+
+    export const websiteConfig = {
+      // ...other config
+      payment: {
+        provider: 'stripe', // The payment provider to use
+      },
+      price: {
+        plans: {
+          free: {
+            id: 'free',
+            prices: [],
+            isFree: true,
+            isLifetime: false,
+            credits: {
+              enable: true,
+              amount: 50,
+              expireDays: 30,
+            },
+          },
+          pro: {
+            id: 'pro',
+            prices: [
+              {
+                type: PaymentTypes.SUBSCRIPTION,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!,
+                amount: 990,
+                currency: 'USD',
+                interval: PlanIntervals.MONTH,
+              },
+              {
+                type: PaymentTypes.SUBSCRIPTION,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY!,
+                amount: 9900,
+                currency: 'USD',
+                interval: PlanIntervals.YEAR,
+              },
+            ],
+            isFree: false,
+            isLifetime: false,
+            popular: true,
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+          lifetime: {
+            id: 'lifetime',
+            prices: [
+              {
+                type: PaymentTypes.ONE_TIME,
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_LIFETIME!,
+                amount: 19900,
+                currency: 'USD',
+                allowPromotionCode: true,
+              },
+            ],
+            isFree: false,
+            isLifetime: true,
+            credits: {
+              enable: true,
+              amount: 1000,
+              expireDays: 30,
+            },
+          },
+        },
+      },
+      // ...other config
+    }
+    ```
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  If you are setting up the environment, you can now return to the **Environment Configuration Documentation** and continue. The rest of this document can be read later.
+
+  <Card icon={<Code className="text-amber-500" />} title="Environment Configuration" href="/docs/env#payment">
+    Set up environment variables
+  </Card>
+</Callout>
+
+***
+
+## Webhooks
+
+Stripe Webhooks are essential for handling asynchronous events (such as successful payments and subscription updates).
+
+### Development Environment
+
+For local development, use Stripe CLI to forward events to your local server:
+
+```bash
+pnpm install -g stripe/stripe-cli
+```
+
+Log in to Stripe:
+
+```bash
+stripe login
+```
+
+Forward events to your local server:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+The webhook secret is printed in the terminal, copy it and add it to your environment variables file:
+
+```bash
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+You can use Stripe CLI to trigger test events, or test events on the website:
+
+```bash
+stripe trigger invoice.paid
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.created
+stripe trigger customer.subscription.updated
+stripe trigger customer.subscription.deleted
+```
+
+### Production Environment
+
+1. Go to Stripe Dashboard > Developers > Webhooks
+2. Click `Add endpoint`
+3. Enter the webhook URL: `https://YOUR-DOMAIN.com/api/webhooks/stripe`
+4. Select the events to listen to:
+   * `invoice.paid`
+   * `checkout.session.completed`
+   * `customer.subscription.created`
+   * `customer.subscription.updated`
+   * `customer.subscription.deleted`
+5. After creation, click `Reveal` to view the webhook signing secret
+6. Copy the webhook signing secret (starts with `whsec_`) and add it to your environment variables
+
+## UI Components
+
+AeloKit includes pre-built React components for handling payments:
+
+<Accordions>
+  <Accordion title="CreateCheckoutButton">
+    Creates a Stripe checkout session and redirects the user to Stripe's checkout page.
+
+    ```tsx
+    import { CreateCheckoutButton } from '@/components/pricing/create-checkout-button';
+
+    <CreateCheckoutButton
+      planId="pro"
+      priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY!}
+      userId="user_123"
+      variant="default"
+      size="default"
+    >
+      Subscribe
+    </CreateCheckoutButton>
+    ```
+  </Accordion>
+
+  <Accordion title="CustomerPortalButton">
+    Redirects the user to the Stripe customer portal to manage their subscription.
+
+    ```tsx
+    import { CustomerPortalButton } from '@/components/pricing/customer-portal-button';
+
+    <CustomerPortalButton
+      userId="user_123"
+      variant="outline"
+      size="default"
+    >
+      Manage Subscription
+    </CustomerPortalButton>
+    ```
+  </Accordion>
+
+  <Accordion title="PricingTable">
+    Displays all pricing plans with spacing in between for easy comparison.
+
+    ```tsx
+    import { PricingTable } from '@/components/pricing/pricing-table';
+
+    <PricingTable
+      userId="user_123"
+      currentPlanId="pro"
+    />
+    ```
+  </Accordion>
+
+  <Accordion title="PricingCard">
+    Displays a single pricing plan with a checkout button.
+
+    ```tsx
+    import { PricingCard } from '@/components/pricing/pricing-card';
+
+    <PricingCard
+      plan={plan}
+      interval="month"
+      userId="user_123"
+      isCurrentPlan={false}
+    />
+    ```
+  </Accordion>
+</Accordions>
+
+## Extending New Payment Providers
+
+AeloKit supports extending new payment providers:
+
+1. Create a new file in the `src/payment/provider` directory
+2. Implement the `PaymentProvider` interface from `types.ts`
+3. Update the payment provider selection logic in `index.ts`
+
+Example implementation:
+
+```tsx title="src/payment/provider/my-provider.ts"
+import {
+  PaymentProvider,
+  CreateCheckoutParams,
+  CheckoutResult,
+  CreatePortalParams,
+  PortalResult,
+  Subscription,
+  getSubscriptionsParams
+} from '@/payment/types';
+
+export class MyProvider implements PaymentProvider {
+  constructor() {
+    // Initialize your payment provider
+  }
+
+  public async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    // Implementation for creating checkout session
+  }
+
+  public async createCustomerPortal(params: CreatePortalParams): Promise<PortalResult> {
+    // Implementation for creating customer portal
+  }
+
+  public async handleWebhookEvent(payload: string, signature: string): Promise<void> {
+    // Implementation for handling webhook events
+  }
+}
+```
+
+Then update the payment provider selection in `index.ts`:
+
+```tsx title="src/payment/index.ts"
+import { MyProvider } from './provider/my-provider';
+
+export const initializePaymentProvider = (): PaymentProvider => {
+  if (!paymentProvider) {
+    if (websiteConfig.payment.provider === 'stripe') {
+      paymentProvider = new StripeProvider();
+    } else if (websiteConfig.payment.provider === 'my-provider') {
+      paymentProvider = new MyProvider();
+    } else {
+      throw new Error(
+        `Unsupported payment provider: ${websiteConfig.payment.provider}`
+      );
+    }
+  }
+
+  return paymentProvider;
+};
+```
+
+## Test Cards
+
+To test Stripe integration, use Stripe's test mode and test credit cards:
+
+* 4242 4242 4242 4242 - Successful payment
+* 4000 0000 0000 3220 - Requires 3D Secure authentication
+* 4000 0000 0000 9995 - Insufficient funds failure
+
+You can find more information about [Stripe test cards](https://docs.stripe.com/testing) in the Stripe documentation.
+
+## Creating Invoices
+
+AeloKit has invoice creation configured for one-time payments.
+
+```tsx title="src/payment/provider/stripe.ts"
+// Automatically create invoice for one-time payments
+checkoutParams.invoice_creation = {
+  enabled: true,
+};
+```
+
+## References
+
+* [Stripe Documentation](https://docs.stripe.com)
+* [Stripe Payment Objects Overview](https://youtu.be/CUAY6IQcVQM)
+* [Stripe Best Practices](https://github.com/t3dotgg/stripe-recommendations)
+
+## Next Steps
+
+<Cards>
+  <Card icon={<CreditCard className="text-blue-500" />} title="Price Configuration" href="/docs/config/price">
+    Configure subscription plans and pricing
+  </Card>
+
+  <Card icon={<KeyRound className="text-green-500" />} title="Authentication" href="/docs/auth">
+    Configure user authentication
+  </Card>
+
+  <Card icon={<BarChart className="text-amber-500" />} title="Analytics" href="/docs/analytics">
+    Configure analytics services
+  </Card>
+
+  <Card icon={<Mail className="text-purple-500" />} title="Email" href="/docs/email">
+    Configure email services
+  </Card>
+</Cards>

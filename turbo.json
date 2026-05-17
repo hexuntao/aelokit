@@ -1,0 +1,98 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": [
+    ".env",
+    ".env.local",
+    ".env.*.local",
+    "apps/web/.env",
+    "apps/web/.env.local",
+    "apps/web/.env.*.local",
+    "packages/db/.env",
+    "packages/db/.env.local",
+    "packages/db/.env.*.local"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "SKIP_ENV_VALIDATION",
+    "NEXT_PUBLIC_*",
+    "DATABASE_URL",
+    "AUTH_*",
+    "BETTER_AUTH_*",
+    "GITHUB_CLIENT_ID",
+    "GITHUB_CLIENT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "RESEND_API_KEY",
+    "BEEHIIV_API_KEY",
+    "BEEHIIV_PUBLICATION_ID",
+    "STORAGE_REGION",
+    "STORAGE_BUCKET_NAME",
+    "STORAGE_ACCESS_KEY_ID",
+    "STORAGE_SECRET_ACCESS_KEY",
+    "STORAGE_ENDPOINT",
+    "STORAGE_PUBLIC_URL",
+    "TURNSTILE_SECRET_KEY",
+    "CREEM_API_KEY",
+    "CREEM_TEST_MODE",
+    "DISABLE_IMAGE_OPTIMIZATION",
+    "DOCKER_BUILD",
+    "DISCORD_WEBHOOK_URL",
+    "FEISHU_WEBHOOK_URL",
+    "CRON_JOBS_USERNAME",
+    "CRON_JOBS_PASSWORD",
+    "AI_GATEWAY_API_KEY",
+    "FAL_API_KEY",
+    "FIREWORKS_API_KEY",
+    "OPENAI_API_KEY",
+    "REPLICATE_API_TOKEN",
+    "GOOGLE_GENERATIVE_AI_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "OPENROUTER_API_KEY",
+    "FIRECRAWL_API_KEY"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        ".source/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "outputs": []
+    },
+    "format": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
+    "content": {
+      "outputs": [".source/**"]
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "email": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

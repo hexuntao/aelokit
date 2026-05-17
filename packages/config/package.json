@@ -1,0 +1,25 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./website": "./src/website.ts",
+    "./types": "./src/types.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/env": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "typescript": "^5.9.3"
+  }
+}

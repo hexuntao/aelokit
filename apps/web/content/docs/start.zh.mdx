@@ -1,0 +1,223 @@
+---
+title: 快速入门
+description: 学习如何在几分钟内设置和运行您的 AI 工作空间
+icon: Rocket
+---
+
+本文档将引导您完成 AeloKit 的设置。我们将介绍克隆项目、安装依赖项、设置数据库和运行本地开发服务器的过程。
+
+## 前提条件
+
+在开始之前，请确保您已安装以下软件：
+
+<Steps>
+  <Step>
+    ### Node.js
+
+    Node.js 是一个允许您运行 JavaScript 代码的运行时环境。
+
+    如果未安装 Node.js，请从 [Node.js 官方网站](https://nodejs.org/) 下载。
+
+    ```bash
+    # 检查是否安装了 Node.js
+    node --version
+    ```
+
+    <Callout type="info">
+      需要 Node.js 18 或更高版本。注意 Node.js 23.1 可能与 Next.js 生产构建存在问题。
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Git
+
+    Git 是一个版本控制系统，用于跟踪任何文件的更改。
+
+    如果未安装 Git，请从 [Git 官方网站](https://git-scm.com/) 下载。
+
+    ```bash
+    # 检查是否安装了 Git
+    git --version
+    ```
+  </Step>
+
+  <Step>
+    ### pnpm
+
+    AeloKit 使用 [**pnpm**](https://pnpm.io/) 作为包管理器。
+
+    ```bash
+    # 安装 pnpm
+    npm install -g pnpm
+
+    # 检查 pnpm 版本
+    pnpm --version
+    ```
+  </Step>
+
+  <Step>
+    ### PostgreSQL
+
+    AeloKit 使用 PostgreSQL 作为数据库。
+
+    您可以使用以下任一方式：
+    - 本地安装 [PostgreSQL](https://www.postgresql.org/)
+    - 使用 [Docker](https://www.docker.com/) 运行 PostgreSQL
+    - 使用云服务如 [Supabase](https://supabase.com/)、[Neon](https://neon.tech/)、[PlanetScale](https://planetscale.com/)
+
+    ```bash
+    # 使用 Docker 快速启动 PostgreSQL
+    docker run --name postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres
+    ```
+  </Step>
+</Steps>
+
+## 快速安装
+
+<Steps>
+  <Step>
+    ### 设置您的项目
+
+    您有多种方式可以下载 AeloKit 的源代码，我们推荐从 GitHub 克隆。
+
+    <Tabs items={['克隆仓库（推荐）', 'Fork 仓库', '下载 ZIP']}>
+      <Tab title="克隆仓库（推荐）">
+        从 GitHub 克隆仓库：
+
+        ```bash
+        git clone https://github.com/aelokit/aelokit.git your-project-name
+
+        cd your-project-name
+        ```
+      </Tab>
+
+      <Tab title="Fork 仓库">
+        如果您想要自定义或贡献代码，可以 Fork 仓库。
+
+        访问 [GitHub 仓库](https://github.com/aelokit/aelokit)，点击右上角的 `Fork` 按钮。
+
+        然后克隆您的 Fork：
+
+        ```bash
+        git clone https://github.com/your-username/aelokit.git your-project-name
+
+        cd your-project-name
+        ```
+      </Tab>
+
+      <Tab title="下载 ZIP">
+        从 GitHub 下载源代码的 ZIP 文件。
+        访问仓库页面，点击 `Code` 按钮，然后点击 `Download ZIP`。
+        下载后，将 ZIP 文件解压到您想要的位置，并在终端中导航到解压的目录。
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### 安装依赖项
+
+    通过运行以下命令安装依赖项：
+
+    ```bash
+    pnpm install
+    ```
+
+    这将安装 Monorepo 中所有包的依赖。
+  </Step>
+
+  <Step>
+    ### 设置环境变量
+
+    将 `env.example` 文件复制到 `.env` 作为起点：
+
+    ```bash
+    cp env.example .env
+    ```
+
+    然后，打开环境变量文件并设置必要的变量。最简配置需要：
+
+    ```bash
+    # 必需：应用基础 URL
+    NEXT_PUBLIC_BASE_URL="http://localhost:3000"
+
+    # 必需：数据库连接
+    DATABASE_URL="postgresql://user:password@localhost:5432/aelokit"
+
+    # 必需：Better Auth 密钥（使用 openssl rand -base64 32 生成）
+    BETTER_AUTH_SECRET="your-secret-key"
+    ```
+
+    您可以在[环境配置](/docs/env)文档中找到有关环境变量的更多信息。
+  </Step>
+
+  <Step>
+    ### 设置数据库
+
+    运行数据库迁移以创建表结构：
+
+    ```bash
+    pnpm --filter @repo/db db:migrate
+    ```
+
+    或者，如果您使用开发模式，可以直接推送 schema：
+
+    ```bash
+    pnpm --filter @repo/db db:push
+    ```
+  </Step>
+
+  <Step>
+    ### 启动开发服务器
+
+    现在您已经设置好环境，可以通过运行以下命令启动开发服务器：
+
+    ```bash
+    pnpm dev
+    ```
+
+    这将在 `http://localhost:3000` 上启动应用。
+  </Step>
+</Steps>
+
+## 验证安装
+
+打开浏览器访问 `http://localhost:3000`，您应该能看到 AeloKit 的首页。
+
+### 测试认证
+
+1. 点击"注册"按钮
+2. 输入邮箱和密码
+3. 检查邮箱获取验证链接（需要配置 `RESEND_API_KEY`）
+4. 完成验证后登录
+
+### 测试数据库
+
+使用 Drizzle Studio 查看数据库：
+
+```bash
+pnpm --filter @repo/db db:studio
+```
+
+这将在 `https://local.drizzle.studio` 打开数据库可视化界面。
+
+## 下一步
+
+现在您已经运行了 AeloKit，以下是一些后续步骤：
+
+<Cards>
+  <Card icon={<Code className="text-blue-500" />} title="环境配置" href="/docs/env">
+    配置环境变量
+  </Card>
+
+  <Card icon={<Database className="text-amber-500" />} title="数据库" href="/docs/database">
+    配置数据库
+  </Card>
+
+  <Card icon={<Network className="text-green-500" />} title="项目结构" href="/docs/structure">
+    了解 Monorepo 项目结构
+  </Card>
+
+  <Card icon={<Settings className="text-purple-500" />} title="网站配置" href="/docs/config">
+    配置网站核心设置
+  </Card>
+</Cards>
