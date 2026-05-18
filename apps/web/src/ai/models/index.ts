@@ -14,6 +14,7 @@ export interface ResolvedModel {
   readonly model: LanguageModel;
   readonly reference: AIModelReference;
   readonly source: AIModelSelectionSource;
+  readonly providerModelId: string;
 }
 
 export interface ModelResolutionError {
@@ -163,6 +164,7 @@ function tryResolveModel(
       model,
       reference,
       source,
+      providerModelId: modelConfig.providerModelId,
     },
   };
 }

@@ -109,14 +109,21 @@ export async function POST(req: Request) {
             status: finishReason === 'stop' ? 'success' : 'error',
             tokens: usage
               ? {
-                  inputTokens: usageAny?.promptTokens ?? 0,
-                  outputTokens: usageAny?.completionTokens ?? 0,
-                  totalTokens: usageAny?.totalTokens ?? 0,
+                  inputTokens: usageAny?.promptTokens ?? usageAny?.inputTokens,
+                  outputTokens:
+                    usageAny?.completionTokens ?? usageAny?.outputTokens,
+                  totalTokens: usageAny?.totalTokens,
+                  cachedInputTokens: usageAny?.cachedPromptTokens,
+                  reasoningTokens: usageAny?.reasoningTokens,
                 }
               : undefined,
             startedAt: new Date(startTime),
             completedAt: new Date(),
             failureReason: finishReason === 'stop' ? undefined : finishReason,
+            rawUsage: usage,
+            providerMetadata: usageAny?.providerMetadata,
+            providerModelId: resolvedModel.providerModelId,
+            requestDurationMs: Date.now() - startTime,
           })
         );
       },
