@@ -12,6 +12,10 @@
 TASK-002 研究结论：官方 assistant-ui AI SDK v6 runtime docs 与 registry
 metadata 匹配；当前推荐版本可进入 TASK-003 install plan，但安装前仍需用户确认。
 
+TASK-003 重新核对：官方 assistant-ui AI SDK v6 文档仍要求 `ai@^6` 和
+`@ai-sdk/react@^3`；registry 仍显示 `@assistant-ui/react@0.14.5` 和
+`@assistant-ui/react-ai-sdk@1.3.26`。
+
 阻塞范围：TASK-003、TASK-003B、TASK-011、TASK-015。
 
 需要用户确认的时机：执行 dependency install 前。
@@ -27,6 +31,9 @@ TASK-002 研究结论：AI SDK docs 当前显示 v6 / AI SDK 6.x 为 latest；re
 当前 `ai@6.0.184`、`@ai-sdk/react@3.0.186` 与 assistant-ui runtime dependency
 range 兼容。TASK-003B 前必须重新检查。
 
+TASK-003 重新核对：AI SDK docs 当前仍显示 `v6 / AI SDK 6.x` 为 latest；registry
+仍显示 `ai@6.0.184`、`@ai-sdk/react@3.0.186`。
+
 阻塞范围：TASK-003、TASK-003B、TASK-008、TASK-009、TASK-010、TASK-011。
 
 需要用户确认的时机：执行 dependency install 前。
@@ -41,6 +48,9 @@ range 兼容。TASK-003B 前必须重新检查。
 TASK-002 研究结论：Mastra 官方 docs 将 agents/workflows/tools 定位为 agent
 orchestration、workflow、tool、memory/MCP 等场景；v0.2 first thin chat 可以不经过
 Mastra。`@mastra/core@1.35.0` 可作为后续可选项，不进入 first thin chat 默认依赖。
+
+TASK-003 重新核对：registry 仍显示 `@mastra/core@1.35.0`；TASK-003 默认安装计划
+不包含 Mastra，除非用户明确确认 first thin chat 需要 agent orchestration。
 
 阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008。
 
@@ -70,6 +80,10 @@ provider path；是否只支持 OpenAI 仍属于产品/范围确认，不由 dep
 TASK-002 研究结论：registry 当前 `@ai-sdk/openai@3.0.64`，peer dependency
 `zod: ^3.25.76 || ^4.1.8` 与 `apps/web` 当前 `zod: ^4.3.6` 兼容；TASK-003B 前
 仍需重新检查。
+
+TASK-003 重新核对：registry 仍显示 `@ai-sdk/openai@3.0.64`，peer dependency
+仍与 `apps/web` 当前 `zod: ^4.3.6` 兼容；TASK-003 默认安装计划使用
+`@ai-sdk/openai@^3.0.64`。
 
 阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008、TASK-013。
 
@@ -203,6 +217,9 @@ Playwright setup，先记录为 optional，不新增测试框架除非确认。
 
 默认建议：v0.2 first chat dependencies 应只进入 `apps/web/package.json`；root
 `package.json` 不应修改，除非新增 root script/check 且另行确认。
+
+TASK-003 安装计划：不需要修改 root `package.json`；仅 TASK-003B 经用户确认后允许
+修改 `apps/web/package.json` 和 `pnpm-lock.yaml`。
 
 阻塞范围：TASK-003、TASK-003B。
 

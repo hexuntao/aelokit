@@ -154,6 +154,81 @@ Affected files after confirmation and TASK-003B execution:
 - `apps/web/package.json`
 - `pnpm-lock.yaml`
 
+### 4.1.1 TASK-003 exact install plan
+
+状态：待用户确认。本文档只输出安装计划；实际安装只能由 TASK-003B 执行。
+
+TASK-003 重新核对时间：2026-05-18。
+
+External Docs Gate 结果：
+
+- assistant-ui AI SDK v6 官方文档仍要求 `ai@^6` 和 `@ai-sdk/react@^3`。
+- Vercel AI SDK 官方文档当前显示 `v6 / AI SDK 6.x` 为 latest。
+- Vercel AI SDK Next.js App Router 文档的默认 quickstart 使用 AI Gateway，
+  但也明确可通过 provider package 切换 provider；AeloKit v0.2 first thin
+  chat 仍选择 direct OpenAI provider path。
+- Vercel AI SDK OpenAI provider 官方文档确认 `@ai-sdk/openai` 提供默认
+  `openai` provider instance，API key 默认来自 `OPENAI_API_KEY`；后续 runtime
+  TASK 必须改由 `@repo/env/server` 注入 server-only key。
+- Mastra 官方 docs 将 `@mastra/core` 用于 Agent / Workflow / Tool
+  orchestration；first thin chat 不需要把 Mastra 作为强制路径。
+
+Registry 重新核对结果：
+
+| Package | Registry latest | Install spec | Reason |
+| --- | --- | --- | --- |
+| `@assistant-ui/react` | `0.14.5` | `@assistant-ui/react@^0.14.5` | assistant-ui React components/runtime provider. |
+| `@assistant-ui/react-ai-sdk` | `1.3.26` | `@assistant-ui/react-ai-sdk@^1.3.26` | assistant-ui AI SDK v6 runtime; depends on `ai@^6.0.175` and `@ai-sdk/react@^3.0.177`. |
+| `ai` | `6.0.184` | `ai@^6.0.184` | AI SDK v6 core streaming and `UIMessage` APIs. |
+| `@ai-sdk/react` | `3.0.186` | `@ai-sdk/react@^3.0.186` | AI SDK v6 React hooks/transport package. |
+| `@ai-sdk/openai` | `3.0.64` | `@ai-sdk/openai@^3.0.64` | First provider package for direct OpenAI path. |
+| `@repo/ai` | workspace package | `@repo/ai@workspace:*` | `@repo/web` must declare direct dependency before importing AI contracts. |
+
+`zod` 状态：
+
+- 不在 TASK-003B 默认安装命令中新增 `zod`。
+- `apps/web/package.json` 当前已有 `zod: ^4.3.6`。
+- 当前 registry metadata 显示 `ai@6.0.184` 和 `@ai-sdk/openai@3.0.64` peer
+  range 为 `zod: ^3.25.76 || ^4.1.8`，`@mastra/core@1.35.0` peer range 为
+  `zod: ^3.25.0 || ^4.0.0`，因此现有 `zod` 已满足当前 peer range。
+- `@assistant-ui/react@0.14.5` 自带 direct dependency `zod: ^4.4.3`，不要求
+  提升 app-level `zod`。
+
+确认后由 TASK-003B 执行的默认安装命令：
+
+```bash
+pnpm --filter @repo/web add @assistant-ui/react@^0.14.5 @assistant-ui/react-ai-sdk@^1.3.26 ai@^6.0.184 @ai-sdk/react@^3.0.186 @ai-sdk/openai@^3.0.64 @repo/ai@workspace:*
+```
+
+影响文件：
+
+- `apps/web/package.json`
+- `pnpm-lock.yaml`
+
+不需要修改：
+
+- root `package.json`
+- `pnpm-workspace.yaml`
+- `packages/ai/package.json`
+- `.env*`
+
+TASK-003B 安装后必须执行：
+
+```bash
+pnpm --filter @repo/web typecheck
+pnpm check:package-exports
+git diff --name-only
+git diff --check -- apps/web/package.json pnpm-lock.yaml
+```
+
+安装前确认项：
+
+- 用户确认使用 AI SDK v6。
+- 用户确认 first provider 使用 direct OpenAI provider path。
+- 用户确认 first thin chat 暂不安装 Mastra。
+- 用户确认允许 TASK-003B 修改 `apps/web/package.json` 和 `pnpm-lock.yaml`。
+- 用户确认允许把 `@repo/ai` 加入 `apps/web` direct dependencies。
+
 ### 4.2 Mastra optional runtime path
 
 Do not install for the first direct-provider chat path unless TASK scope confirms
@@ -173,6 +248,9 @@ pnpm --filter @repo/web add @mastra/core@^1.35.0
 
 Mastra belongs in app runtime wiring under `apps/web/src/ai/**`, not in
 `packages/ai` and not in UI components.
+
+TASK-003 默认计划不安装 `@mastra/core`。如果用户确认 Mastra 进入 v0.2 第一版
+runtime，必须先更新本节和 open questions，再由 TASK-003B 使用用户确认后的命令安装。
 
 ## 5. 是否使用 AI SDK v6
 
