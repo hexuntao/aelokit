@@ -22,6 +22,7 @@
 - `packages/notification/`：跨 app/package 共享的系统通知领域包（`@repo/notification`）
 - `packages/storage/`：跨 app/package 共享的对象存储领域包（`@repo/storage`）
 - `packages/analytics/`：跨 app/package 共享的统计分析领域包（`@repo/analytics`）
+- `packages/ai/`：v0.1 已创建的 AI contracts/types/adapters/runtime-types 包（`@repo/ai`）
 - `packages/`：后续拆包位置
 - 根目录：workspace 编排、turbo、CI、工程文档
 
@@ -49,7 +50,8 @@
 - 共享通知包：`packages/notification/`（`@repo/notification`，notification provider、sendNotification、Discord/Feishu 实现）
 - 分析模块：`apps/web/src/analytics/`（兼容 shim，re-export 自 `@repo/analytics`；React Provider 组件保留在 `apps/web/src/analytics/*.tsx`）
 - 共享分析包：`packages/analytics/`（`@repo/analytics`，analytics types、provider interface、config helpers、event names、client/server helpers）
-- 未来 AI runtime wiring：`apps/web/src/ai/`（当前不要提前创建）
+- 未来 AI runtime wiring：`apps/web/src/ai/`（仅在 v0.2 对应 TASK 授权后创建）
+- AI contracts 包：`packages/ai/`（`@repo/ai`，v0.1 已创建；只放 contracts/types/adapters/runtime-types）
 - 配置文件：`apps/web/src/config/`
 - 共享配置包：`packages/config/`（`@repo/config`，`websiteConfig` 的来源）
 - 共享工具包：`packages/shared/`（`@repo/shared`，纯工具函数 `cn`/`formatPrice`/`formatDate` 等）
@@ -131,19 +133,45 @@ pnpm web:db:generate
 - `@/content/*` → `apps/web/content/*`
 - `@/public/*` → `apps/web/public/*`
 
-当前已抽取 `@repo/config`（配置）、`@repo/shared`（纯工具/类型）、`@repo/env`（环境验证）、`@repo/i18n`（国际化路由和消息）、`@repo/db`（Drizzle 数据库层）、`@repo/auth`（认证核心层）、`@repo/payment`（支付领域包）、`@repo/credits`（积分领域包）、`@repo/mail`（事务邮件领域包）、`@repo/newsletter`（邮件订阅领域包）、`@repo/notification`（系统通知领域包）、`@repo/storage`（对象存储领域包）和 `@repo/analytics`（统计分析领域包），其余 `@repo/*` 业务包尚未拆分。
+当前已抽取 `@repo/config`（配置）、`@repo/shared`（纯工具/类型）、`@repo/env`（环境验证）、`@repo/i18n`（国际化路由和消息）、`@repo/db`（Drizzle 数据库层）、`@repo/auth`（认证核心层）、`@repo/payment`（支付领域包）、`@repo/credits`（积分领域包）、`@repo/mail`（事务邮件领域包）、`@repo/newsletter`（邮件订阅领域包）、`@repo/notification`（系统通知领域包）、`@repo/storage`（对象存储领域包）、`@repo/analytics`（统计分析领域包）和 `@repo/ai`（AI contracts/types/adapters/runtime-types），其余 `@repo/*` 业务包尚未拆分。
 
 ## AI Infrastructure Guardrail
 
 - AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
-- `packages/ai` 未来负责 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter types。
-- `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、credits ledger mutation、provider SDK 初始化或 live runtime execution。
-- `apps/web/src/ai` 未来负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool 选择、Mastra/AI SDK runtime 连接、审计和 app policy。
-- `apps/web/src/components/ai` 未来负责 web app 当前 AI UI。
+- `packages/ai` 已在 v0.1 创建，当前职责仍是 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter-compatible types 和 runtime type definitions。
+- `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、DB query、credits ledger mutation、provider SDK 初始化或 live runtime execution。
+- `apps/web/src/ai` 负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool 选择、Mastra/AI SDK runtime 连接、审计和 app policy。
+- `apps/web/src/components/ai` 负责 web app 当前 AI UI。
 - `apps/web/src/app/api/ai/chat/route.ts` 是首个 AI chat route 的规划命名，对外为 `POST /api/ai/chat`。
 - 不要使用 `/api/chat` 作为首个 AI route。
 - v0.2 usage 初期只做 audit，不接 credits 扣费。
 - credits preflight/reservation/settlement 后续进入 v0.5，并且必须通过 `@repo/credits` 提供的能力完成。
+
+## v0.2 AI Chat Gate
+
+- v0.2 执行入口文档是 `docs/product/AI_CHAT_V0_2_*`。
+- 后续每次只执行一个 `docs/product/AI_CHAT_V0_2_IMPLEMENTATION_PLAN.md` 中定义的 TASK。
+- TASK-002 前必须执行 External Docs Gate：涉及 assistant-ui、Vercel AI SDK、Mastra、provider SDK、streaming response、message shape、tool call、usage metadata 或 persistence 兼容性时，必须查官方最新文档。
+- 不允许凭旧 API、旧示例、记忆或猜测实现 assistant-ui / AI SDK / Mastra / provider SDK 接入。
+- 如果官方文档与当前代码或 v0.2 文档冲突，先暂停并说明冲突点，不要硬写。
+- v0.2 禁止创建 `/api/chat`，禁止 provider secret 进入 client，禁止 usage audit 调用 credits ledger。
+- v0.2 禁止创建 worker/gateway/studio/design-system split，禁止实现 v0.3+ memory/RAG/MCP/credits charging。
+
+## v0.2 Dependency Gate
+
+- TASK-003 只输出 dependency install plan：exact package list、版本范围、安装命令、影响文件和兼容关系。
+- 只有 TASK-003B 可以实际安装 v0.2 AI dependencies。
+- TASK-003B 只能在用户确认 TASK-003 install plan 后执行。
+- TASK-003B 只允许修改 `apps/web/package.json` 和 `pnpm-lock.yaml`。
+- 其他 TASK 不允许顺手修改 `apps/web/package.json`、root `package.json` 或 `pnpm-lock.yaml`。
+
+## v0.2 Schema Gate
+
+- TASK-004 固定输出 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`。
+- TASK-004 不创建 schema，不生成 migration，不运行 DB 命令。
+- TASK-004 不允许把 schema design 写进 dependency research。
+- TASK-005 只有在用户确认 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts`、更新 `packages/db/src/schema.ts` 并生成 migration。
+- AI schema 仍归 `packages/db`，不要把 DB query、schema 或 migration 放进 `packages/ai`。
 
 ## UI / Design System 边界规则
 
@@ -162,9 +190,14 @@ pnpm web:db:generate
 - 不要创建根 `src/` 目录
 - 不要把业务文件放回根目录
 - 不要提前拆 `apps/admin`、`apps/landing`、`apps/docs`、`apps/worker`、`apps/gateway`、`apps/studio`
-- 不要提前创建 `packages/ai`、`packages/design-system`、`packages/api-client`、`packages/logger`、`packages/observability`、`packages/testing`
+- 不要提前创建 `packages/design-system`、`packages/api-client`、`packages/logger`、`packages/observability`、`packages/testing`
+- 不要把 `packages/ai` 用作 runtime、route、UI、DB query、schema、migration 或 provider SDK 初始化层
 - 不要把业务组件提前抽到未来 design-system
 - 不要把 i18n/auth/payment/credits/server action 依赖组件放入未来 design-system
+- 不要创建 `/api/chat` 作为 AI chat route
+- 不要让 provider secret 进入 client
+- 不要让 usage audit 调用 credits ledger
+- 不要实现 v0.3+ memory/RAG/MCP/credits charging
 - 不要改技术栈
 - 不要删除现有功能
 - 不要移除 `[locale]` 路由结构
