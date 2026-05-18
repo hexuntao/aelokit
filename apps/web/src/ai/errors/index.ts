@@ -27,6 +27,9 @@ export const RuntimeErrors = {
   unauthenticated: () =>
     createRuntimeError('unauthenticated', 'User must be authenticated.'),
 
+  forbidden: (reason?: string) =>
+    createRuntimeError('forbidden', reason ?? 'Access denied.'),
+
   providerUnavailable: (providerId: string) =>
     createRuntimeError(
       'provider-unavailable',

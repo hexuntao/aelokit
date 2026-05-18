@@ -16,6 +16,7 @@ import {
 } from '@/ai/runtime';
 import { RuntimeErrors, isRuntimeError } from '@/ai/errors';
 import { createUsageAuditEntry, recordUsageAudit } from '@/ai/usage';
+import { enforceEntitlement } from '@/ai/entitlements';
 
 export const maxDuration = 30;
 
@@ -47,7 +48,24 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Parse request body
+    // 3. Auth/Entitlement check (TASK-014)
+    const entitlementCheck = enforceEntitlement(context);
+    if (!entitlementCheck.allowed) {
+      const error =
+        entitlementCheck.error.code === 'forbidden'
+          ? RuntimeErrors.forbidden(entitlementCheck.error.message)
+          : RuntimeErrors.unauthenticated();
+
+      const statusCode =
+        entitlementCheck.error.code === 'forbidden' ? 403 : 401;
+
+      return new Response(JSON.stringify({ error }), {
+        status: statusCode,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 4. Parse request body
     const {
       messages,
       threadId,
@@ -58,7 +76,7 @@ export async function POST(req: Request) {
       modelId?: string;
     } = await req.json();
 
-    // 4. Resolve model (model resolution with defaults
+    // 5. Resolve model (model resolution with defaults
     let selectedModel: { providerId: 'openai'; modelId: string } | undefined;
     if (modelId) {
       selectedModel = { providerId: 'openai' as const, modelId };
@@ -76,7 +94,7 @@ export async function POST(req: Request) {
 
     const { data: resolvedModel } = modelResult;
 
-    // 5. Create and validate chat request
+    // 6. Create and validate chat request
     const chatRequest = createChatRuntimeRequest(
       messages,
       {
@@ -95,7 +113,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 6. Stream text from the model
+    // 7. Stream text from the model
     const result = streamText({
       model: resolvedModel.model,
       system: getSystemPrompt(),
@@ -129,7 +147,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 7. Return UI message stream response
+    // 8. Return UI message stream response
     return result.toUIMessageStreamResponse({
       messageMetadata: ({ part }) => {
         if (part.type === 'start') {

@@ -5,3 +5,4 @@ export * from './errors';
 export * from './runtime';
 export * from './usage';
 export * from './persistence';
+export * from './entitlements';
