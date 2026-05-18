@@ -79,6 +79,23 @@ v0.1 完成后必须满足：
 - Open Questions 中未确认问题不会被伪装成已确认。
 - 后续 TASK 的完成报告必须包含修改文件、实现摘要、验证命令和结果、验收状态、未完成事项、commit hash 或建议 commit message。
 
+### 6.1 TASK-009: Minimal AI Data Model Freeze 验收
+
+TASK-009 完成后必须满足：
+
+- [x] **实体清单完整**：9 个 v0.2 minimal 实体已冻结（`ai_provider`、`ai_model`、`ai_user_model_setting`、`ai_agent`、`ai_thread`、`ai_message`、`ai_message_part`、`ai_tool_call`、`ai_usage`）。
+- [x] **字段语义清晰**：每个实体的字段名、类型、必填性、语义已冻结。
+- [x] **约束明确**：每个实体的约束条件已写清。
+- [x] **关系冻结**：实体间关系已用 ASCII 图和文字说明冻结。
+- [x] **v0.2 边界明确**：
+  - v0.2 usage audit 不触发 credits mutation。
+  - v0.2 不包含 memory/knowledge/embedding/MCP/credits tables。
+  - v0.2 只支持 user-level default model，不支持 team policy 或 BYOK。
+  - v0.2 只支持 system Agent，不支持用户自定义 Agent。
+- [x] **v0.2 schema 前置条件已列出**：schema 所有权、migration 策略、索引策略、外键约束、软删除策略、JSON 字段验证。
+- [x] **未冻结问题已标记**：索引策略、软删除策略、JSON 验证、外键级联、分区策略、保留策略已列为 open questions。
+- [x] **未创建禁止内容**：无 schema、无 migration、无 DB 命令、无 route、无 UI、无 runtime 代码。
+
 ## 7. Validation Commands
 
 v0.1 编码实现完成后必须执行：

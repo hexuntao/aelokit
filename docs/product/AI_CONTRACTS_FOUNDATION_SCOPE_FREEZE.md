@@ -184,43 +184,321 @@ packages/db/src/ai.schema.ts = future DB schema after schema confirmation
 
 v0.1 只冻结 minimal AI data model 的名称、关系和语义。它不是 schema 任务，不生成 Drizzle schema，不生成 migration。
 
+**重要：v0.2 schema 创建前必须再次确认 schema/migration，并获得用户明确授权。**
+
+### 7.1 冻结实体清单
+
 v0.2 minimal chat persistence 需要冻结以下实体：
 
-| Future table name | Contract name | 语义 |
-| --- | --- | --- |
-| `ai_provider` | `AIProvider` | AI provider identity、display name、capabilities、enabled status、default ordering。 |
-| `ai_model` | `AIModel` | Provider 下可选模型，包含 model id、capabilities、context window、token/cost metadata reserve。 |
-| `ai_user_model_setting` | `AIUserModelSetting` | 用户默认 provider/model 设置。v0.2 只做 user-level default，不做 team policy 或 BYOK。 |
-| `ai_agent` | `AIAgent` | Agent profile、instructions、visibility、default model reserve、tool/skill capability references。 |
-| `ai_thread` | `AIThread` | Chat thread metadata、owner、agent/model selection、status、title、timestamps。 |
-| `ai_message` | `AIMessage` | Thread 内 message envelope，区分 user/assistant/system/tool 等 role。 |
-| `ai_message_part` | `AIMessagePart` | Message part，支持 text、tool-call、tool-result、file、reasoning、source/citation reserve。 |
-| `ai_tool_call` | `AIToolCall` | Tool call lifecycle audit，记录 tool name、status、arguments/result metadata reserve。 |
-| `ai_usage` | `AIUsage` | v0.2 usage audit，不扣 credits，只记录 provider/model/tokens/cost estimate/status/error。 |
+| Future table name | Contract name | Owner | 语义 |
+| --- | --- | --- | --- |
+| `ai_provider` | `AIProvider` | `packages/db` | AI provider identity、display name、capabilities、enabled status、default ordering。 |
+| `ai_model` | `AIModel` | `packages/db` | Provider 下可选模型，包含 model id、capabilities、context window、token/cost metadata reserve。 |
+| `ai_user_model_setting` | `AIUserModelSetting` | `packages/db` | 用户默认 provider/model 设置。v0.2 只做 user-level default，不做 team policy 或 BYOK。 |
+| `ai_agent` | `AIAgent` | `packages/db` | Agent profile、instructions、visibility、default model reserve、tool/skill capability references。 |
+| `ai_thread` | `AIThread` | `packages/db` | Chat thread metadata、owner、agent/model selection、status、title、timestamps。 |
+| `ai_message` | `AIMessage` | `packages/db` | Thread 内 message envelope，区分 user/assistant/system/tool 等 role。 |
+| `ai_message_part` | `AIMessagePart` | `packages/db` | Message part，支持 text、tool-call、tool-result、file、reasoning、source/citation reserve。 |
+| `ai_tool_call` | `AIToolCall` | `packages/db` | Tool call lifecycle audit，记录 tool name、status、arguments/result metadata reserve。 |
+| `ai_usage` | `AIUsage` | `packages/db` | v0.2 usage audit，不扣 credits，只记录 provider/model/tokens/cost estimate/status/error。 |
 
-必须冻结的关系：
+### 7.2 实体字段语义冻结
 
-- 一个 `AIProvider` 可以有多个 `AIModel`。
-- 一个 user 可以有零或一个 active `AIUserModelSetting`。
-- 一个 `AIThread` 属于一个 user，并可引用一个 agent 和一个 selected model。
-- 一个 `AIThread` 包含多个 `AIMessage`。
-- 一个 `AIMessage` 包含多个 `AIMessagePart`。
-- 一个 `AIMessagePart` 可以引用一个 `AIToolCall`。
-- 一个 `AIUsage` 可以关联 user、thread、message、provider、model。
-- v0.2 中 `AIUsage` 只用于 audit，不触发 credits mutation。
+#### 7.2.1 `ai_provider`
 
-v0.1 不冻结的内容：
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `text` (primary key) | Y | Provider 唯一标识，如 `openai`、`anthropic`、`google`。 |
+| `display_name` | `text` | Y | 用户可见名称，如 `OpenAI`、`Anthropic`。 |
+| `capabilities` | `jsonb` | N | Provider 能力位图，如 `streaming`、`function_calling`、`vision`。 |
+| `is_enabled` | `boolean` | Y | 是否启用。disabled provider 不可被选择。 |
+| `sort_order` | `integer` | N | UI 排序权重。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+| `updated_at` | `timestamp` | Y | 更新时间。 |
 
-- Memory persistence tables。
-- Knowledge base tables。
-- Embedding tables。
-- MCP credential tables。
-- Cost event / credit settlement tables。
-- Admin audit UI shape。
-- Provider secret storage strategy。
-- BYOK。
-- Team-level model policy。
-- Advanced per-agent model policy。
+**约束：**
+- `id` 必须全局唯一。
+- `is_enabled` 默认为 `true`。
+- `display_name` 不能为空。
+
+#### 7.2.2 `ai_model`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `text` (primary key) | Y | Model 唯一标识，如 `gpt-4o`、`claude-3-5-sonnet`。 |
+| `provider_id` | `text` (FK → `ai_provider.id`) | Y | 所属 Provider。 |
+| `display_name` | `text` | Y | 用户可见名称。 |
+| `capabilities` | `jsonb` | N | Model 能力位图，如 `streaming`、`function_calling`、`vision`、`reasoning`。 |
+| `context_window` | `integer` | N | 上下文窗口大小（tokens）。 |
+| `max_output_tokens` | `integer` | N | 最大输出 tokens。 |
+| `input_cost_per_million` | `decimal` | N | 输入 token 成本（每百万 tokens）。v0.2 reserve，不用于实际计费。 |
+| `output_cost_per_million` | `decimal` | N | 输出 token 成本（每百万 tokens）。v0.2 reserve，不用于实际计费。 |
+| `is_enabled` | `boolean` | Y | 是否启用。 |
+| `is_default` | `boolean` | N | 是否为该 Provider 的默认模型。 |
+| `sort_order` | `integer` | N | UI 排序权重。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+| `updated_at` | `timestamp` | Y | 更新时间。 |
+
+**约束：**
+- `id` 必须全局唯一。
+- `provider_id` 必须引用有效的 `ai_provider`。
+- `is_enabled` 默认为 `true`。
+- 每个 `provider_id` 下最多一个 `is_default = true` 的模型。
+
+#### 7.2.3 `ai_user_model_setting`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | 主键。 |
+| `user_id` | `text` (FK → auth user) | Y | 用户 ID。 |
+| `provider_id` | `text` (FK → `ai_provider.id`) | Y | 用户选择的 Provider。 |
+| `model_id` | `text` (FK → `ai_model.id`) | Y | 用户选择的 Model。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+| `updated_at` | `timestamp` | Y | 更新时间。 |
+
+**约束：**
+- `user_id` 必须唯一（每个用户最多一条记录）。
+- `provider_id` 和 `model_id` 必须引用有效且启用的记录。
+- `model_id` 必须属于 `provider_id` 对应的 Provider。
+
+**v0.2 边界：**
+- 只支持 user-level default，不支持 team policy。
+- 不支持 BYOK（Bring Your Own Key）。
+
+#### 7.2.4 `ai_agent`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Agent 唯一标识。 |
+| `name` | `text` | Y | Agent 名称。 |
+| `slug` | `text` | Y | URL 友好标识，唯一。 |
+| `description` | `text` | N | Agent 描述。 |
+| `instructions` | `text` | N | Agent 系统指令/提示词。 |
+| `visibility` | `enum` | Y | 可见性：`system`（系统预置）、`public`（所有用户可见）、`private`（仅创建者可见）。v0.2 只支持 `system`。 |
+| `default_provider_id` | `text` (FK → `ai_provider.id`) | N | Agent 默认 Provider。 |
+| `default_model_id` | `text` (FK → `ai_model.id`) | N | Agent 默认 Model。 |
+| `tool_ids` | `jsonb` | N | Agent 可用工具 ID 列表。v0.2 reserve。 |
+| `skill_ids` | `jsonb` | N | Agent 可用技能 ID 列表。v0.2 reserve。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+| `updated_at` | `timestamp` | Y | 更新时间。 |
+
+**约束：**
+- `slug` 必须全局唯一。
+- `visibility` 默认为 `system`。
+- v0.2 只支持 `visibility = 'system'` 的预置 Agent。
+
+**v0.2 边界：**
+- 不支持用户自定义 Agent。
+- 不支持 Studio Agent 编辑。
+- 不支持 per-agent model policy（使用 user default 或 system default）。
+
+#### 7.2.5 `ai_thread`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Thread 唯一标识。 |
+| `user_id` | `text` (FK → auth user) | Y | Thread 所有者。 |
+| `agent_id` | `uuid` (FK → `ai_agent.id`) | N | 关联的 Agent。 |
+| `provider_id` | `text` (FK → `ai_provider.id`) | N | 本次 Thread 选择的 Provider。 |
+| `model_id` | `text` (FK → `ai_model.id`) | N | 本次 Thread 选择的 Model。 |
+| `title` | `text` | N | Thread 标题，可由系统自动生成或用户编辑。 |
+| `status` | `enum` | Y | Thread 状态：`active`、`archived`、`deleted`。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+| `updated_at` | `timestamp` | Y | 更新时间。 |
+
+**约束：**
+- `user_id` 必须引用有效用户。
+- `status` 默认为 `active`。
+- 如果 `provider_id` 和 `model_id` 都设置，`model_id` 必须属于 `provider_id`。
+
+**Model selection 优先级（v0.2）：**
+1. Thread 级别 `model_id`（如果设置）。
+2. User default `ai_user_model_setting.model_id`（如果存在）。
+3. System default（`ai_model.is_default = true` 且 Provider enabled）。
+
+#### 7.2.6 `ai_message`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Message 唯一标识。 |
+| `thread_id` | `uuid` (FK → `ai_thread.id`) | Y | 所属 Thread。 |
+| `role` | `enum` | Y | Message 角色：`user`、`assistant`、`system`、`tool`。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+
+**约束：**
+- `thread_id` 必须引用有效 Thread。
+- `role` 必须为枚举值之一。
+- Message 按 `created_at` 在 Thread 内排序。
+
+#### 7.2.7 `ai_message_part`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Part 唯一标识。 |
+| `message_id` | `uuid` (FK → `ai_message.id`) | Y | 所属 Message。 |
+| `part_type` | `enum` | Y | Part 类型：`text`、`tool-call`、`tool-result`、`file`、`image`、`reasoning`、`source`。 |
+| `content` | `jsonb` | N | Part 内容，结构取决于 `part_type`。 |
+| `tool_call_id` | `uuid` (FK → `ai_tool_call.id`) | N | 关联的 Tool Call（仅 `tool-call` 和 `tool-result` 类型）。 |
+| `sort_order` | `integer` | Y | 在 Message 内的排序。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+
+**约束：**
+- `message_id` 必须引用有效 Message。
+- `part_type` 必须为枚举值之一。
+- `sort_order` 在同一 Message 内必须唯一。
+
+**Part type 语义：**
+- `text`：普通文本内容。
+- `tool-call`：工具调用请求，关联 `ai_tool_call`。
+- `tool-result`：工具调用结果，关联 `ai_tool_call`。
+- `file`：文件附件引用。v0.2 reserve。
+- `image`：图片附件引用。v0.2 reserve。
+- `reasoning`：推理过程片段。v0.2 reserve。
+- `source`：引用来源/引用。v0.2 reserve。
+
+#### 7.2.8 `ai_tool_call`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Tool Call 唯一标识。 |
+| `thread_id` | `uuid` (FK → `ai_thread.id`) | Y | 所属 Thread（便于查询）。 |
+| `message_id` | `uuid` (FK → `ai_message.id`) | Y | 触发该调用的 Message。 |
+| `tool_name` | `text` | Y | 工具名称。 |
+| `status` | `enum` | Y | 调用状态：`pending`、`running`、`success`、`error`、`timeout`。 |
+| `arguments` | `jsonb` | N | 调用参数（结构取决于工具）。 |
+| `result` | `jsonb` | N | 调用结果。 |
+| `error_message` | `text` | N | 错误信息（如果失败）。 |
+| `started_at` | `timestamp` | N | 开始执行时间。 |
+| `completed_at` | `timestamp` | N | 完成时间。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+
+**约束：**
+- `thread_id` 必须引用有效 Thread。
+- `message_id` 必须引用有效 Message。
+- `tool_name` 不能为空。
+- `status` 默认为 `pending`。
+
+#### 7.2.9 `ai_usage`
+
+| 字段名 | 类型 | 必填 | 语义 |
+| --- | --- | --- | --- |
+| `id` | `uuid` (primary key) | Y | Usage 记录唯一标识。 |
+| `user_id` | `text` (FK → auth user) | Y | 用户 ID。 |
+| `thread_id` | `uuid` (FK → `ai_thread.id`) | N | 关联的 Thread。 |
+| `message_id` | `uuid` (FK → `ai_message.id`) | N | 关联的 Message。 |
+| `provider_id` | `text` (FK → `ai_provider.id`) | Y | 使用的 Provider。 |
+| `model_id` | `text` (FK → `ai_model.id`) | Y | 使用的 Model。 |
+| `input_tokens` | `integer` | N | 输入 tokens 数。 |
+| `output_tokens` | `integer` | N | 输出 tokens 数。 |
+| `total_tokens` | `integer` | N | 总 tokens 数。 |
+| `estimated_cost_usd` | `decimal` | N | 估算成本（美元）。v0.2 仅用于审计，不触发扣费。 |
+| `status` | `enum` | Y | 请求状态：`success`、`error`、`timeout`、`rate_limited`。 |
+| `error_code` | `text` | N | 错误代码（如果失败）。 |
+| `error_message` | `text` | N | 错误信息（如果失败）。 |
+| `request_duration_ms` | `integer` | N | 请求耗时（毫秒）。 |
+| `created_at` | `timestamp` | Y | 创建时间。 |
+
+**约束：**
+- `user_id` 必须引用有效用户。
+- `provider_id` 和 `model_id` 必须引用有效记录。
+- `status` 必须为枚举值之一。
+
+**v0.2 边界：**
+- `ai_usage` 仅用于审计，不触发 credits mutation。
+- 不实现 credits preflight、reservation、settlement。
+- 不实现 quota enforcement。
+
+### 7.3 实体关系冻结
+
+```
+ai_provider (1) ───< (N) ai_model
+                     │
+                     │ (referenced by)
+                     ▼
+ai_user_model_setting ─── ai_provider
+                      └── ai_model
+
+ai_agent ─── ai_provider (optional default)
+         └── ai_model (optional default)
+
+ai_thread ─── auth.user (owner)
+          ├── ai_agent (optional)
+          ├── ai_provider (optional selection)
+          └── ai_model (optional selection)
+
+ai_thread (1) ───< (N) ai_message
+                     │
+                     │ (1)
+                     ▼
+                ai_message (1) ───< (N) ai_message_part
+                                           │
+                                           │ (optional FK)
+                                           ▼
+                                      ai_tool_call
+
+ai_tool_call ─── ai_thread
+             └── ai_message (triggering message)
+
+ai_usage ─── auth.user
+          ├── ai_thread (optional)
+          ├── ai_message (optional)
+          ├── ai_provider
+          └── ai_model
+```
+
+### 7.4 v0.2 schema 创建前置条件
+
+在创建 v0.2 schema 前，必须确认：
+
+1. **Schema 所有权确认**：所有 AI schema 文件位于 `packages/db/src/ai.schema.ts`，通过 `packages/db/src/schema.ts` re-export。
+2. **Migration 策略确认**：确认使用 Drizzle migration 还是 push，并获得用户授权。
+3. **索引策略确认**：确认高频查询路径和索引需求。
+4. **外键约束确认**：确认是否启用数据库级外键约束。
+5. **软删除策略确认**：确认 `ai_thread`、`ai_message` 是否需要软删除。
+6. **JSON 字段验证确认**：确认 `jsonb` 字段是否需要应用层验证或数据库约束。
+
+### 7.5 v0.2 明确不包含的内容
+
+以下内容不在 v0.2 minimal schema 范围内：
+
+- **Memory persistence tables**：属于 v0.3。
+- **Knowledge base tables**：属于 v0.3。
+- **Embedding tables**：属于 v0.3。
+- **MCP credential tables**：属于 v0.4。
+- **Cost event / credit settlement tables**：属于 v0.5。
+- **Admin audit UI shape**：不属于 schema 范畴。
+- **Provider secret storage strategy**：属于 app layer 配置。
+- **BYOK (Bring Your Own Key)**：未来规划。
+- **Team-level model policy**：未来规划。
+- **Advanced per-agent model policy**：未来规划。
+- **User-defined Agent tables**：未来规划。
+- **Tool/Skill registry tables**：v0.2 reserve，使用代码定义。
+
+### 7.6 v0.2 usage audit 与 credits charging 的边界
+
+**v0.2 usage audit：**
+- 只记录，不扣费。
+- 不调用 `@repo/credits`。
+- 不实现 quota enforcement。
+- `estimated_cost_usd` 仅用于审计分析，不触发 billing。
+
+**v0.5 credits integration（未来）：**
+- Credits preflight：请求前检查额度。
+- Credits reservation：请求时预留额度。
+- Credits settlement：请求后结算。
+- Credits refund：失败请求退款。
+- Failed request handling：失败不扣费或退款。
+
+### 7.7 未冻结的 Open Questions
+
+以下问题在 v0.1 中未冻结，需要在 v0.2 schema 设计前确认：
+
+1. **索引策略**：哪些字段需要索引？
+2. **软删除策略**：`ai_thread` 和 `ai_message` 是否需要 `deleted_at`？
+3. **JSON 字段验证**：`jsonb` 字段是否需要 schema 验证？
+4. **外键级联策略**：删除 Thread 时是否级联删除 Message？
+5. **Partition 策略**：大表是否需要分区？
+6. **Retention 策略**：Usage 数据保留策略？
 
 ## 8. 依赖边界
 
