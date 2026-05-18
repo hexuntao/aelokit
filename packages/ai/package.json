@@ -1,0 +1,33 @@
+{
+  "name": "@repo/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./models": "./src/models/index.ts",
+    "./agents": "./src/agents/index.ts",
+    "./tools": "./src/tools/index.ts",
+    "./skills": "./src/skills/index.ts",
+    "./memory": "./src/memory/index.ts",
+    "./knowledge": "./src/knowledge/index.ts",
+    "./mcp": "./src/mcp/index.ts",
+    "./usage": "./src/usage/index.ts",
+    "./permissions": "./src/permissions/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./adapters/ai-sdk": "./src/adapters/ai-sdk/index.ts",
+    "./adapters/mastra": "./src/adapters/mastra/index.ts",
+    "./runtime-types": "./src/runtime-types/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
