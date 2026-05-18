@@ -92,15 +92,43 @@ v0.2 明确不做：
 - 未经用户确认修改 `apps/web/package.json`、root `package.json` 或
   `pnpm-lock.yaml`。
 
+### 4.2B Confirmed Dependency Install 阶段
+
+仅 TASK-003B 允许实际安装 v0.2 AI dependencies。TASK-003B 只能在用户确认
+TASK-003 dependency install plan 后执行。
+
+允许：
+
+- `apps/web/package.json`
+- `pnpm-lock.yaml`
+
+必须执行：
+
+- confirmed install command。
+- `pnpm --filter @repo/web typecheck`
+- `pnpm check:package-exports`
+
+禁止：
+
+- runtime。
+- route。
+- UI。
+- schema。
+- migration。
+- `.env*`。
+- root `package.json`。
+
 ### 4.3 Schema Design 阶段
 
 允许：
 
-- 文档文件。
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
+- `docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md`
 - 输出 schema design，包括表结构、字段、索引、外键、迁移影响。
 
 禁止：
 
+- 把 schema design 写到 `docs/product/AI_CHAT_V0_2_DEPENDENCY_RESEARCH.md`。
 - 创建 `packages/db/src/ai.schema.ts`。
 - 修改 `packages/db/src/schema.ts`。
 - 生成 migration。
@@ -129,12 +157,11 @@ v0.2 明确不做：
 
 - `apps/web/src/ai/**`
 - `apps/web/src/app/api/ai/chat/route.ts`
-- `apps/web/package.json`，仅用于已确认 dependency plan。
-- `pnpm-lock.yaml`，仅由已确认安装产生。
 
 禁止：
 
 - 创建 `/api/chat`。
+- 顺手安装依赖或修改 `apps/web/package.json` / `pnpm-lock.yaml`。
 - provider secret 进入 client。
 - runtime 逻辑进入 `packages/ai`。
 - usage audit 调用 `@repo/credits` 或修改 credits ledger。
@@ -189,6 +216,9 @@ v0.2 禁止：
 - 必须输出版本范围。
 - 必须输出兼容关系。
 - 必须等待用户确认后才能安装。
+- TASK-003B 是唯一允许实际安装 v0.2 AI dependencies 的任务。
+- 其他 TASK 不允许顺手安装 `assistant-ui`、`ai`、`@ai-sdk/openai`、
+  `@mastra/core` 或其他 provider SDK。
 - 不允许私自安装 `assistant-ui`、`ai`、`@ai-sdk/openai`、`@mastra/core`
   或其他 provider SDK。
 - assistant-ui 与 AI SDK 必须确认兼容版本后再安装。
@@ -197,7 +227,7 @@ v0.2 禁止：
 
 ## 7. Schema / Migration 规则
 
-- 必须先做 schema design 文档。
+- 必须先做 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`。
 - schema design 必须列出表结构、字段、索引、外键、默认值、迁移影响。
 - 必须等待用户确认后才能创建 schema。
 - 必须等待用户确认后才能生成 migration。
@@ -250,4 +280,3 @@ v0.2 禁止：
 - 为什么这样接入。
 - 与 AeloKit 当前边界如何对齐。
 - 是否存在未确认风险。
-

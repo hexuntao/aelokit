@@ -15,6 +15,7 @@
 - `docs/product/AI_CHAT_V0_2_SCOPE_FREEZE.md`
 - `docs/product/AI_CHAT_V0_2_ACCEPTANCE.md`
 - `docs/product/AI_CHAT_V0_2_IMPLEMENTATION_PLAN.md`
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
 - `docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md`
 
 如果本 TASK 涉及 assistant-ui、Vercel AI SDK、Mastra、provider SDK，必须先执行 External Docs Gate：
@@ -29,6 +30,8 @@
 - 不允许越过 Scope Freeze。
 - 不允许实现 v0.3+ 内容。
 - 不允许私自安装依赖。
+- 如果要安装 v0.2 AI dependencies，只能执行 TASK-003B。
+- TASK-003B 之外的其他 TASK 不允许顺手安装依赖。
 - 不允许私自创建 migration。
 - 不允许创建 `/api/chat`。
 - 不允许把 provider secret 暴露到 client。
@@ -38,7 +41,8 @@
 
 执行边界：
 - 严格遵守 `AI_CHAT_V0_2_IMPLEMENTATION_PLAN.md` 中该 TASK 的允许修改文件和禁止修改文件。
-- 如果需要新增依赖，先输出 exact package list、版本范围、安装命令、影响文件，等待用户确认。
+- 如果需要新增依赖，先执行 TASK-003 输出 exact package list、版本范围、安装命令、影响文件，等待用户确认。
+- 实际安装依赖只能在用户确认后执行 TASK-003B；其他 TASK 遇到缺依赖时必须停止并报告 blocker。
 - 如果需要 schema/migration，先输出 schema design、migration impact、DB 命令，等待用户确认。
 - 如果官方文档与当前代码或计划冲突，先暂停说明冲突点，不要硬写。
 - 如果 TASK 范围不足以解决 blocker，输出最小变更请求，不要自行扩大范围。
@@ -103,6 +107,7 @@
 
 - 只研究依赖：执行 TASK-002。
 - 只输出安装计划：执行 TASK-003。
+- 实际安装已确认依赖：执行 TASK-003B。
 - 只设计 schema：执行 TASK-004。
 - 创建 schema/migration：必须等用户确认后执行 TASK-005。
 - 创建 runtime skeleton：执行 TASK-007。

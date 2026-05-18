@@ -83,13 +83,13 @@ ai@^6.0.184
 Do not add `zod` unless the current `apps/web` dependency is removed or no longer
 satisfies peer ranges. Current `apps/web` already declares `zod: ^4.3.6`.
 
-Proposed command after confirmation:
+Proposed command after confirmation, executable only by TASK-003B:
 
 ```bash
 pnpm --filter @repo/web add @assistant-ui/react@^0.14.5 @assistant-ui/react-ai-sdk@^1.3.26 ai@^6.0.184 @ai-sdk/react@^3.0.186 @ai-sdk/openai@^3.0.64 @repo/ai@workspace:*
 ```
 
-Affected files after confirmation:
+Affected files after confirmation and TASK-003B execution:
 
 - `apps/web/package.json`
 - `pnpm-lock.yaml`
@@ -99,13 +99,13 @@ Affected files after confirmation:
 Do not install for the first direct-provider chat path unless TASK scope confirms
 agent orchestration is needed.
 
-Optional package after confirmation:
+Optional package after confirmation, executable only by TASK-003B:
 
 ```txt
 @mastra/core@^1.35.0
 ```
 
-Optional command after confirmation:
+Optional command after confirmation and only if TASK-003 explicitly includes Mastra:
 
 ```bash
 pnpm --filter @repo/web add @mastra/core@^1.35.0
@@ -357,4 +357,3 @@ Mastra becomes appropriate when AeloKit needs:
 - 不创建 route。
 - 不创建 UI。
 - 不创建 schema/migration。
-

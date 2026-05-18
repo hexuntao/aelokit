@@ -9,6 +9,7 @@
 - 每个 TASK 开始前必须重新读取本 TASK 指定文档。
 - 涉及外部依赖/API 的 TASK 必须先执行 External Docs Gate。
 - 涉及安装依赖、schema、migration、DB 命令、CI/CD 的 TASK 必须先等待用户确认。
+- 只有 TASK-003B 允许实际安装 v0.2 AI dependencies；其他 TASK 不允许顺手安装依赖。
 - 本文档不授权越过 `AI_CHAT_V0_2_SCOPE_FREEZE.md`。
 
 默认必须读取：
@@ -68,6 +69,7 @@ provider SDK dependency decisions. Must read official docs and record URLs in
 - `docs/product/AI_CHAT_V0_2_ACCEPTANCE.md`
 - `docs/product/AI_CHAT_V0_2_IMPLEMENTATION_PLAN.md`
 - `docs/product/AI_CHAT_V0_2_DEPENDENCY_RESEARCH.md`
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
 - `docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md`
 - `docs/product/AI_CHAT_V0_2_CODEX_PROMPT.md`
 
@@ -94,7 +96,7 @@ provider SDK dependency decisions. Must read official docs and record URLs in
 
 ### 验收标准
 
-- 6 个目标文档存在。
+- 7 个目标文档存在。
 - 只修改目标文档。
 - 没有代码、依赖、schema、migration、route、UI 改动。
 
@@ -286,6 +288,106 @@ docs(ai): add v0.2 dependency install plan
 
 如果 exact versions 无法确认，记录 registry/doc 查询失败，并停止在文档里伪造版本。
 
+## TASK-003B：Install Confirmed Dependencies
+
+### 目标
+
+执行用户已确认的 v0.2 AI dependency install plan。
+
+### 范围
+
+- 运行 TASK-003 中用户已确认的 install command。
+- 只让 package manager 更新 `apps/web/package.json` 和 `pnpm-lock.yaml`。
+- 执行安装后的最小验证。
+
+### 非目标
+
+- 不写 runtime。
+- 不创建 route。
+- 不创建 UI。
+- 不创建 schema。
+- 不生成 migration。
+- 不修改 `.env*`。
+- 不顺手新增 TASK-003 未确认的依赖。
+
+### 前置条件
+
+- TASK-002 已完成。
+- TASK-003 已输出 exact dependency install plan。
+- 用户已明确确认 TASK-003 dependency install plan 和 install command。
+- 用户指定执行 TASK-003B。
+
+### 必须读取的文档
+
+- 默认必须读取清单。
+- `docs/product/AI_CHAT_V0_2_DEPENDENCY_RESEARCH.md`
+- `apps/web/package.json`
+- root `package.json`
+- `pnpm-lock.yaml`
+
+### External Docs Gate
+
+Required. Before installing, re-check the exact versions and compatibility notes
+from TASK-003 if any external dependency changed since the plan was written.
+If docs or registry metadata conflicts with TASK-003, pause and update the plan
+instead of installing.
+
+### 允许修改文件
+
+- `apps/web/package.json`
+- `pnpm-lock.yaml`
+
+### 禁止修改文件
+
+- runtime。
+- route。
+- UI。
+- schema。
+- migration。
+- `.env*`。
+- root `package.json`。
+- `apps/web/src/**`
+- `packages/db/**`
+- `packages/ai/**`
+
+### 实现要求
+
+- 执行用户确认的 install command。
+- 安装后检查 diff，确认只出现允许的 package/lockfile 变更。
+- 不安装 TASK-003 未确认的 package。
+- 不创建任何 source file。
+- 不修改 env/schema/migration/route/UI/runtime。
+
+### 验收标准
+
+- `apps/web/package.json` 包含用户确认的 direct dependencies。
+- `pnpm-lock.yaml` 只反映这些确认依赖的安装结果。
+- 没有 source/runtime/route/UI/schema/migration/env 改动。
+- required validation commands pass or blockers are recorded.
+
+### 验证命令
+
+```bash
+pnpm --filter @repo/web typecheck
+pnpm check:package-exports
+git diff --name-only
+git diff --check -- apps/web/package.json pnpm-lock.yaml
+```
+
+### Git 提交要求
+
+建议提交：
+
+```txt
+build(web): install ai chat dependencies
+```
+
+### blocker handling
+
+如果 install command 会修改未授权文件，暂停并报告 diff，不继续实现代码。如果
+typecheck 或 package exports 失败，只修复 dependency-install 范围内的问题；需要代码
+改动时停止并请求新的 TASK。
+
 ## TASK-004：Minimal AI Schema Design
 
 ### 目标
@@ -296,6 +398,7 @@ docs(ai): add v0.2 dependency install plan
 
 - 文档化 9 张表的 schema design。
 - 文档化字段、类型、索引、外键、默认值、migration impact。
+- 固定输出到 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`。
 
 ### 非目标
 
@@ -317,6 +420,7 @@ docs(ai): add v0.2 dependency install plan
 - `docs/product/AI_CONTRACTS_FOUNDATION_SCOPE_FREEZE.md`
 - `docs/product/AI_CONTRACTS_FOUNDATION_ACCEPTANCE.md`
 - `docs/architecture/AI_AGENT_INFRASTRUCTURE_BOUNDARIES.md`
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
 
 ### External Docs Gate
 
@@ -325,12 +429,12 @@ AI SDK. Schema field names must also align with v0.1 contracts.
 
 ### 允许修改文件
 
-- `docs/product/AI_CHAT_V0_2_DEPENDENCY_RESEARCH.md`
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
 - `docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md`
-- A future schema design doc only if user confirms exact filename.
 
 ### 禁止修改文件
 
+- `docs/product/AI_CHAT_V0_2_DEPENDENCY_RESEARCH.md`
 - `packages/db/src/ai.schema.ts`
 - `packages/db/src/schema.ts`
 - `packages/db/src/migrations/**`
@@ -344,11 +448,12 @@ AI SDK. Schema field names must also align with v0.1 contracts.
 - 说明和 v0.1 contracts 的映射。
 - 说明 migration 影响。
 - 明确 thread/message/message part/tool call/usage audit persistence path。
+- 不允许把 schema design 写到 dependency research 里。
 - 等待用户确认。
 
 ### 验收标准
 
-- schema design 足以让 TASK-005 创建 Drizzle schema。
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md` 足以让 TASK-005 创建 Drizzle schema。
 - 未确认项进入 open questions。
 - 没有 schema/migration 文件变更。
 
@@ -356,7 +461,7 @@ AI SDK. Schema field names must also align with v0.1 contracts.
 
 ```bash
 git diff --name-only
-git diff --check -- docs/product/AI_CHAT_V0_2_*.md
+git diff --check -- docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md
 ```
 
 
@@ -403,7 +508,7 @@ docs(ai): design minimal chat persistence schema
 - `packages/AGENTS.md`
 - `packages/db/AGENTS.md`
 - `docs/product/AI_CONTRACTS_FOUNDATION_SCOPE_FREEZE.md`
-- TASK-004 schema design output。
+- `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`
 
 ### External Docs Gate
 
@@ -570,7 +675,7 @@ feat(db): seed ai provider model and system agent
 
 ### 前置条件
 
-- Dependency install has been confirmed and executed if runtime imports external packages.
+- Dependency install has been confirmed and executed via TASK-003B if runtime imports external packages.
 - `@repo/web` can import `@repo/ai` via declared direct dependency.
 
 ### 必须读取的文档
@@ -589,11 +694,11 @@ Required for provider SDK initialization and Mastra runtime if used.
 ### 允许修改文件
 
 - `apps/web/src/ai/**`
-- `apps/web/package.json` and `pnpm-lock.yaml` only if dependency install was
-  separately confirmed.
 
 ### 禁止修改文件
 
+- `apps/web/package.json`
+- `pnpm-lock.yaml`
 - `packages/ai/**`
 - `packages/db/**`
 - `apps/web/src/components/ai/**`
@@ -663,7 +768,7 @@ schema + `env.example` update.
 ### 前置条件
 
 - TASK-007 runtime skeleton complete.
-- Dependencies installed and confirmed.
+- Dependencies installed and confirmed via TASK-003B.
 - Auth access pattern confirmed from existing app.
 
 ### 必须读取的文档
@@ -940,7 +1045,7 @@ instead of defaulting to zero.
 
 ### 前置条件
 
-- Dependencies installed and confirmed.
+- Dependencies installed and confirmed via TASK-003B.
 - TASK-008 route available.
 - Design guidance read.
 
@@ -1377,7 +1482,8 @@ the blocker separately from typecheck/lint result.
 
 ### 前置条件
 
-- TASK-001 through TASK-015 complete or explicitly deferred.
+- TASK-001 through TASK-015 complete or explicitly deferred, including TASK-003B
+  when dependency installation is required.
 - Working tree contains only intended v0.2 changes.
 
 ### 必须读取的文档
@@ -1446,4 +1552,3 @@ chore(ai): validate v0.2 chat integration
 
 If a command cannot run, record command, reason, whether it blocks merge, and the
 minimal next step. Do not label unrun checks as passed.
-

@@ -9,7 +9,7 @@
 默认建议：使用 `@assistant-ui/react@^0.14.5` 和
 `@assistant-ui/react-ai-sdk@^1.3.26`，安装前重新检查官方文档和 npm registry。
 
-阻塞范围：TASK-003、TASK-011、TASK-015。
+阻塞范围：TASK-003、TASK-003B、TASK-011、TASK-015。
 
 需要用户确认的时机：执行 dependency install 前。
 
@@ -20,7 +20,7 @@
 默认建议：使用 AI SDK v6，当前 assistant-ui 官方 runtime docs 对新项目推荐
 `ai@^6` + `@ai-sdk/react@^3`。
 
-阻塞范围：TASK-003、TASK-008、TASK-009、TASK-010、TASK-011。
+阻塞范围：TASK-003、TASK-003B、TASK-008、TASK-009、TASK-010、TASK-011。
 
 需要用户确认的时机：执行 dependency install 前。
 
@@ -31,7 +31,7 @@
 默认建议：第一版 simple chat 不安装/接入 Mastra runtime，只保留 integration plan；
 等出现真实 agent/tool/workflow orchestration 需求后再安装 `@mastra/core`。
 
-阻塞范围：TASK-003、TASK-007、TASK-008。
+阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008。
 
 需要用户确认的时机：TASK-003 dependency plan 和 TASK-007 runtime skeleton 前。
 
@@ -42,7 +42,7 @@
 默认建议：首个 provider 只支持 OpenAI direct provider path，避免同时引入多 provider
 policy。
 
-阻塞范围：TASK-003、TASK-006、TASK-007、TASK-013。
+阻塞范围：TASK-003、TASK-003B、TASK-006、TASK-007、TASK-013。
 
 需要用户确认的时机：dependency install 和 seed provider/model 前。
 
@@ -52,7 +52,7 @@ policy。
 
 默认建议：使用 `@ai-sdk/openai@^3.0.64` 作为 first provider SDK。
 
-阻塞范围：TASK-003、TASK-007、TASK-008、TASK-013。
+阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008、TASK-013。
 
 需要用户确认的时机：dependency install 前。
 
@@ -63,7 +63,7 @@ policy。
 默认建议：v0.2 不同步支持 OpenRouter，避免扩大 provider key、model policy 和 routing
 范围。
 
-阻塞范围：若用户要求 OpenRouter，则阻塞 TASK-003、TASK-006、TASK-007。
+阻塞范围：若用户要求 OpenRouter，则阻塞 TASK-003、TASK-003B、TASK-006、TASK-007。
 
 需要用户确认的时机：provider selection 确认时。
 
@@ -182,7 +182,7 @@ Playwright setup，先记录为 optional，不新增测试框架除非确认。
 默认建议：v0.2 first chat dependencies 应只进入 `apps/web/package.json`；root
 `package.json` 不应修改，除非新增 root script/check 且另行确认。
 
-阻塞范围：TASK-003。
+阻塞范围：TASK-003、TASK-003B。
 
 需要用户确认的时机：dependency install plan 前。
 
@@ -192,7 +192,7 @@ Playwright setup，先记录为 optional，不新增测试框架除非确认。
 
 默认建议：依赖安装经确认后允许由 pnpm 更新 `pnpm-lock.yaml`；本规划任务不允许修改。
 
-阻塞范围：TASK-003 后的实际 install。
+阻塞范围：TASK-003B。
 
 需要用户确认的时机：执行 install command 前。
 
@@ -225,7 +225,7 @@ typecheck/lint/build 和手动/浏览器验证记录。
 默认建议：v0.2 使用 direct OpenAI provider，AI Gateway 作为后续 provider strategy
 评估项；如果改用 Gateway，需要重新确认 env、provider/model seed 和 dependency plan。
 
-阻塞范围：TASK-003、TASK-006、TASK-007、TASK-008。
+阻塞范围：TASK-003、TASK-003B、TASK-006、TASK-007、TASK-008。
 
 需要用户确认的时机：provider strategy 确认时。
 
@@ -239,4 +239,3 @@ history adapter 可作为 thread reload support，但不让前端成为 persiste
 阻塞范围：TASK-009、TASK-011。
 
 需要用户确认的时机：chat persistence service 前。
-
