@@ -12,12 +12,21 @@ import type { Message } from './types';
 
 const API_URL = '/api/ai/chat';
 
+const AVAILABLE_MODELS = [
+  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
+  { id: 'gpt-4.1', name: 'GPT-4.1' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+  { id: 'gpt-4o', name: 'GPT-4o' },
+];
+
 interface ChatContextType {
   messages: Message[];
   input: string;
   isLoading: boolean;
   error: Error | null;
+  selectedModelId: string;
   setInput: (value: string) => void;
+  setSelectedModelId: (modelId: string) => void;
   handleSubmit: (e?: React.FormEvent) => void;
   stop: () => void;
 }
@@ -37,6 +46,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [selectedModelId, setSelectedModelId] =
+    useState<string>('gpt-4.1-mini');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const stop = useCallback(() => {
@@ -79,6 +90,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           },
           body: JSON.stringify({
             messages: [...messages, userMessage],
+            modelId: selectedModelId,
           }),
           signal: controller.signal,
         });
@@ -148,7 +160,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-    [input, isLoading, messages]
+    [input, isLoading, messages, selectedModelId]
   );
 
   return (
@@ -158,7 +170,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         input,
         isLoading,
         error,
+        selectedModelId,
         setInput,
+        setSelectedModelId,
         handleSubmit,
         stop,
       }}
@@ -167,3 +181,5 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     </ChatContext.Provider>
   );
 }
+
+export { AVAILABLE_MODELS };

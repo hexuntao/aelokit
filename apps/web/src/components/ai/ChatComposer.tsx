@@ -1,12 +1,27 @@
 'use client';
 
-import { useChatContext } from './ChatProvider';
+import { useChatContext, AVAILABLE_MODELS } from './ChatProvider';
 import { Send, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function ChatComposer() {
-  const { input, setInput, handleSubmit, isLoading, stop } = useChatContext();
+  const {
+    input,
+    setInput,
+    handleSubmit,
+    isLoading,
+    stop,
+    selectedModelId,
+    setSelectedModelId,
+  } = useChatContext();
 
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -15,6 +30,24 @@ export function ChatComposer() {
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 w-full max-w-4xl mx-auto"
         >
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedModelId}
+              onValueChange={setSelectedModelId}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_MODELS.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="relative">
             <Textarea
               placeholder="Type a message..."
