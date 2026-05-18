@@ -110,6 +110,10 @@ provider selection、env 和 seed 范围，应保持待确认。
 默认建议：使用 `pnpm --filter @repo/db db:generate` 生成 migration，禁止 db push，
 执行命令前必须确认影响。
 
+TASK-004 schema design 结论：TASK-005 如获确认，应先创建
+`packages/db/src/ai.schema.ts` 和 `packages/db/src/schema.ts` export，再运行
+`pnpm --filter @repo/db db:generate` 生成 migration；仍禁止 `db:push`。
+
 阻塞范围：TASK-005。
 
 需要用户确认的时机：TASK-004 schema design 完成后。
@@ -120,6 +124,11 @@ provider selection、env 和 seed 范围，应保持待确认。
 
 默认建议：一次性创建 v0.2 frozen minimal 9 张表，避免 thread/message/usage
 跨 migration 不一致；不加入 v0.3+ tables。
+
+TASK-004 schema design 结论：建议 TASK-005 一次性创建 `ai_provider`、
+`ai_model`、`ai_user_model_setting`、`ai_agent`、`ai_thread`、`ai_message`、
+`ai_message_part`、`ai_tool_call`、`ai_usage`，并排除 memory/RAG/MCP/credits
+settlement tables。
 
 阻塞范围：TASK-004、TASK-005。
 
@@ -173,6 +182,10 @@ script conventions，不创建新 app。
 
 默认建议：tokens 使用 provider/AI SDK reported usage；cost estimate 使用 seed model
 静态价格计算，无法确认时允许 null，不默认 0。
+
+TASK-004 schema design 结论：`ai_usage` 保存 AI SDK/provider reported token
+metrics；`estimated_cost_usd`、`cost_currency_code` 和 `cost_estimate_source`
+只做 audit estimate，无法确认时写 `null`，不得作为 credits billing source。
 
 阻塞范围：TASK-010。
 
@@ -282,6 +295,86 @@ TASK-002 研究结论：assistant-ui AI SDK v6 history adapter 需要 `withForma
 round-trip AI SDK `UIMessage`；AI SDK persistence docs也强调服务端加载、校验、保存。
 因此 v0.2 仍应以 server-side persistence 为事实来源。
 
+TASK-004 schema design 结论：`ai_message` 保留 `parent_message_id` 和
+`runtime_format` 以兼容 assistant-ui `withFormat`，`ai_message_part` 以 ordered
+rows 保存 `UIMessage.parts`，但持久化事实来源仍在 server-side persistence
+service。
+
 阻塞范围：TASK-009、TASK-011。
 
 需要用户确认的时机：chat persistence service 前。
+
+## 23. AI schema ID column 使用 `text` 还是 Postgres `uuid`？
+
+状态：待确认。
+
+默认建议：使用现有 repo 风格的 `text` primary key，保存 app-generated UUID/ULID
+字符串；这样与 `user.id`、`payment.id`、`credit_transaction.id` 等现有表一致。
+
+TASK-004 schema design 结论：文档按 `text` id 设计，但语义仍是 stable UUID-like
+identifier。若用户要求 Postgres `uuid`，TASK-005 前必须调整 schema design。
+
+阻塞范围：TASK-005。
+
+需要用户确认的时机：schema design review。
+
+## 24. AI schema 外键 cascade / set null / restrict 策略是否确认？
+
+状态：待确认。
+
+默认建议：user-owned rows 跟随 `user.id` cascade；thread 删除 cascade message、
+message part、tool call；provider/model/agent lookup 使用 restrict/no-action 或
+set null，避免误删历史 audit。
+
+TASK-004 schema design 结论：已在每张表列出建议 FK delete behavior；TASK-005
+创建 migration 前需要确认。
+
+阻塞范围：TASK-005。
+
+需要用户确认的时机：schema design review。
+
+## 25. JSON 字段验证由 app service 负责，还是 DB check 负责？
+
+状态：待确认。
+
+默认建议：v0.2 由 `apps/web/src/ai` persistence service 和 `@repo/ai` structural
+contracts 校验 JSON shape；DB 只做 nullable/default 和关系约束，避免把
+assistant-ui / AI SDK runtime shape 过早固化成 DB check。
+
+TASK-004 schema design 结论：`capabilities`、`instructions`、`metadata`、
+`content`、`input`、`output`、`raw_usage`、`provider_metadata` 均采用 app-owned
+validation。
+
+阻塞范围：TASK-005、TASK-009、TASK-010。
+
+需要用户确认的时机：schema design review。
+
+## 26. `ai_usage` 是否需要 retention / partition 策略？
+
+状态：待确认。
+
+默认建议：v0.2 不做 partition；先用 `user_id`/`thread_id`/`provider_id`/`model_id`/
+`status` + `created_at` 索引满足 audit 查询。retention 策略进入 usage/admin
+阶段再确认。
+
+TASK-004 schema design 结论：不创建 partition，不创建 v0.5 cost event 或 billing
+tables。
+
+阻塞范围：TASK-005、TASK-016。
+
+需要用户确认的时机：schema design review 或 usage audit service 前。
+
+## 27. 每个 provider 只能有一个 default model 是否用 partial unique index？
+
+状态：待确认。
+
+默认建议：使用 `ai_model_provider_default_uidx` partial unique index，约束每个
+`provider_id` 只能有一个 `is_default = true` 模型；如果 Drizzle 版本或 migration
+生成不支持该表达，应在 TASK-005 暂停并改用应用层约束或手写 SQL。
+
+TASK-004 schema design 结论：schema design 推荐 partial unique index，但将其作为
+TASK-005 需要验证的 migration 细节。
+
+阻塞范围：TASK-005、TASK-006。
+
+需要用户确认的时机：schema design review。
