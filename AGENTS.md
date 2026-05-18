@@ -102,6 +102,7 @@ pnpm web:db:generate
 
 ## AI Infrastructure Guardrail
 
+- AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
 - `packages/ai` 未来负责 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter types。
 - `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、credits ledger mutation、provider SDK 初始化或 live runtime execution。
 - `apps/web/src/ai` 未来负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool 选择、Mastra/AI SDK runtime 连接、审计和 app policy。

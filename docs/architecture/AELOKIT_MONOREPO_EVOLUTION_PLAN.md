@@ -49,7 +49,6 @@ packages/
 
 docs/
   audit/
-  migration/
   modules/
   nextjs/
 ```
@@ -149,7 +148,6 @@ packages/
 docs/
   product/
   architecture/
-  migration/
   audit/
   runbooks/
   decisions/
@@ -196,7 +194,6 @@ scripts/
 | `packages/testing` | Test utilities | Test factories, fixtures, contract mocks, Playwright helpers | Production runtime code | After real test runner and repeated fixtures exist | Depends on test stack only | Long-term |
 | `docs/product` | Product planning | PRD, roadmap, product surfaces, AI roadmap | Runtime implementation | Current Task creates docs here | None | Current Task |
 | `docs/architecture` | Architecture planning | Boundaries, layering, split plans, ADR inputs | Runtime implementation | Current Task creates docs here | None | Current Task |
-| `docs/migration` | Migration execution plans | Phase plans and historical migration docs | Product PRD | Already exists | None | Current |
 | `docs/audit` | Audits | Dependency, boundary, security, UI audits | Implementation | Already exists | None | Current |
 | `docs/runbooks` | Operations runbooks | Deploy, rollback, incident, provider outage procedures | Architecture decisions | When operations workflows stabilize | None | v0.6+ |
 | `docs/decisions` | ADRs | Approved decisions and trade-offs | Long-form product roadmap | When decisions require durable ADRs | None | v0.1+ |

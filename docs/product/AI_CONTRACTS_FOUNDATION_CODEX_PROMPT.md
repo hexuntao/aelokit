@@ -11,9 +11,12 @@
 
 - AGENTS.md
 - packages/AGENTS.md
+- docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md
+- docs/product/AI_CONTRACTS_FOUNDATION_ENTRYPOINT.md
 - docs/product/AI_CONTRACTS_FOUNDATION_SCOPE_FREEZE.md
 - docs/product/AI_CONTRACTS_FOUNDATION_ACCEPTANCE.md
 - docs/product/AI_CONTRACTS_FOUNDATION_IMPLEMENTATION_PLAN.md
+- docs/product/AI_CONTRACTS_FOUNDATION_OPEN_QUESTIONS.md
 
 如果任务会修改 packages/ai，且 packages/ai/AGENTS.md 已存在，也必须读取：
 

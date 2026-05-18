@@ -1,5 +1,7 @@
 # Claude Code 规则
 
+本文件是 Claude Code 使用的仓库规则摘要。若与根目录 `AGENTS.md` 冲突，以根目录 `AGENTS.md` 为准。
+
 ## 项目概述
 
 本项目是一个 pnpm workspace + Turborepo monorepo，当前只有一个应用 `apps/web`。
@@ -47,7 +49,7 @@
 - 共享通知包：`packages/notification/`（`@repo/notification`，notification provider、sendNotification、Discord/Feishu 实现）
 - 分析模块：`apps/web/src/analytics/`（兼容 shim，re-export 自 `@repo/analytics`；React Provider 组件保留在 `apps/web/src/analytics/*.tsx`）
 - 共享分析包：`packages/analytics/`（`@repo/analytics`，analytics types、provider interface、config helpers、event names、client/server helpers）
-- AI 工作流：`apps/web/src/ai/`
+- 未来 AI runtime wiring：`apps/web/src/ai/`（当前不要提前创建）
 - 配置文件：`apps/web/src/config/`
 - 共享配置包：`packages/config/`（`@repo/config`，`websiteConfig` 的来源）
 - 共享工具包：`packages/shared/`（`@repo/shared`，纯工具函数 `cn`/`formatPrice`/`formatDate` 等）
@@ -131,29 +133,38 @@ pnpm web:db:generate
 
 当前已抽取 `@repo/config`（配置）、`@repo/shared`（纯工具/类型）、`@repo/env`（环境验证）、`@repo/i18n`（国际化路由和消息）、`@repo/db`（Drizzle 数据库层）、`@repo/auth`（认证核心层）、`@repo/payment`（支付领域包）、`@repo/credits`（积分领域包）、`@repo/mail`（事务邮件领域包）、`@repo/newsletter`（邮件订阅领域包）、`@repo/notification`（系统通知领域包）、`@repo/storage`（对象存储领域包）和 `@repo/analytics`（统计分析领域包），其余 `@repo/*` 业务包尚未拆分。
 
-## UI 边界规则
+## AI Infrastructure Guardrail
 
-- 当前**没有** `packages/ui`
-- UI 组件位于 `apps/web/src/components/`
-- `ui/` 目录包含 shadcn/ui 原语（52 个组件）
-- `magicui/`、`animate-ui/`、`tailark/`、`diceui/` 是第三方库组件，不抽入 `packages/ui`
-- `blocks/`、`auth/`、`admin/`、`settings/`、`pricing/`、`dashboard/`、`docs/` 是业务组件，不抽入 `packages/ui`
-- 未来抽取 `packages/ui` 时，只包含纯 UI 原语（button、card、dialog 等），不包含：
-  - 依赖 `next-intl` 的组件
-  - 依赖 `next/navigation`、`next/link` 的组件
-  - 依赖 `@/actions`、`@/db`、`@/payment`、`@/credits` 等的组件
-  - 依赖 `authClient` 的组件
-- 抽取 `packages/ui` 前需完成 Phase 2.13 UI 边界审计（见 `docs/migration/MONOREPO_PHASE_2_13_UI_BOUNDARY_AUDIT.md`）
+- AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
+- `packages/ai` 未来负责 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter types。
+- `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、credits ledger mutation、provider SDK 初始化或 live runtime execution。
+- `apps/web/src/ai` 未来负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool 选择、Mastra/AI SDK runtime 连接、审计和 app policy。
+- `apps/web/src/components/ai` 未来负责 web app 当前 AI UI。
+- `apps/web/src/app/api/ai/chat/route.ts` 是首个 AI chat route 的规划命名，对外为 `POST /api/ai/chat`。
+- 不要使用 `/api/chat` 作为首个 AI route。
+- v0.2 usage 初期只做 audit，不接 credits 扣费。
+- credits preflight/reservation/settlement 后续进入 v0.5，并且必须通过 `@repo/credits` 提供的能力完成。
+
+## UI / Design System 边界规则
+
+- 当前没有 `packages/ui`，也没有 `packages/design-system`。
+- UI 组件位于 `apps/web/src/components/`。
+- 未来目标是 `packages/design-system`，不是狭义 `packages/ui`。
+- `packages/design-system` 后期可包含 `ui/`、`blocks/`、`marketing/`、`ai/`、`dashboard/`、`forms/`、`layouts/`、`icons/`、`tokens/`、`styles/`、`hooks/`、`utils/`。
+- 当前不要创建 `packages/design-system`。
+- `magicui/`、`animate-ui/`、`tailark/`、`diceui/` 是第三方库组件，不抽入未来 design-system，除非经过审计和重包装。
+- `blocks/`、`auth/`、`admin/`、`settings/`、`pricing/`、`dashboard/`、`docs/` 是业务或 app-bound 组件，不提前抽入未来 design-system。
+- 不允许把业务数据请求、server actions、auth session、payment/credits 逻辑放入未来 design-system。
+- 组件未来要沉淀到 design-system，必须先消除 app route/action/auth/payment/credits 依赖，并有组件依赖审计和用户确认。
 
 ## 禁止事项
 
 - 不要创建根 `src/` 目录
 - 不要把业务文件放回根目录
 - 不要提前拆 `apps/admin`、`apps/landing`、`apps/docs`、`apps/worker`、`apps/gateway`、`apps/studio`
-- 不要提前抽 `packages/ui`
-- 不要把业务组件放入未来 `packages/ui`
-- 不要把 i18n 依赖组件放入未来 `packages/ui`
-- 不要把 auth/payment/credits 依赖组件放入未来 `packages/ui`
+- 不要提前创建 `packages/ai`、`packages/design-system`、`packages/api-client`、`packages/logger`、`packages/observability`、`packages/testing`
+- 不要把业务组件提前抽到未来 design-system
+- 不要把 i18n/auth/payment/credits/server action 依赖组件放入未来 design-system
 - 不要改技术栈
 - 不要删除现有功能
 - 不要移除 `[locale]` 路由结构
@@ -257,3 +268,17 @@ pnpm web:db:generate
 - `process.env.NODE_ENV` 可以保留
 - 允许保留的 `process.env`：`NODE_ENV`、`SKIP_ENV_VALIDATION`、平台变量（如 `DOCKER_BUILD`、`DISABLE_IMAGE_OPTIMIZATION`）
 - 新增环境变量必须同步更新：schema + env.example + 运行 `pnpm check:env`
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked in GitHub Issues for `hexuntao/aelokit`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `CONTEXT.md` and `docs/adr/` when present, with `docs/product/` as product source of truth and `docs/architecture/` as architecture source of truth. See `docs/agents/domain.md`.

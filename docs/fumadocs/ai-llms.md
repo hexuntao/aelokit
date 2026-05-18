@@ -449,7 +449,7 @@ To setup for Inkeep AI:
    }
    ```
 
-To use your own AI models, update the configurations in `useChat` and `/api/chat` route.
+To use your own AI models in AeloKit, update the configurations in `useChat` and the `/api/ai/chat` route.
 
 Note that Fumadocs doesn't provide the AI model, it's up to you.
 Your AI model can use the `llms-full.txt` file generated above, or more diversified sources of information when combined with 3rd party solutions.
