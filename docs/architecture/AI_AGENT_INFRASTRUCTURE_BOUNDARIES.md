@@ -11,11 +11,11 @@
 AI Agent Infrastructure should be split into contracts, app wiring, API routes, UI, and data ownership.
 
 ```txt
-packages/ai = cross-app AI contracts, registries, adapters, errors, permissions
+packages/ai = cross-app AI contracts, registries, lightweight adapter types, runtime types, errors, permissions
 apps/web/src/ai = web app runtime wiring and dependency injection
 apps/web/src/components/ai = web app AI UI components
 apps/web/src/app/api/ai = web app AI API routes
-packages/db/src/ai.schema.ts = AI database schema, created in a later schema task
+packages/db/src/ai.schema.ts = AI database schema; minimal chat persistence may be created in v0.2 after schema/migration confirmation
 ```
 
 None of these future paths should be created during Current Task.
@@ -36,8 +36,9 @@ None of these future paths should be created during Current Task.
 - Knowledge base contracts.
 - MCP contracts.
 - Usage and cost calculation types.
-- AI SDK adapter core.
-- Mastra adapter core.
+- Lightweight Vercel AI SDK adapter types.
+- Lightweight Mastra adapter types.
+- AI runtime type definitions.
 - AG-UI / CopilotKit adapter reserve types.
 - AI errors.
 - AI permission contracts.
@@ -53,7 +54,17 @@ None of these future paths should be created during Current Task.
 - `cookies()`, `headers()`, or server actions.
 - Direct access to `apps/web`.
 - Direct coupling to `next-intl`.
-- Direct database queries unless a later decision explicitly adds repository interfaces.
+- Direct database queries.
+- Credits ledger mutation.
+- Provider SDK initialization.
+- Real Vercel AI SDK runtime calls.
+- Real Mastra agent instances.
+
+v0.1 boundary:
+
+- Allowed: contracts, registries, runtime type definitions, lightweight AI SDK/Mastra adapter type surfaces, permission/error/usage/cost types.
+- Not allowed: runtime execution, provider SDK initialization, DB access, route handlers, React components, app session/cookie/header access.
+- Data model work in v0.1 is a freeze of names and relationships, not schema or migration creation.
 
 Recommended first exports in v0.1:
 
@@ -86,9 +97,10 @@ It may own:
 - Reading app config and env via existing packages.
 - Creating AI provider instances for the web app.
 - Resolving current user/session in app routes before invoking AI runtime.
-- Connecting `packages/ai` contracts to `@repo/auth`, `@repo/credits`, `@repo/storage`, `@repo/db`, and `@repo/analytics`.
+- Connecting `packages/ai` contracts to `@repo/auth`, `@repo/storage`, `@repo/db`, and `@repo/analytics`.
+- Connecting to `@repo/credits` only when v0.5 usage/credits semantics are approved.
 - Wiring Mastra runtime instances for web app use.
-- Selecting default model for app routes.
+- Selecting the system default model and v0.2 user-level model setting for app routes.
 - App-specific policy decisions, such as free-plan limits.
 
 It should not own:
@@ -107,18 +119,20 @@ Future AI API routes are app-layer transport boundaries.
 
 They may own:
 
-- `POST /api/ai/chat` style endpoints.
+- `POST /api/ai/chat` as the first streaming chat endpoint.
+- Future AI endpoints under `/api/ai/*`, such as `/api/ai/threads`, `/api/ai/agents`, `/api/ai/models`, `/api/ai/memory`, `/api/ai/knowledge`, `/api/ai/tools`, `/api/ai/mcp`, and `/api/ai/usage`.
 - Streaming response using Vercel AI SDK.
 - Auth/session checks.
 - Request validation.
 - Locale and request context extraction.
-- Credit preflight/reservation hooks.
+- Usage audit persistence after completion.
+- Credit preflight/reservation hooks only in v0.5 after usage semantics are stable.
 - Tool permission checks.
 - Stream metadata emission.
-- Usage event persistence after completion.
 
 They should not own:
 
+- `/api/chat`; that namespace is too broad for the first AI streaming route.
 - Provider registry definitions.
 - Agent contract definitions.
 - Tool/skill registry source of truth.
@@ -160,26 +174,30 @@ Future AI schema belongs to `packages/db`, not `apps/web`.
 
 It should own table definitions for:
 
-- Model providers and model registry metadata.
-- Agent profiles.
-- Agent-tool and agent-skill assignments.
-- Chat threads.
-- Messages.
-- Message parts.
-- Tool calls.
-- Attachments metadata.
-- Memory records.
-- Thread summaries.
-- Knowledge bases.
-- Documents.
-- Chunks.
-- Embeddings.
-- MCP server configs.
-- Tool call logs.
-- Usage events.
-- Cost events.
-- Credit usage linkage.
-- Audit events.
+- v0.2 minimal chat persistence:
+  - `ai_provider`.
+  - `ai_model`.
+  - `ai_user_model_setting`.
+  - `ai_agent`.
+  - `ai_thread`.
+  - `ai_message`.
+  - `ai_message_part`.
+  - `ai_tool_call`.
+  - `ai_usage`.
+- v0.3 memory and knowledge extensions:
+  - `ai_memory`.
+  - `ai_thread_summary`.
+  - `ai_knowledge_base`.
+  - `ai_knowledge_document`.
+  - `ai_knowledge_chunk`.
+  - `ai_embedding`.
+  - `ai_mcp_server`.
+  - `ai_mcp_tool`.
+  - `ai_mcp_credential`.
+- v0.5 usage/credits/admin audit extensions if needed:
+  - Cost events.
+  - Credit usage linkage.
+  - Audit events.
 
 It should not own:
 
@@ -190,10 +208,11 @@ It should not own:
 
 Creation conditions:
 
-- v0.3 or later.
-- AI data model scope freeze complete.
-- Migration impact reviewed.
-- User confirms schema and migration work.
+- v0.1 freezes the AI data model names and relationships in docs/contracts only.
+- v0.2 may create minimal `packages/db/src/ai.schema.ts` for chat persistence after explicit schema/migration confirmation.
+- v0.3 may extend the schema for memory and knowledge after a second scope freeze.
+- Migration impact is reviewed before each schema change.
+- User confirms schema and migration work before files or migrations are created.
 
 ---
 
@@ -207,10 +226,13 @@ Owns:
 - Provider capabilities.
 - Model registry.
 - Default model.
-- User-level model settings.
-- Agent-level model settings.
+- v0.2 minimal user-level model settings: user default model, per-chat `modelId`, and fallback to system default provider/model.
+- v0.3+ agent-level model settings.
+- v0.5+ usage/cost-aware model policy.
 - Provider key strategy.
 - AI Gateway strategy.
+
+v0.2 should not include per-agent advanced model policy, BYOK, team-level model policy, complex pricing management UI, or complete model capability matrix management.
 
 Integration points:
 
@@ -318,20 +340,44 @@ MCP must be permissioned before it is user-accessible. Local stdio MCP is higher
 
 ### 7.8 Usage / Credits
 
-Owns:
+v0.2 owns usage audit only:
 
-- Token usage events.
-- Cost events.
-- Credit events.
-- User quota.
-- Billing integration.
+- `userId`.
+- `threadId`.
+- `messageId`.
+- Provider.
+- Model.
+- Input tokens.
+- Output tokens.
+- Estimated cost.
+- Created time.
+- Request status.
+- Error reason when failed.
+
+v0.2 does not own:
+
+- Credits charging.
+- Credits reservation.
+- Credits settlement.
+- Refunds.
+- Plan quota enforcement through credits.
+- Failed-call billing rollback.
+
+v0.5 owns usage/credits/admin audit:
+
+- Usage and cost dashboard.
+- Credits preflight.
+- Credits reservation.
+- Credits settlement.
+- Refund and failed request handling.
+- User quota and plan entitlement integration.
 - Admin usage audit.
 
 Integration points:
 
 - Vercel AI SDK usage metadata.
 - Provider/model pricing table.
-- `@repo/credits` consumption/reservation/settlement.
+- `@repo/credits` consumption/reservation/settlement in v0.5.
 - `@repo/payment` plan entitlement.
 - `@repo/analytics` usage events.
 
@@ -376,7 +422,7 @@ Direct Vercel AI SDK route is sufficient when:
 | SaaS package | AI integration | Boundary |
 | --- | --- | --- |
 | `@repo/auth` | Identify user, roles, API keys, admin/system permissions | AI packages do not fetch sessions directly |
-| `@repo/credits` | Consume or reserve credits for AI usage | `packages/ai` defines usage contracts; credits package owns ledger mutation |
+| `@repo/credits` | v0.5 credits preflight, reservation, settlement, refund handling | v0.2 records usage audit only; `packages/ai` defines usage contracts, and credits package owns ledger mutation |
 | `@repo/storage` | Store attachments, source files, generated assets | AI runtime stores metadata in DB and files in storage |
 | `@repo/db` | Own AI schema and persistence | App routes call repositories/services, schema stays in DB package |
 | `@repo/env` | Validate provider/gateway keys | Do not read secrets in client components |

@@ -34,9 +34,9 @@ This is a layered architecture, not a required implementation in Current Task.
 | --- | --- | --- |
 | assistant-ui | Chat UI, thread/composer rendering, UI runtime provider, attachments/tool-call presentation, client-side thread state adapters | Provider SDKs, DB schema, credits ledger, auth session lookup |
 | Vercel AI SDK Runtime | Streaming protocol, `UIMessage`, `streamText`, tool call stream handling, UI message response, model provider interface, usage metadata | Product page layout, full agent orchestration, app permissions by itself |
-| `apps/web` API routes | HTTP boundary, auth/session checks, request validation, stream response, route-level policy, credit preflight, usage finalization | Cross-app contracts, DB schema ownership, UI components |
-| `apps/web/src/ai` runtime wiring | App-specific provider setup, model selection, user context injection, Mastra instance wiring, integration with auth/credits/storage/db/analytics | Reusable contract definitions, React UI, schema definitions |
-| `packages/ai` contracts/adapters | Provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission contracts, AI SDK adapter core, Mastra adapter core, errors | Next routes, cookies, server actions, `apps/web`, concrete app pages |
+| `apps/web` API routes | HTTP boundary, auth/session checks, request validation, stream response, route-level policy, v0.2 usage audit, v0.5 credit preflight/finalization | Cross-app contracts, DB schema ownership, UI components |
+| `apps/web/src/ai` runtime wiring | App-specific provider setup, system and user-level model selection, user context injection, Mastra instance wiring, integration with auth/storage/db/analytics and v0.5 credits | Reusable contract definitions, React UI, schema definitions |
+| `packages/ai` contracts/adapters | Provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission contracts, lightweight AI SDK adapter types, lightweight Mastra adapter types, runtime type definitions, errors | Next routes, cookies, server actions, `apps/web`, concrete app pages, DB queries, provider SDK initialization, live runtime execution |
 | Mastra runtime | Agent execution, tools, workflows, memory, RAG, MCP orchestration, human-in-the-loop patterns | Product billing policy, app-specific UI, SaaS package ownership |
 | SaaS packages | Auth identity, DB persistence, file storage, credit ledger, payment entitlements, analytics events | AI UI, route-level streaming protocol, agent contract source of truth |
 
@@ -53,9 +53,9 @@ assistant-ui Thread / Composer
 ↓
 Vercel AI SDK chat runtime
 ↓
-POST apps/web API route
+POST /api/ai/chat
 ↓
-Resolve user/session, locale, entitlement, credits preflight
+Resolve user/session, locale, entitlement, user/default model setting
 ↓
 apps/web/src/ai selects agent/model/tools
 ↓
@@ -69,8 +69,10 @@ API route emits UI message stream
 ↓
 assistant-ui renders messages, parts, tool states, citations
 ↓
-Usage/cost/analytics are recorded after completion
+Minimal thread/message persistence and usage audit are recorded after completion
 ```
+
+v0.2 usage audit is not credits billing. Credit preflight, reservation, settlement, refunds, quota enforcement, and failed-request billing rollback are deferred to v0.5.
 
 ---
 
@@ -148,9 +150,9 @@ Do not force Mastra into simple chat before needed. A direct AI SDK route is acc
 | Package | Integration point |
 | --- | --- |
 | `@repo/auth` | User identity, roles, API keys, admin/system permissions |
-| `@repo/credits` | Credit preflight, reservation, consumption, refund/settlement |
+| `@repo/credits` | v0.5 credit preflight, reservation, consumption, refund/settlement; not mutated by v0.2 usage audit |
 | `@repo/storage` | Attachments, knowledge source files, generated artifacts |
-| `@repo/db` | Thread/message/agent/memory/knowledge/usage persistence |
+| `@repo/db` | v0.2 provider/model/user setting/agent/thread/message/message part/tool call/usage persistence; v0.3 memory/knowledge persistence |
 | `@repo/env` | Provider and gateway key validation |
 | `@repo/payment` | Plan entitlements, billing state, paid features |
 | `@repo/analytics` | Product analytics for AI events |

@@ -44,7 +44,7 @@ Package boundaries should preserve the current monorepo shape:
 
 | Package | Responsibility | Allowed dependencies | Forbidden dependencies | Suggested exports | Create when | Horizon |
 | --- | --- | --- | --- | --- | --- | --- |
-| `@repo/ai` | Cross-app AI infrastructure core | `@repo/config`, `@repo/env`, `@repo/shared`; AI SDK/Mastra adapter deps only when implemented | React UI, assistant-ui components, Next route handlers, cookies, server actions, `apps/web`, dashboard pages, direct session lookup | `.`, `./providers`, `./models`, `./agents`, `./tools`, `./skills`, `./memory`, `./knowledge`, `./mcp`, `./usage`, `./permissions`, `./errors`, `./adapters/ai-sdk`, `./adapters/mastra`, `./runtime-types` | v0.1 after explicit confirmation | v0.1 |
+| `@repo/ai` | Cross-app AI infrastructure core | `@repo/config`, `@repo/env`, `@repo/shared`; lightweight AI SDK/Mastra adapter type dependencies only when confirmed | React UI, assistant-ui components, Next route handlers, cookies, server actions, `apps/web`, dashboard pages, direct session lookup, DB queries, provider SDK initialization, credits ledger mutation, live AI SDK/Mastra runtime execution | `.`, `./providers`, `./models`, `./agents`, `./tools`, `./skills`, `./memory`, `./knowledge`, `./mcp`, `./usage`, `./permissions`, `./errors`, `./adapters/ai-sdk`, `./adapters/mastra`, `./runtime-types` | v0.1 after explicit confirmation and data model freeze | v0.1 |
 | `@repo/design-system` | Product-level design system | `@repo/shared`, React, styling deps, icon deps; optional framework adapters by subpath only | DB, auth session, payment logic, credits ledger, server actions, route handlers, hard-bound page queries | `.`, `./ui`, `./blocks`, `./marketing`, `./ai`, `./dashboard`, `./forms`, `./layouts`, `./icons`, `./tokens`, `./styles`, `./hooks`, `./utils` | v0.7 after component audit and extraction scope freeze | v0.7 |
 | `@repo/api-client` | Typed API client and generated contract consumers | Future `contracts`, fetch/runtime-safe helpers, auth token types | Direct DB access, provider SDK implementations, UI pages | `.`, `./client`, `./types`, `./errors`, `./ai`, `./admin` | When `apps/gateway` or public API contracts exist | v0.6+ |
 | `@repo/logger` | Structured logging and redaction | `@repo/env`, `@repo/shared` | UI, analytics dashboards, DB persistence by default | `.`, `./types`, `./server`, `./redaction`, `./fields` | When worker/gateway need consistent logs | v0.6+ |
@@ -68,10 +68,10 @@ It should own:
 - Knowledge contracts.
 - MCP contracts.
 - Usage and cost calculation contracts.
-- AI SDK adapter core.
-- Mastra adapter core.
+- Lightweight Vercel AI SDK adapter types.
+- Lightweight Mastra adapter types.
+- Runtime type definitions.
 - AG-UI / CopilotKit adapter reserve types.
-- AI runtime types.
 - AI errors.
 - AI permission contracts.
 
@@ -87,6 +87,18 @@ It should not own:
 - Direct imports from `apps/web`.
 - Direct coupling to `next-intl`.
 - Direct app billing UI or settings UI.
+- Real Vercel AI SDK runtime calls.
+- Real Mastra agent instances.
+- Provider SDK initialization.
+- DB queries.
+- Credits ledger mutation.
+- App session, cookies, or headers.
+
+v0.1 scope:
+
+- `packages/ai` may define contracts, lightweight adapter type surfaces, runtime type definitions, errors, and permission types.
+- `packages/ai` may participate in an AI data model freeze by defining stable TypeScript contracts.
+- `packages/ai` must not implement runtime execution. Runtime wiring begins in v0.2 inside `apps/web`.
 
 Required distinction:
 
@@ -95,8 +107,15 @@ packages/ai = cross-app reusable AI infrastructure core
 apps/web/src/ai = web app runtime wiring
 apps/web/src/components/ai = web app current AI UI components
 apps/web/src/app/api/ai = web app current AI API routes
-packages/db/src/ai.schema.ts = AI database schema, created only in a later task
+packages/db/src/ai.schema.ts = AI database schema; minimal chat persistence may be created in v0.2 after schema/migration confirmation
 ```
+
+`packages/db` AI schema timing:
+
+- v0.1 freezes the minimal AI data model in docs/contracts only.
+- v0.2 may add minimal chat persistence schema: `ai_provider`, `ai_model`, `ai_user_model_setting`, `ai_agent`, `ai_thread`, `ai_message`, `ai_message_part`, `ai_tool_call`, and `ai_usage`.
+- v0.3 may extend the same schema for memory and knowledge: `ai_memory`, `ai_thread_summary`, `ai_knowledge_base`, `ai_knowledge_document`, `ai_knowledge_chunk`, `ai_embedding`, `ai_mcp_server`, `ai_mcp_tool`, and `ai_mcp_credential`.
+- Schema creation and migration generation require explicit user confirmation in their own implementation task.
 
 ---
 

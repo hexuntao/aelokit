@@ -45,9 +45,10 @@ Short-term AI responsibilities:
 
 - First AI workspace.
 - App-level AI runtime wiring in future `apps/web/src/ai`.
-- App-level AI API routes in future `apps/web/src/app/api/ai`.
+- App-level AI API routes in future `apps/web/src/app/api/ai`, starting with `POST /api/ai/chat`.
 - App-level AI UI components in future `apps/web/src/components/ai`.
-- Session, locale, billing, credits, and analytics wiring around AI runtime.
+- Session, locale, billing entitlement, model setting, usage audit, and analytics wiring around AI runtime.
+- Credits preflight/reservation/settlement wiring only after v0.5 usage/credits semantics are approved.
 
 Does not own:
 

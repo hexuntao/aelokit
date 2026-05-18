@@ -10,8 +10,8 @@
 
 ```txt
 Current Task：Monorepo Evolution Planning
-v0.1：AI Infrastructure Foundation
-v0.2：assistant-ui + AI SDK + Mastra chat
+v0.1：AI Contracts + Data Model Foundation
+v0.2：assistant-ui + AI SDK + Mastra Chat + Minimal Persistence
 v0.3：Memory + Knowledge Base
 v0.4：Skills / Tools / MCP
 v0.5：Usage / Credits / Admin Audit
@@ -63,23 +63,25 @@ Create planning documents that define future monorepo structure, package boundar
 
 ---
 
-## v0.1: AI Infrastructure Foundation
+## v0.1: AI Contracts + Data Model Foundation
 
 **Goal**
 
-Create the reusable AI infrastructure core package boundaries and contracts without building chat UI or DB schema.
+Create the reusable AI infrastructure core package with stable contracts, lightweight adapter type surfaces, and a frozen minimal AI data model before any app runtime is implemented.
 
 **Scope**
 
 - Create `packages/ai` after explicit confirmation.
-- Add provider abstraction.
+- Add provider contracts.
 - Add model registry contracts.
 - Add agent contracts.
-- Add tool and skill registry contracts.
+- Add tool, skill, and MCP contracts.
 - Add memory and knowledge contracts.
-- Add MCP contracts.
 - Add usage/cost/permission/error types.
-- Add AI SDK and Mastra adapter core types.
+- Add lightweight Vercel AI SDK adapter types.
+- Add lightweight Mastra adapter types.
+- Add runtime type definitions.
+- Freeze the minimal AI data model needed by v0.2 chat persistence, without necessarily generating migration files.
 
 **Non-goals**
 
@@ -87,7 +89,13 @@ Create the reusable AI infrastructure core package boundaries and contracts with
 - No `apps/web/src/app/api/ai` routes.
 - No `packages/db/src/ai.schema.ts`.
 - No migrations.
+- No real Vercel AI SDK runtime calls.
+- No real Mastra agent instances.
+- No provider SDK initialization.
+- No DB queries.
 - No credits charging.
+- No credits ledger mutation.
+- No user session, cookies, or headers.
 - No worker/gateway/studio split.
 
 **Prerequisites**
@@ -95,12 +103,16 @@ Create the reusable AI infrastructure core package boundaries and contracts with
 - User approves v0.1 scope freeze.
 - Package boundary doc accepted.
 - Exports and dependency list approved.
+- Minimal AI data model is reviewed and accepted as a contract before schema work.
 
 **Acceptance Criteria**
 
 - `packages/ai` has explicit exports.
 - It does not import from `apps/web`.
 - It does not contain React UI, Next routes, cookies, server actions, or DB schema.
+- It exposes only contracts, runtime type definitions, and lightweight adapter type surfaces.
+- It contains no live AI SDK/Mastra runtime execution.
+- The minimal AI data model required by v0.2 is documented and frozen.
 - It typechecks with its own package script.
 
 **Creates app/package?**
@@ -113,25 +125,43 @@ Create the reusable AI infrastructure core package boundaries and contracts with
 
 ---
 
-## v0.2: assistant-ui + AI SDK + Mastra chat
+## v0.2: assistant-ui + AI SDK + Mastra Chat + Minimal Persistence
 
 **Goal**
 
-Add the first working AI chat path inside `apps/web` using assistant-ui and Vercel AI SDK, with Mastra used where agent orchestration is actually needed.
+Add the first working AI chat path inside `apps/web` using assistant-ui and Vercel AI SDK, with Mastra used in-process where agent orchestration is actually needed, and persist the minimal chat data needed for product use.
 
 **Scope**
 
 - Add app-local AI UI under `apps/web/src/components/ai`.
 - Add app-local runtime wiring under `apps/web/src/ai`.
-- Add app-local AI API route under `apps/web/src/app/api/ai` or approved namespace.
+- Add the first AI chat route at `apps/web/src/app/api/ai/chat/route.ts`, exposed as `POST /api/ai/chat`.
 - Stream responses via Vercel AI SDK.
-- Integrate basic model/provider selection through `packages/ai`.
+- Integrate assistant-ui with the AI SDK chat path.
+- Use Mastra in-process only where a chat workflow needs agent/tool orchestration.
+- Integrate basic model/provider selection through `packages/ai` contracts.
+- Add minimal user-level model setting: user default model, per-chat `modelId`, and fallback to the system default provider/model.
+- Add minimal thread/message persistence.
+- Allow creation of minimal `packages/db/src/ai.schema.ts` after separate schema/migration confirmation.
+- Minimal schema covers `ai_provider`, `ai_model`, `ai_user_model_setting`, `ai_agent`, `ai_thread`, `ai_message`, `ai_message_part`, `ai_tool_call`, and `ai_usage`.
 - Add minimal app-level auth and entitlement checks.
+- Record usage audit data only: `userId`, `threadId`, `messageId`, provider, model, input/output tokens, estimated cost, creation time, request status, and failure reason when applicable.
 
 **Non-goals**
 
+- No credits charging.
+- No credits reservation.
+- No credits settlement.
+- No refund handling.
+- No plan quota enforcement through credits.
+- No failed-call billing rollback.
 - No full memory/RAG.
 - No full MCP.
+- No per-agent advanced model policy.
+- No BYOK or multi-provider key management.
+- No team-level model policy.
+- No complex model pricing management UI.
+- No complete model capability matrix management.
 - No dedicated worker/gateway/studio.
 - No design-system extraction.
 - No broad app split.
@@ -140,22 +170,28 @@ Add the first working AI chat path inside `apps/web` using assistant-ui and Verc
 
 - v0.1 completed.
 - User approves dependency installation and exact package versions.
-- User approves API route naming.
+- User approves creating `POST /api/ai/chat`.
+- User approves minimal AI schema and migration work before any schema file or migration is created.
+- Minimal AI data model freeze from v0.1 is accepted.
 
 **Acceptance Criteria**
 
 - Authenticated user can send a message and receive a streamed response.
 - Runtime uses `packages/ai` contracts instead of ad hoc app-only types.
 - No package imports from `apps/web`.
-- Usage metadata is at least captured in a route-level shape, even if not billed yet.
+- `/api/ai/chat` is the only first streaming route; `/api/chat` is not used.
+- User default model and per-chat model selection fallback correctly to the system default when unset.
+- Threads, messages, message parts, tool calls, and usage audit records can be persisted.
+- Usage is auditable but does not mutate the credits ledger.
 
 **Creates app/package?**
 
 - No new app/package expected.
+- May create minimal AI schema and route/UI/runtime files only as part of the future v0.2 implementation after explicit confirmation.
 
 **Needs user confirmation?**
 
-- Yes, because dependencies and runtime code are required.
+- Yes, because dependencies, runtime code, route creation, schema, and migration work are required.
 
 ---
 
@@ -163,12 +199,13 @@ Add the first working AI chat path inside `apps/web` using assistant-ui and Verc
 
 **Goal**
 
-Add persistent memory and source-grounded knowledge base infrastructure.
+Add persistent memory, thread summaries, and source-grounded knowledge base infrastructure on top of the stable chat path.
 
 **Scope**
 
-- Add AI DB schema after schema scope freeze.
-- Add memory persistence contracts and app wiring.
+- Extend AI DB schema after v0.3 schema scope freeze.
+- Add user memory, agent memory, project memory, and thread summary persistence.
+- Add memory write confirmation and deletion policies.
 - Add thread summary strategy.
 - Add knowledge base, documents, chunks, embeddings, retrieval metadata, sources, citations.
 - Connect source files to `@repo/storage`.
@@ -178,12 +215,15 @@ Add persistent memory and source-grounded knowledge base infrastructure.
 
 - No uncontrolled user tool execution.
 - No local stdio MCP.
+- No complete tool marketplace.
+- No credits billing enforcement.
 - No app split by default.
 
 **Prerequisites**
 
 - v0.2 chat path stable.
-- AI schema reviewed.
+- v0.2 minimal schema and chat persistence are stable.
+- v0.3 schema extensions are reviewed.
 - User confirms migration/schema work.
 - Storage and retention policy are defined.
 
@@ -196,7 +236,7 @@ Add persistent memory and source-grounded knowledge base infrastructure.
 
 **Creates app/package?**
 
-- May create `packages/db/src/ai.schema.ts`.
+- May extend `packages/db/src/ai.schema.ts` with memory and knowledge tables.
 - Does not create new app/package by default.
 
 **Needs user confirmation?**
@@ -260,11 +300,13 @@ Connect AI usage to cost tracking, credits, quota, and admin audit.
 
 **Scope**
 
-- Token usage events.
-- Cost events.
-- Credit event linkage.
-- Quota policy.
-- Credit preflight/reservation/settlement design.
+- Usage and cost dashboard.
+- Mature token usage events and cost events.
+- Credit preflight.
+- Credit reservation.
+- Credit settlement.
+- Refund and failed request handling.
+- Quota policy and plan entitlement integration.
 - Admin usage dashboard inside `apps/web`.
 - Agent, tool call, MCP, knowledge, and cost audit views.
 
@@ -273,18 +315,23 @@ Connect AI usage to cost tracking, credits, quota, and admin audit.
 - No dedicated `apps/admin` unless split criteria are met.
 - No public gateway by default.
 - No irreversible billing behavior without review.
+- No admin app split unless `apps/web` admin surfaces meet the split criteria.
 
 **Prerequisites**
 
 - Usage semantics approved.
 - Pricing/cost table strategy approved.
 - Credits integration policy approved.
+- v0.2 usage audit records are stable enough to become billing inputs.
+- Failure/refund semantics are documented.
 
 **Acceptance Criteria**
 
 - Usage can be audited by user, model, agent, provider, and time.
 - Credits ledger remains owned by `@repo/credits`.
+- AI runtime performs preflight/reservation/settlement through `@repo/credits` instead of mutating ledger tables directly.
 - Billing entitlements remain connected to `@repo/payment`.
+- Failed requests and refunds have explicit handling.
 - Admin can inspect usage without reading raw sensitive content by default.
 
 **Creates app/package?**
