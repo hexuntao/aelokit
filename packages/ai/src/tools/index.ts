@@ -14,11 +14,44 @@ export type AIToolCapability =
 
 export type AIToolCallStatus =
   | 'pending'
-  | 'requires-permission'
   | 'running'
-  | 'succeeded'
-  | 'failed'
-  | 'cancelled';
+  | 'success'
+  | 'error'
+  | 'timeout';
+
+export type AIToolCallStatusMapping = {
+  readonly contractToDb: {
+    readonly pending: 'pending';
+    readonly running: 'running';
+    readonly success: 'success';
+    readonly error: 'error';
+    readonly timeout: 'timeout';
+  };
+  readonly dbToContract: {
+    readonly pending: 'pending';
+    readonly running: 'running';
+    readonly success: 'success';
+    readonly error: 'error';
+    readonly timeout: 'timeout';
+  };
+};
+
+export const AITOOL_CALL_STATUS_MAPPING: AIToolCallStatusMapping = {
+  contractToDb: {
+    pending: 'pending',
+    running: 'running',
+    success: 'success',
+    error: 'error',
+    timeout: 'timeout',
+  },
+  dbToContract: {
+    pending: 'pending',
+    running: 'running',
+    success: 'success',
+    error: 'error',
+    timeout: 'timeout',
+  },
+};
 
 export interface AIToolDisplayMetadata {
   readonly name: string;

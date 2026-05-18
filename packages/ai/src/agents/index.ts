@@ -6,7 +6,33 @@ export type AIAgentId = string;
 
 export type AIAgentEnabledStatus = 'enabled' | 'disabled' | 'deprecated';
 
-export type AIAgentVisibility = 'system' | 'workspace' | 'user' | 'private';
+export type AIAgentVisibility = 'system' | 'public' | 'private';
+
+export type AIAgentVisibilityMapping = {
+  readonly contractToDb: {
+    readonly system: 'system';
+    readonly public: 'public';
+    readonly private: 'private';
+  };
+  readonly dbToContract: {
+    readonly system: 'system';
+    readonly public: 'public';
+    readonly private: 'private';
+  };
+};
+
+export const AI_AGENT_VISIBILITY_MAPPING: AIAgentVisibilityMapping = {
+  contractToDb: {
+    system: 'system',
+    public: 'public',
+    private: 'private',
+  },
+  dbToContract: {
+    system: 'system',
+    public: 'public',
+    private: 'private',
+  },
+};
 
 export interface AIAgentDisplayMetadata {
   readonly name: string;

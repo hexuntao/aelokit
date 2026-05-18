@@ -18,6 +18,7 @@ const PACKAGES_TO_CHECK = [
   "storage",
   "analytics",
   "env",
+  "ai",
 ];
 
 let hasErrors = false;

@@ -9,7 +9,37 @@ export type AIUsageThreadId = string;
 
 export type AIUsageMessageId = string;
 
-export type AIUsageStatus = 'pending' | 'recorded' | 'failed' | 'cancelled';
+export type AIUsageStatus = 'success' | 'error' | 'timeout' | 'rate_limited';
+
+export type AIUsageStatusMapping = {
+  readonly contractToDb: {
+    readonly success: 'success';
+    readonly error: 'error';
+    readonly timeout: 'timeout';
+    readonly rate_limited: 'rate_limited';
+  };
+  readonly dbToContract: {
+    readonly success: 'success';
+    readonly error: 'error';
+    readonly timeout: 'timeout';
+    readonly rate_limited: 'rate_limited';
+  };
+};
+
+export const AI_USAGE_STATUS_MAPPING: AIUsageStatusMapping = {
+  contractToDb: {
+    success: 'success',
+    error: 'error',
+    timeout: 'timeout',
+    rate_limited: 'rate_limited',
+  },
+  dbToContract: {
+    success: 'success',
+    error: 'error',
+    timeout: 'timeout',
+    rate_limited: 'rate_limited',
+  },
+};
 
 export type AIUsageFailureReason =
   | 'provider-error'
