@@ -9,6 +9,7 @@
     "./schema": "./src/schema.ts",
     "./auth-schema": "./src/auth.schema.ts",
     "./app-schema": "./src/app.schema.ts",
+    "./ai-schema": "./src/ai.schema.ts",
     "./types": "./src/types.ts"
   },
   "types": "./src/index.ts",
