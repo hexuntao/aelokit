@@ -49,6 +49,54 @@
 - Mastra tools docs:
   <https://mastra.ai/docs/agents/using-tools>
 
+## 2.1 TASK-002 External Docs Gate 结果
+
+状态：已执行，未发现官方文档与 v0.2 Scope Freeze 的冲突。
+
+读取时间：2026-05-18。
+
+官方文档确认：
+
+- assistant-ui 当前 AI SDK runtime 明确区分 AI SDK v6 / v5 / v4；新项目路径要求
+  `ai@^6` 和 `@ai-sdk/react@^3`。
+- assistant-ui v6 runtime 的默认 quickstart 仍示例 `/api/chat`，但也提供
+  `AssistantChatTransport({ api })` 自定义 endpoint；AeloKit 必须覆盖为
+  `/api/ai/chat`。
+- AI SDK docs 当前导航显示 v6 / AI SDK 6.x 为 latest；`useChat` 默认 HTTP
+  endpoint 是 `/api/chat`，AeloKit 不能使用默认 endpoint。
+- AI SDK v6 route 当前使用 `streamText`、`UIMessage`、
+  `convertToModelMessages` 和 `toUIMessageStreamResponse()`。
+- AI SDK persistence docs 建议从存储加载消息后用 `validateUIMessages` 校验，再
+  用 `originalMessages` / `onFinish` 进行保存；AeloKit v0.2 应由 server-side
+  persistence service 做事实来源。
+- OpenAI provider docs 当前包为 `@ai-sdk/openai`，默认 provider instance 可从
+  `@ai-sdk/openai` import，API key 默认读取 `OPENAI_API_KEY`；AeloKit 实现时必须
+  经 `@repo/env/server` 读取 server-only key。
+- OpenAI provider docs 说明自 AI SDK 5 起默认使用 OpenAI Responses API；seed
+  model 和 provider options 必须在 runtime TASK 中重新确认。
+- Mastra docs 将 agents/workflows/tools 定位为 open-ended agent work、
+  workflow steps、tools、memory/MCP/orchestration 等能力；v0.2 first thin chat
+  不需要强制经过 Mastra。
+
+Registry 校验命令：
+
+```bash
+npm view @assistant-ui/react version peerDependencies dependencies --json
+npm view @assistant-ui/react-ai-sdk version peerDependencies dependencies --json
+npm view ai version peerDependencies dependencies --json
+npm view @ai-sdk/react version peerDependencies dependencies --json
+npm view @ai-sdk/openai version peerDependencies dependencies --json
+npm view @mastra/core version peerDependencies dependencies --json
+```
+
+结论：
+
+- TASK-002 可以推荐 first thin chat path 依赖，但不能安装。
+- TASK-003 仍需把安装计划整理为用户可确认的 exact install plan。
+- TASK-003B 前必须重新检查官方 docs 和 registry；若版本或 peer range 变化，应先
+  更新本文件而不是安装。
+- 当前无 blocker。
+
 ## 3. 当前版本观察
 
 通过 `npm view` 读取 registry 元数据，未安装任何依赖：
@@ -64,6 +112,18 @@
 | `zod` | `4.4.3` | `apps/web` already has `zod: ^4.3.6`, satisfying current peers |
 
 Registry versions are not a substitute for user confirmation. Install TASK must re-check.
+
+Current workspace compatibility notes:
+
+- `apps/web` already declares `react: ^19.2.3` and `react-dom: ^19.2.3`; current
+  assistant-ui and `@ai-sdk/react` peer ranges accept React 19.
+- `apps/web` already declares `zod: ^4.3.6`; current AI SDK, OpenAI provider and
+  Mastra peer ranges accept Zod 4. `@assistant-ui/react` has its own direct
+  `zod: ^4.4.3` dependency, so it does not require changing the app-level Zod
+  version for TASK-002.
+- `apps/web` does not yet declare `@repo/ai`; runtime TASKs that import contracts
+  from `@repo/ai` need `@repo/ai@workspace:*` in `apps/web/package.json`, but only
+  TASK-003B may apply that package change after user confirmation.
 
 ## 4. 推荐安装包
 
@@ -191,6 +251,14 @@ const runtime = useChatRuntime({
 This is mandatory for AeloKit because `/api/chat` is forbidden and
 `/api/ai/chat` is the planned first AI route.
 
+Do not rely on raw `useChat()` defaults. AI SDK v6 docs state the default
+transport posts to `/api/chat`; if raw AI SDK UI is used instead of assistant-ui
+runtime, it must also explicitly configure:
+
+```ts
+new DefaultChatTransport({ api: '/api/ai/chat' })
+```
+
 ## 9. `streamText` 当前用法
 
 AI SDK v6 route shape:
@@ -227,6 +295,11 @@ extend this with current v6-supported options, likely:
 - `onFinish` or equivalent stream completion hook for persistence.
 
 The exact hook shape must be re-confirmed during TASK-008/TASK-009.
+
+For persisted messages loaded from DB, route TASKs should also evaluate
+`validateUIMessages` before converting messages for the model. This keeps stored
+tool calls, metadata, and future custom parts from silently drifting away from
+the current runtime schema.
 
 ## 11. Message shape / UI message shape
 
@@ -348,6 +421,9 @@ Mastra becomes appropriate when AeloKit needs:
 - 是否允许新增 `@repo/ai` 到 `apps/web` direct dependencies。
 - 是否需要新增/更新 provider key env schema and `env.example`。
 - 是否需要 Playwright 覆盖首次 chat flow。
+
+TASK-002 已完成官方文档和 registry 研究；上述问题仍需用户在 TASK-003/TASK-003B
+或对应 runtime/schema/UI TASK 前确认，不能由本 TASK 代替确认。
 
 ## 18. 禁止事项
 

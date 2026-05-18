@@ -9,6 +9,9 @@
 默认建议：使用 `@assistant-ui/react@^0.14.5` 和
 `@assistant-ui/react-ai-sdk@^1.3.26`，安装前重新检查官方文档和 npm registry。
 
+TASK-002 研究结论：官方 assistant-ui AI SDK v6 runtime docs 与 registry
+metadata 匹配；当前推荐版本可进入 TASK-003 install plan，但安装前仍需用户确认。
+
 阻塞范围：TASK-003、TASK-003B、TASK-011、TASK-015。
 
 需要用户确认的时机：执行 dependency install 前。
@@ -19,6 +22,10 @@
 
 默认建议：使用 AI SDK v6，当前 assistant-ui 官方 runtime docs 对新项目推荐
 `ai@^6` + `@ai-sdk/react@^3`。
+
+TASK-002 研究结论：AI SDK docs 当前显示 v6 / AI SDK 6.x 为 latest；registry
+当前 `ai@6.0.184`、`@ai-sdk/react@3.0.186` 与 assistant-ui runtime dependency
+range 兼容。TASK-003B 前必须重新检查。
 
 阻塞范围：TASK-003、TASK-003B、TASK-008、TASK-009、TASK-010、TASK-011。
 
@@ -31,6 +38,10 @@
 默认建议：第一版 simple chat 不安装/接入 Mastra runtime，只保留 integration plan；
 等出现真实 agent/tool/workflow orchestration 需求后再安装 `@mastra/core`。
 
+TASK-002 研究结论：Mastra 官方 docs 将 agents/workflows/tools 定位为 agent
+orchestration、workflow、tool、memory/MCP 等场景；v0.2 first thin chat 可以不经过
+Mastra。`@mastra/core@1.35.0` 可作为后续可选项，不进入 first thin chat 默认依赖。
+
 阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008。
 
 需要用户确认的时机：TASK-003 dependency plan 和 TASK-007 runtime skeleton 前。
@@ -42,6 +53,10 @@
 默认建议：首个 provider 只支持 OpenAI direct provider path，避免同时引入多 provider
 policy。
 
+TASK-002 研究结论：官方 AI SDK provider docs 确认可用 `@ai-sdk/openai` direct
+provider path；是否只支持 OpenAI 仍属于产品/范围确认，不由 dependency research
+自动确认。
+
 阻塞范围：TASK-003、TASK-003B、TASK-006、TASK-007、TASK-013。
 
 需要用户确认的时机：dependency install 和 seed provider/model 前。
@@ -51,6 +66,10 @@ policy。
 状态：待确认。
 
 默认建议：使用 `@ai-sdk/openai@^3.0.64` 作为 first provider SDK。
+
+TASK-002 研究结论：registry 当前 `@ai-sdk/openai@3.0.64`，peer dependency
+`zod: ^3.25.76 || ^4.1.8` 与 `apps/web` 当前 `zod: ^4.3.6` 兼容；TASK-003B 前
+仍需重新检查。
 
 阻塞范围：TASK-003、TASK-003B、TASK-007、TASK-008、TASK-013。
 
@@ -62,6 +81,9 @@ policy。
 
 默认建议：v0.2 不同步支持 OpenRouter，避免扩大 provider key、model policy 和 routing
 范围。
+
+TASK-002 研究结论：本轮只确认 OpenAI direct provider path；同步支持 OpenRouter 会扩大
+provider selection、env 和 seed 范围，应保持待确认。
 
 阻塞范围：若用户要求 OpenRouter，则阻塞 TASK-003、TASK-003B、TASK-006、TASK-007。
 
@@ -225,6 +247,9 @@ typecheck/lint/build 和手动/浏览器验证记录。
 默认建议：v0.2 使用 direct OpenAI provider，AI Gateway 作为后续 provider strategy
 评估项；如果改用 Gateway，需要重新确认 env、provider/model seed 和 dependency plan。
 
+TASK-002 研究结论：AI SDK docs 当前同时提供 provider package 和 AI Gateway 入口；
+AeloKit v0.2 first thin chat 推荐 direct OpenAI，避免把 Gateway routing/policy 纳入本期。
+
 阻塞范围：TASK-003、TASK-003B、TASK-006、TASK-007、TASK-008。
 
 需要用户确认的时机：provider strategy 确认时。
@@ -235,6 +260,10 @@ typecheck/lint/build 和手动/浏览器验证记录。
 
 默认建议：v0.2 以 server-side persistence service 为事实来源；assistant-ui
 history adapter 可作为 thread reload support，但不让前端成为 persistence owner。
+
+TASK-002 研究结论：assistant-ui AI SDK v6 history adapter 需要 `withFormat` 才能
+round-trip AI SDK `UIMessage`；AI SDK persistence docs也强调服务端加载、校验、保存。
+因此 v0.2 仍应以 server-side persistence 为事实来源。
 
 阻塞范围：TASK-009、TASK-011。
 
