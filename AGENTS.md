@@ -3,7 +3,7 @@
 本文件是 AeloKit 全仓的 AI 编码 Agent 基线规则。子目录可以用自己的
 `AGENTS.md` 进一步收紧规则，但不得放宽这里的安全、阶段性架构和禁止事项。
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 ## AGENTS.md 优先级
 
@@ -61,6 +61,7 @@ pnpm --filter @repo/db db:generate
 pnpm --filter @repo/db db:migrate
 pnpm --filter @repo/db db:push
 pnpm --filter @repo/db db:studio
+pnpm --filter @repo/db db:enable-pgvector
 pnpm --filter @repo/db typecheck
 pnpm --filter @repo/db lint
 pnpm --filter @repo/db format
@@ -89,6 +90,7 @@ pnpm web:db:generate
 - 共享逻辑、领域服务和 package-owned 能力应放在对应 `packages/*`。
 - Drizzle schema 和真实迁移所有权在 `packages/db/src`。
 - `apps/web/src/db` 是兼容 shim，不是真实 schema 所有权位置。
+- `apps/web/src/ai` 是当前 v0.2/v0.3 web app AI runtime wiring 目录。
 - 事务性邮件 app wiring 位于 `apps/web/src/mail`，可复用模板/组件在 `packages/mail`。
 - 分析脚本注入和 React Provider 仍在 `apps/web/src/analytics`，通用 analytics contracts/helper 在 `packages/analytics`。
 - 静态资源在 `apps/web/public/`，运维脚本在 `apps/web/scripts/`，营销/文档内容在 `apps/web/content/`。
@@ -139,6 +141,51 @@ pnpm web:db:generate
 - TASK-004 不允许把 schema design 写进 dependency research。
 - TASK-005 只有在用户确认 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts`、更新 `packages/db/src/schema.ts` 并生成 migration。
 - AI schema 仍归 `packages/db`，不要把 DB query、schema 或 migration 放进 `packages/ai`。
+
+## v0.3 Mastra Memory / Knowledge Gate
+
+- v0.3 执行入口文档是 `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_*`。
+- v0.3 以现有 `POST /api/ai/chat` 为唯一 chat stream route；不允许创建 `/api/chat`，也不允许替换或绕过 `/api/ai/chat` 主路径。
+- Mastra runtime 只能位于 `apps/web/src/ai/**`；`packages/ai` 仍只放 contracts、types、adapter-compatible types 和 runtime type definitions。
+- v0.3 不允许接 MCP、credits charging、worker/gateway/studio split、完整 agent workflow、完整 knowledge admin 或超出 Scope Freeze 的 v0.4+ 能力。
+- memory/knowledge 默认必须有用户控制开关、用户确认流程或明确产品策略；不得自动静默保存敏感 durable memory。
+- Knowledge source ownership、visibility/access policy、source-to-resource mapping 和 citation/source provenance 不能丢失。
+- AeloKit-owned metadata 只保存产品边界数据、同意/启用状态、归属、可见性、mapping 和 citation rendering metadata；不要扩展成 Mastra memory/RAG internals mirror。
+- 如果 citation/source 采用 response-only metadata，必须记录持久化限制和 provenance 在 stream/UI 中的传递路径。
+
+## v0.3 Env Gate
+
+- v0.3 embedding 配置由 `@repo/env/server` 管理，当前变量包括：`AI_EMBEDDING_PROVIDER`、`AI_EMBEDDING_MODEL`、`AI_EMBEDDING_BASE_URL`、`AI_EMBEDDING_API_KEY`。
+- `AI_EMBEDDING_API_KEY` 未配置时，可按实现策略 fallback 到 `OPENAI_API_KEY`；如果两者都不可用，knowledge ingestion/retrieval 必须标记 blocked，不能假装通过。
+- `DATABASE_URL` 同时影响 Mastra `PostgresStore`、Mastra/PgVector 连接、AI persistence 和 DB/vector 验证；缺失或指向未启用 `vector` extension 的数据库会阻塞 knowledge retrieval。
+- provider secret 和 embedding secret 只能在 server-side runtime 使用，不允许进入 client component、client hook、浏览器 payload 或 `NEXT_PUBLIC_*` 变量。
+- 新增或修改 v0.3 env schema 时必须同步 `env.example` 并运行 `pnpm check:env`；AI Agent 不得修改 `.env` 或真实 secret。
+
+## v0.3 DB / Vector / Script Gate
+
+- `packages/db/scripts/enable-pgvector.ts` 和 `packages/db/scripts/enable-pgvector.sql` 用于启用并验证 PostgreSQL `vector` extension。
+- `pnpm --filter @repo/db db:enable-pgvector` 会修改目标数据库 extension 状态；运行前必须有用户对 DB 操作的明确确认。
+- `pgvector` extension 是 knowledge retrieval / vector storage 的前置条件；未启用时必须把相关 runtime smoke 或 storage/vector 验证标记为 blocked。
+- schema、migration 和真实 DB 所有权仍归 `packages/db`；不要把 schema/migration 写入 `apps/web/src/db` 或 `packages/ai`。
+- `knowledge.schema.ts` 只保存 AeloKit-owned metadata，例如 knowledge source ownership、visibility/access policy、source/document/chunk mapping 和 citation rendering metadata；不要扩展成 Mastra RAG internals mirror。
+- Mastra storage/vector 自己管理的表、schema、index 或 runtime internals 应通过 Mastra 官方能力使用和验证，不要在 AeloKit schema 中重新实现一套完整 RAG engine。
+
+## v0.3 验证要求
+
+v0.3 最终验收必须至少执行：
+
+```bash
+pnpm check:env
+pnpm check:package-exports
+pnpm --filter @repo/ai typecheck
+pnpm --filter @repo/db typecheck
+pnpm --filter @repo/web typecheck
+pnpm --filter @repo/web build
+```
+
+- Runtime Smoke 不能只用代码审查替代；必须覆盖 authenticated `/chat`、普通聊天、memory enable/create/use/delete、knowledge source/retrieval、citation/source UI、`ai_usage` 写入和 credits ledger 无变化。
+- 如果无法完成 authenticated browser smoke，验收报告必须标记 `blocked` 或 `PARTIAL` 并说明原因，不能把 login redirect 截图或代码审查结果标记为 `PASS`。
+- 未运行的命令、未验证的 DB/vector 条件、缺失 embedding key 或未启用 `vector` extension 都必须明确记录，不能伪装成通过。
 
 ## Design System Guardrail
 
@@ -286,6 +333,7 @@ pnpm web:db:generate
 - 自动化测试尚未完整集成到所有 package 脚本中；文档或轻量改动至少做文件范围和边界检查。
 - 添加测试运行器时，将测试文件与功能放在同一目录下，使用 `.test.ts(x)` 或 `.spec.ts(x)` 后缀，并在 PR 中记录相关命令。
 - 数据、schema、migration 变更必须独立任务确认；本规则文档任务不得生成 migration。
+- v0.3 Mastra Memory / Knowledge 相关验收必须遵守 `v0.3 验证要求`，不能用静态代码审查替代 runtime smoke。
 
 ## 提交与合并请求规范
 
@@ -323,6 +371,6 @@ pnpm web:db:generate
 - 不要创建 `/api/chat` 作为 AI chat route。
 - 不要让 provider secret 进入 client。
 - 不要让 usage audit 调用 credits ledger。
-- 不要实现 v0.3+ memory/RAG/MCP/credits charging。
+- 不要把 v0.3 memory/knowledge 扩展成 MCP、credits charging、worker/gateway/studio 或 v0.4+ RAG/agent workflow scope。
 - 不要删除现有 SaaS 功能。
 - 不要私自替换技术栈。

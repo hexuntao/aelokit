@@ -2,6 +2,8 @@
 
 本文件是 Claude Code 使用的仓库规则摘要。若与根目录 `AGENTS.md` 冲突，以根目录 `AGENTS.md` 为准。
 
+最后更新：2026-05-19
+
 ## 项目概述
 
 本项目是一个 pnpm workspace + Turborepo monorepo，当前只有一个应用 `apps/web`。
@@ -50,7 +52,7 @@
 - 共享通知包：`packages/notification/`（`@repo/notification`，notification provider、sendNotification、Discord/Feishu 实现）
 - 分析模块：`apps/web/src/analytics/`（兼容 shim，re-export 自 `@repo/analytics`；React Provider 组件保留在 `apps/web/src/analytics/*.tsx`）
 - 共享分析包：`packages/analytics/`（`@repo/analytics`，analytics types、provider interface、config helpers、event names、client/server helpers）
-- 未来 AI runtime wiring：`apps/web/src/ai/`（仅在 v0.2 对应 TASK 授权后创建）
+- AI runtime wiring：`apps/web/src/ai/`（当前 v0.2/v0.3 runtime wiring，包含 provider、Mastra、memory、knowledge、policy 等 app-local 能力）
 - AI contracts 包：`packages/ai/`（`@repo/ai`，v0.1 已创建；只放 contracts/types/adapters/runtime-types）
 - 配置文件：`apps/web/src/config/`
 - 共享配置包：`packages/config/`（`@repo/config`，`websiteConfig` 的来源）
@@ -96,6 +98,12 @@ pnpm --filter @repo/web db:studio
 pnpm --filter @repo/web email
 pnpm --filter @repo/web lint
 pnpm --filter @repo/web format
+```
+
+DB 包命令：
+
+```bash
+pnpm --filter @repo/db db:enable-pgvector
 ```
 
 Monorepo 级命令：
@@ -173,6 +181,23 @@ pnpm web:db:generate
 - TASK-005 只有在用户确认 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts`、更新 `packages/db/src/schema.ts` 并生成 migration。
 - AI schema 仍归 `packages/db`，不要把 DB query、schema 或 migration 放进 `packages/ai`。
 
+## v0.3 Mastra Memory / Knowledge Gate
+
+- v0.3 执行入口文档是 `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_*`。
+- Mastra runtime 只能在 `apps/web/src/ai/**`；`packages/ai` 仍只放 contracts/types/adapters/runtime-types。
+- `/api/ai/chat` 仍是唯一 chat stream route；不要创建 `/api/chat`，不要绕过 v0.2 persistence 和 usage audit。
+- v0.3 不接 MCP、credits charging、worker/gateway/studio split 或超出 Scope Freeze 的 v0.4+ 能力。
+- memory/knowledge 必须有用户控制开关、确认流程或明确产品策略；knowledge source ownership、visibility 和 citation provenance 不能丢失。
+- `knowledge.schema.ts` 只保存 AeloKit-owned metadata，不要扩展成 Mastra RAG internals mirror。
+
+## v0.3 Env / PgVector / Validation
+
+- Embedding env 在 `@repo/env/server`：`AI_EMBEDDING_PROVIDER`、`AI_EMBEDDING_MODEL`、`AI_EMBEDDING_BASE_URL`、`AI_EMBEDDING_API_KEY`；`AI_EMBEDDING_API_KEY` 可 fallback 到 `OPENAI_API_KEY`。
+- `DATABASE_URL` 会影响 Mastra `PostgresStore`、PgVector 和 runtime smoke；provider/embedding secrets 不允许进入 client。
+- `packages/db/scripts/enable-pgvector.ts` 和 `.sql` 用于启用 `vector` extension；`pgvector` 是 knowledge retrieval 前置条件，运行 DB extension 脚本前必须有用户确认。
+- v0.3 验证至少运行：`pnpm check:env`、`pnpm check:package-exports`、`pnpm --filter @repo/ai typecheck`、`pnpm --filter @repo/db typecheck`、`pnpm --filter @repo/web typecheck`、`pnpm --filter @repo/web build`。
+- Runtime Smoke 不能只用代码审查替代；无法完成 authenticated browser smoke 时必须标记 blocked/PARTIAL，不能标记 PASS。
+
 ## UI / Design System 边界规则
 
 - 当前没有 `packages/ui`，也没有 `packages/design-system`。
@@ -197,7 +222,7 @@ pnpm web:db:generate
 - 不要创建 `/api/chat` 作为 AI chat route
 - 不要让 provider secret 进入 client
 - 不要让 usage audit 调用 credits ledger
-- 不要实现 v0.3+ memory/RAG/MCP/credits charging
+- 不要把 v0.3 memory/knowledge 扩展成 MCP、credits charging、worker/gateway/studio 或 v0.4+ RAG/agent workflow scope
 - 不要改技术栈
 - 不要删除现有功能
 - 不要移除 `[locale]` 路由结构
@@ -301,6 +326,7 @@ pnpm web:db:generate
 - `process.env.NODE_ENV` 可以保留
 - 允许保留的 `process.env`：`NODE_ENV`、`SKIP_ENV_VALIDATION`、平台变量（如 `DOCKER_BUILD`、`DISABLE_IMAGE_OPTIMIZATION`）
 - 新增环境变量必须同步更新：schema + env.example + 运行 `pnpm check:env`
+- AI provider key 和 embedding key 必须走 server env，不允许进入 client
 
 ## Agent skills
 
