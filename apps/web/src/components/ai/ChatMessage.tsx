@@ -4,7 +4,15 @@ import type {
   MessageState,
   ThreadAssistantMessagePart,
 } from '@assistant-ui/react';
-import { User, Bot, FileText, LinkIcon, Wrench, Brain } from 'lucide-react';
+import {
+  User,
+  Bot,
+  FileText,
+  LinkIcon,
+  Wrench,
+  Brain,
+  BookOpen,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
@@ -37,6 +45,26 @@ function getToolStatusLabel(
     return 'complete';
   }
   return 'running';
+}
+
+function getProvenanceLabel(provenance: string): string {
+  if (provenance.startsWith('manual-note:')) {
+    return 'Manual entry';
+  }
+  if (provenance.startsWith('http://') || provenance.startsWith('https://')) {
+    return 'URL';
+  }
+  if (provenance.startsWith('uploaded:')) {
+    return 'Uploaded document';
+  }
+  return 'Source';
+}
+
+function formatScore(score: number): string {
+  if (score >= 0.9) return 'High';
+  if (score >= 0.7) return 'Good';
+  if (score >= 0.5) return 'Moderate';
+  return 'Low';
 }
 
 function MessagePart({
@@ -87,7 +115,57 @@ function MessagePart({
         </div>
       );
     }
-    case 'source':
+    case 'source': {
+      const partAny = part as Record<string, unknown>;
+      const sourceId = partAny.sourceId as string | undefined;
+      const title = partAny.title as string | undefined;
+      const provenance = partAny.provenance as string | undefined;
+      const score = partAny.score as number | undefined;
+      const provider = partAny.provider as string | undefined;
+
+      const hasKnowledgeMetadata = sourceId && provenance;
+
+      if (hasKnowledgeMetadata) {
+        const provenanceLabel = getProvenanceLabel(provenance!);
+        const scoreLabel = score !== undefined ? formatScore(score) : null;
+        const isUrl =
+          provenance!.startsWith('http://') ||
+          provenance!.startsWith('https://');
+
+        return (
+          <div className="rounded-md border bg-background/70 px-3 py-2 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <BookOpen className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate font-medium">
+                  {title || sourceId}
+                </span>
+              </div>
+              {scoreLabel && (
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {scoreLabel} relevance
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>{provenanceLabel}</span>
+              {isUrl && (
+                <a
+                  href={provenance}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 underline-offset-2 hover:underline"
+                >
+                  <LinkIcon className="size-3" />
+                  <span>Open link</span>
+                </a>
+              )}
+              {provider && <span className="opacity-60">via {provider}</span>}
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex items-center gap-2 rounded-md border bg-background/70 px-3 py-2 text-xs">
           <LinkIcon className="size-3.5 text-muted-foreground" />
@@ -105,6 +183,7 @@ function MessagePart({
           )}
         </div>
       );
+    }
     case 'file':
     case 'image':
       return (

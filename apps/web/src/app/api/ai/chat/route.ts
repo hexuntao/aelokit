@@ -397,6 +397,7 @@ export async function POST(req: Request) {
             messageId: assistantMessageId,
             providerId: resolvedModel.reference.providerId,
             modelId: resolvedModel.reference.modelId,
+            knowledgeEnabled,
           };
         }
         if (part.type === 'finish') {
@@ -411,6 +412,9 @@ export async function POST(req: Request) {
             outputTokens: totalUsage
               ? (totalUsage as any).completionTokens
               : undefined,
+            citations:
+              knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
+            knowledgeEnabled,
           };
         }
         return undefined;

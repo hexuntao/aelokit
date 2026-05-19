@@ -6,9 +6,17 @@ import { ChatComposer } from './ChatComposer';
 import { ChatErrorState } from './ChatErrorState';
 import { useChatContext } from './ChatProvider';
 import { MemorySidebar, MemoryToggleButton } from './MemorySidebar';
+import { CitationList, CitationSummary } from './CitationList';
 
 function ChatContent() {
-  const { error, errorType, errorMetadata, memoryEnabled } = useChatContext();
+  const {
+    error,
+    errorType,
+    errorMetadata,
+    memoryEnabled,
+    lastCitations,
+    knowledgeEnabled,
+  } = useChatContext();
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
@@ -16,9 +24,19 @@ function ChatContent() {
         <div className="flex items-center gap-2">
           <MemoryToggleButton />
         </div>
-        <MemorySidebar />
+        <div className="flex items-center gap-3">
+          {lastCitations.length > 0 && (
+            <CitationSummary citations={lastCitations} />
+          )}
+          <MemorySidebar />
+        </div>
       </div>
       <ChatThread />
+      {knowledgeEnabled && lastCitations.length > 0 && (
+        <div className="border-t px-4 py-3 bg-muted/30">
+          <CitationList citations={lastCitations} />
+        </div>
+      )}
       {error && (
         <ChatErrorState
           error={error}

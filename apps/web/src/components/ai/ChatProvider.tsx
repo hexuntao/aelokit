@@ -17,6 +17,7 @@ import {
 } from 'react';
 import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
+import type { CitationMetadata } from './CitationList';
 
 const API_URL = '/api/ai/chat';
 
@@ -36,6 +37,8 @@ type ChatMessageMetadata = {
   readonly totalTokens?: number;
   readonly inputTokens?: number;
   readonly outputTokens?: number;
+  readonly citations?: readonly CitationMetadata[];
+  readonly knowledgeEnabled?: boolean;
 };
 
 type AeloKitUIMessage = UIMessage<ChatMessageMetadata>;
@@ -55,6 +58,8 @@ interface ChatContextType {
   threadId?: string;
   memoryEnabled: boolean;
   setMemoryEnabled: (enabled: boolean) => void;
+  lastCitations: readonly CitationMetadata[];
+  knowledgeEnabled: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -78,6 +83,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
   const [threadId, setThreadId] = useState<string | undefined>();
   const [memoryEnabled, setMemoryEnabledState] = useState<boolean>(false);
+  const [lastCitations, setLastCitations] = useState<
+    readonly CitationMetadata[]
+  >([]);
+  const [knowledgeEnabled, setKnowledgeEnabled] = useState<boolean>(false);
   const threadIdRef = useRef<string | undefined>(undefined);
   const selectedModelIdRef = useRef(selectedModelId);
   const memoryEnabledRef = useRef(memoryEnabled);
@@ -136,6 +145,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (responseThreadId) {
         setThreadId(responseThreadId);
       }
+
+      const citations = message.metadata?.citations;
+      if (citations && Array.isArray(citations)) {
+        setLastCitations(citations);
+      } else {
+        setLastCitations([]);
+      }
+
+      const knowledgeEnabledMeta = message.metadata?.knowledgeEnabled;
+      setKnowledgeEnabled(knowledgeEnabledMeta === true);
     },
     onError: (runtimeError) => {
       const chatError = runtimeError as ChatError;
@@ -158,6 +177,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           threadId,
           memoryEnabled,
           setMemoryEnabled,
+          lastCitations,
+          knowledgeEnabled,
         }}
       >
         {children}
