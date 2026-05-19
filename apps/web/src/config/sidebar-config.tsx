@@ -11,6 +11,7 @@ import {
   KeyIcon,
   LayoutDashboardIcon,
   LockKeyholeIcon,
+  MessageCircleIcon,
   Settings2Icon,
   SettingsIcon,
   UsersRoundIcon,
@@ -35,6 +36,12 @@ export function useSidebarLinks(): NestedMenuItem[] {
   const isDemo = isDemoWebsite();
 
   return [
+    {
+      title: t('chat.title'),
+      icon: <MessageCircleIcon className="size-4 shrink-0" />,
+      href: Routes.Chat,
+      external: false,
+    },
     {
       title: t('dashboard.title'),
       icon: <LayoutDashboardIcon className="size-4 shrink-0" />,

@@ -29,6 +29,9 @@ export enum Routes {
   // dashboard routes
   Dashboard = '/dashboard',
 
+  // ai chat routes
+  Chat = '/chat',
+
   // admin routes
   AdminUsers = '/admin/users',
 
@@ -54,6 +57,7 @@ export const routesNotAllowedByLoggedInUsers = [Routes.Login, Routes.Register];
  */
 export const protectedRoutes = [
   Routes.Dashboard,
+  Routes.Chat,
   Routes.AdminUsers,
   Routes.SettingsProfile,
   Routes.SettingsBilling,

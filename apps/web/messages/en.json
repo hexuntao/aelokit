@@ -415,6 +415,9 @@
     }
   },
   "Dashboard": {
+    "chat": {
+      "title": "Chat"
+    },
     "dashboard": {
       "title": "Workspace"
     },

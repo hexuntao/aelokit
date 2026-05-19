@@ -415,6 +415,9 @@
     }
   },
   "Dashboard": {
+    "chat": {
+      "title": "聊天"
+    },
     "dashboard": {
       "title": "工作台"
     },
