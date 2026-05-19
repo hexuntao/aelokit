@@ -799,7 +799,9 @@ Rollback considerations:
 
 Why excluded:
 
-- Memory/RAG tables are v0.3 and not required for first chat persistence.
+- Mastra-first memory/knowledge metadata belongs to v0.3 and is not required
+  for first chat persistence; v0.2 must not add self-built memory/RAG/vector
+  schema.
 - MCP credential tables are v0.4 and would expand security scope.
 - Credits settlement/cost event tables are v0.5 and would turn audit into billing
   before semantics are stable.

@@ -494,7 +494,7 @@ docs(ai): design minimal chat persistence schema
 
 - 不运行 db push。
 - 不修改 credits/payment。
-- 不加入 v0.3 memory/knowledge/RAG tables。
+- 不加入 v0.3 Mastra-first memory/knowledge metadata，也不加入自建 memory/RAG/vector schema。
 
 ### 前置条件
 
@@ -1506,7 +1506,8 @@ Required only if validation discovers dependency/API mismatch.
 
 - New dependencies.
 - New schema/migration.
-- v0.3+ memory/RAG/MCP/credits settlement.
+- v0.3+ Mastra-first memory/knowledge metadata, self-built RAG/vector schema,
+  MCP, or credits settlement.
 - CI/CD config unless separately confirmed.
 
 ### 实现要求

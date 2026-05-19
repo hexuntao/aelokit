@@ -56,10 +56,11 @@ docs/
 Current important observations:
 
 - `apps/web/src/components` owns current UI, including `ui/`, `magicui/`, `animate-ui/`, `tailark/`, business components, dashboard, settings, docs, pricing, auth, and admin components.
-- There is intentionally no current `packages/ui`, `packages/design-system`, or `packages/ai`.
-- There is currently no `apps/web/src/ai`, `apps/web/src/components/ai`, or `apps/web/src/app/api/ai`; these are future app-layer runtime and UI locations.
+- There is intentionally no current `packages/ui` or `packages/design-system`.
+- `packages/ai` now exists as the v0.1 contracts foundation and must remain contracts/adapters/runtime-types only.
+- `apps/web/src/ai`, `apps/web/src/components/ai`, and `apps/web/src/app/api/ai/chat` now host the v0.2 chat path; v0.3 should enhance that path rather than replace it.
 - `apps/web/src/db/*`, `apps/web/src/payment/*`, `apps/web/src/credits/*`, `apps/web/src/mail/*`, `apps/web/src/newsletter/*`, `apps/web/src/notification/*`, `apps/web/src/storage/*`, and `apps/web/src/analytics/*` include compatibility shims or app-specific wiring. True domain ownership remains in `packages/*`.
-- `packages/env` already includes optional AI provider keys, but no AI runtime package has been created.
+- AI provider keys remain server-only through env validation; app runtime wiring must not expose provider secrets to client code.
 
 ---
 
@@ -80,7 +81,7 @@ Current planning should assume:
 
 - **assistant-ui** owns the chat UI layer.
 - **Vercel AI SDK** owns streaming/runtime protocol, `UIMessage`, UI runtime connection, model-provider interface, token usage metadata, and route-level stream response primitives.
-- **Mastra** owns Agent / Tool / Workflow / Memory / RAG / MCP orchestration when AeloKit needs deeper agent runtime behavior than a direct AI SDK route.
+- **Mastra** owns Agent / Tool / Workflow runtime and, from v0.3, memory runtime, conversation history, working memory, semantic recall, memory processors, document chunking, embedding, vector retrieval, and rerank/RAG pipeline. AeloKit wires Mastra from the app layer and does not place Mastra runtime in `packages/ai`.
 - **CopilotKit / AG-UI** are future optional extension points. They are not part of Current Task and should not enter v0.1 implementation.
 
 Current version snapshot checked on 2026-05-18:
@@ -177,7 +178,7 @@ scripts/
 | `packages/shared` | Shared pure helpers | Utilities, constants, generic types, low-level hooks/context | Business domains, DB access, auth session | Already exists | Minimal external deps only | Current |
 | `packages/env` | Env validation | Server/client/shared env schema, workspace env loading | Business config, direct provider clients | Already exists | No `@repo/*` deps | Current |
 | `packages/i18n` | i18n helper package | Routing, message merging, docs i18n helpers, hreflang, URL helpers | App copy ownership, page content, app navigation state | Already exists | `config`, `env`, `next-intl` | Current |
-| `packages/db` | Database ownership | Drizzle schema, migrations, DB connection, DB types, future minimal AI persistence schema | App route handlers, UI, provider clients, AI runtime execution | Already exists; minimal AI schema may be added in v0.2 after schema confirmation | `env`, Drizzle, postgres | Current |
+| `packages/db` | Database ownership | Drizzle schema, migrations, DB connection, DB types, v0.2 minimal AI persistence schema, future AeloKit-owned AI metadata | App route handlers, UI, provider clients, AI runtime execution, Mastra memory/RAG internals | Already exists | `env`, Drizzle, postgres | Current |
 | `packages/auth` | Auth core | Better Auth server/client helpers, auth types, app callback contracts | App-specific email, credits, newsletter side effects | Already exists | `config`, `db`, `env`, `shared` | Current |
 | `packages/payment` | Payment domain | Provider interface, Stripe/Creem providers, checkout/portal/webhook helpers | Credits ledger ownership, auth session lookup, UI | Already exists | `config`, `db`, `env`, `shared` | Current |
 | `packages/credits` | Credits domain | Credit balance, ledger, transaction types, distribution helpers | Payment provider integration, UI, AI runtime orchestration | Already exists | `config`, `db` | Current |
@@ -186,7 +187,7 @@ scripts/
 | `packages/notification` | System notifications | Provider interface, payment/credit notification service | App routes, user-facing inbox, analytics | Already exists | `config`, `env` | Current |
 | `packages/storage` | Object storage | S3/R2 provider, upload/delete service, provider config | Browser upload UI, API route auth | Already exists | `config`, `env`, `s3mini` | Current |
 | `packages/analytics` | Analytics contracts/helpers | Event names, provider contracts, config helpers, client/server-safe helpers | React providers, script injection, dashboard analytics UI | Already exists | `config`, `env` | Current |
-| `packages/ai` | AI infrastructure core | Provider/model/agent/tool/skill/MCP/memory/knowledge contracts, usage/cost/error/permission types, runtime type definitions, lightweight AI SDK/Mastra adapter type surfaces | React UI, route handlers, Next cookies/session, app pages, DB queries, provider SDK initialization, live AI SDK/Mastra runtime execution | After v0.1 scope freeze | `config`, `env`, `shared`, optional adapter type dependencies; no `apps/web` | v0.1 |
+| `packages/ai` | AI infrastructure core | Provider/model/agent/tool/skill/MCP/memory/knowledge contracts, usage/cost/error/permission types, runtime type definitions, lightweight AI SDK/Mastra adapter type surfaces | React UI, route handlers, Next cookies/session, app pages, DB queries, provider SDK initialization, live AI SDK/Mastra runtime execution, Mastra memory/RAG runtime, vector abstraction, reranker, workflow engine | Already exists as v0.1 contracts foundation | `config`, `env`, `shared`, optional adapter type dependencies; no `apps/web` | v0.1 |
 | `packages/design-system` | Product design system | Primitives, blocks, marketing/docs/AI/dashboard/forms/layouts/icons/tokens/styles/hooks/utils | DB, payment, credits, auth session, server actions, route handlers | After design-system scope freeze and component dependency audit | `shared`, React, styling deps; optional `i18n` only if explicitly designed | v0.7 |
 | `packages/api-client` | Typed API client | Public API client, internal typed fetch wrappers, generated contract consumers | Server-only domain logic, direct DB access | After `apps/gateway` or public API contracts exist | Future `contracts`, `auth` token conventions | v0.6+ |
 | `packages/logger` | Logging abstraction | Logger interface, structured log fields, redaction helpers | UI, analytics dashboards, persistence by itself | When worker/gateway need consistent logs | `env`, maybe `shared` | v0.6+ |
@@ -251,7 +252,7 @@ Do not do:
 - Credits billing integration or credits ledger mutation.
 - App split.
 
-### v0.2: assistant-ui + AI SDK + Mastra Chat + Minimal Persistence
+### v0.2: assistant-ui + Vercel AI SDK Chat + Minimal Persistence
 
 Create the first app-layer AI chat path in `apps/web`:
 
@@ -274,19 +275,29 @@ Do not do:
 - MCP marketplace.
 - Per-agent advanced model policy, BYOK, team model policy, or complete model capability/pricing management UI.
 
-### v0.3: Memory + Knowledge Base
+### v0.3: Mastra-first Memory + Knowledge Integration
 
-Extend the v0.2 chat persistence model after schema scope freeze:
+Enhance the existing v0.2 `/api/ai/chat` path with Mastra-owned memory and retrieval context after a v0.3 scope freeze:
 
-- Memory contracts and persistence.
-- User memory, agent memory, project memory, and thread summaries.
-- Knowledge documents/chunks/embeddings/retrieval metadata.
-- Sources and citations.
-- Storage relationship for attachments and knowledge source files.
-- Schema extensions for `ai_memory`, `ai_thread_summary`, `ai_knowledge_base`, `ai_knowledge_document`, `ai_knowledge_chunk`, `ai_embedding`, `ai_mcp_server`, `ai_mcp_tool`, and `ai_mcp_credential`.
+- Keep v0.1 `@repo/ai` contracts/adapters/runtime-types unchanged.
+- Keep v0.2 assistant-ui + Vercel AI SDK chat + minimal persistence unchanged.
+- Wire Mastra memory/retrieval through `apps/web/src/ai` into the existing `POST /api/ai/chat` route.
+- Mastra owns memory runtime, conversation history, working memory, semantic recall, memory processors, document chunking, embedding, vector retrieval, rerank/RAG pipeline, and future agent/workflow/tool orchestration.
+- AeloKit owns auth/session/user identity, route access control, user consent, memory enable/disable policy, knowledge source ownership metadata, UI entry/display, citation/source rendering, usage audit, v0.2 chat persistence, and future credits boundary.
+- Add only AeloKit-owned metadata or persistence extensions after explicit schema/migration confirmation.
 
 Do not do:
 
+- Self-built complete memory engine.
+- Self-built complete RAG pipeline.
+- Self-built vector abstraction.
+- Self-built reranker.
+- Self-built workflow engine.
+- Mastra runtime inside `packages/ai`.
+- `/api/chat` or a rewrite of `POST /api/ai/chat`.
+- MCP integration.
+- Credits charging.
+- Worker/gateway/studio split.
 - App split.
 - Public gateway.
 - Full Studio.
@@ -365,7 +376,7 @@ Do not let optional protocols drive core v0.1-v0.5 architecture.
 | Premature app split | Duplicate auth/env/i18n/build config, unstable deploys | Keep `apps/web` as host until clear split criteria are met |
 | `packages/ai` becomes a junk package | Mixed UI, routes, DB access, runtime side effects | Restrict to contracts, registries, adapters, types, errors, permissions |
 | Design system becomes narrow or too coupled | Either only button/card/dialog, or business components leak into package | Use `packages/design-system` with explicit product-level boundaries |
-| AI schema added before the right phase | Migration churn and broken data contracts | Freeze the minimal data model in v0.1, create only minimal chat persistence in v0.2 after confirmation, then extend memory/knowledge in v0.3 |
+| AI schema added before the right phase | Migration churn and broken data contracts | Freeze the minimal data model in v0.1, create only minimal chat persistence in v0.2 after confirmation, then add only AeloKit-owned memory/knowledge metadata in v0.3 after Mastra-first scope freeze |
 | Credits charging before usage semantics are stable | Incorrect billing or user trust issues | Start with usage/cost records, then add reservation/settlement |
 | MCP/tool permissions are under-modeled | Security issues and unexpected side effects | Tool permission contracts before enabling user tools |
 | Codex over-executes future plan | Future directories/configs created during planning | Keep planning docs explicit: future structure is not current implementation |

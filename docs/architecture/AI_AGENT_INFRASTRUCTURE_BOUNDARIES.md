@@ -20,6 +20,8 @@ packages/db/src/ai.schema.ts = AI database schema; minimal chat persistence may 
 
 None of these future paths should be created during Current Task.
 
+v0.3 is Mastra-first Memory + Knowledge Integration. It enhances the existing `POST /api/ai/chat` path with Mastra memory/retrieval context; it does not rewrite v0.1 contracts, replace v0.2 chat, create `/api/chat`, or move Mastra runtime into `packages/ai`.
+
 ---
 
 ## 2. `packages/ai` Boundary
@@ -59,6 +61,9 @@ None of these future paths should be created during Current Task.
 - Provider SDK initialization.
 - Real Vercel AI SDK runtime calls.
 - Real Mastra agent instances.
+- Mastra memory/RAG runtime.
+- Vector abstraction or reranker implementation.
+- Workflow engine implementation.
 
 v0.1 boundary:
 
@@ -100,7 +105,9 @@ It may own:
 - Connecting `packages/ai` contracts to `@repo/auth`, `@repo/storage`, `@repo/db`, and `@repo/analytics`.
 - Connecting to `@repo/credits` only when v0.5 usage/credits semantics are approved.
 - Wiring Mastra runtime instances for web app use.
+- Wiring Mastra memory and knowledge retrieval into the existing `/api/ai/chat` path in v0.3.
 - Selecting the system default model and v0.2 user-level model setting for app routes.
+- Enforcing user consent, memory enable/disable policy, and route access control before memory/retrieval context is used.
 - App-specific policy decisions, such as free-plan limits.
 
 It should not own:
@@ -110,6 +117,10 @@ It should not own:
 - DB schema definitions.
 - Reusable tool/skill type definitions that another app should consume.
 - Package-level provider abstractions.
+- A self-built memory engine.
+- A self-built complete RAG pipeline.
+- A self-built vector abstraction or reranker.
+- A self-built workflow engine.
 
 ---
 
@@ -125,6 +136,7 @@ They may own:
 - Auth/session checks.
 - Request validation.
 - Locale and request context extraction.
+- v0.3 memory/retrieval context injection through `apps/web/src/ai`, without replacing the existing chat route.
 - Usage audit persistence after completion.
 - Credit preflight/reservation hooks only in v0.5 after usage semantics are stable.
 - Tool permission checks.
@@ -184,16 +196,16 @@ It should own table definitions for:
   - `ai_message_part`.
   - `ai_tool_call`.
   - `ai_usage`.
-- v0.3 memory and knowledge extensions:
-  - `ai_memory`.
-  - `ai_thread_summary`.
-  - `ai_knowledge_base`.
-  - `ai_knowledge_document`.
-  - `ai_knowledge_chunk`.
-  - `ai_embedding`.
-  - `ai_mcp_server`.
-  - `ai_mcp_tool`.
-  - `ai_mcp_credential`.
+- v0.3 AeloKit-owned memory and knowledge metadata, after Mastra-first scope freeze:
+  - User consent and memory enable/disable policy state.
+  - Knowledge source ownership metadata.
+  - Source/citation rendering metadata.
+  - Mappings between v0.2 thread/message persistence and Mastra-managed memory/retrieval resources.
+  - Any durable app metadata required for audit, retention, or access control.
+- v0.4+ MCP persistence, only after MCP scope confirmation:
+  - MCP server config.
+  - MCP tool discovery metadata.
+  - MCP credential references.
 - v0.5 usage/credits/admin audit extensions if needed:
   - Cost events.
   - Credit usage linkage.
@@ -205,12 +217,15 @@ It should not own:
 - UI state.
 - Next.js route handlers.
 - Business process orchestration.
+- Mastra memory, embedding, vector retrieval, rerank, or RAG internals.
 
 Creation conditions:
 
 - v0.1 freezes the AI data model names and relationships in docs/contracts only.
 - v0.2 may create minimal `packages/db/src/ai.schema.ts` for chat persistence after explicit schema/migration confirmation.
-- v0.3 may extend the schema for memory and knowledge after a second scope freeze.
+- v0.3 may add only AeloKit-owned memory/knowledge metadata after a second scope freeze, such as user consent state, memory enable/disable policy state, knowledge source ownership metadata, citation/source rendering metadata, or mappings from v0.2 chat persistence to Mastra-managed memory/retrieval resources.
+- v0.3 must not mirror Mastra internals as a self-built memory engine, vector store abstraction, reranker, or complete RAG pipeline.
+- MCP credential/server/tool persistence belongs to v0.4 or later, not v0.3.
 - Migration impact is reviewed before each schema change.
 - User confirms schema and migration work before files or migrations are created.
 
@@ -281,29 +296,43 @@ Integration points:
 
 ### 7.4 Memory
 
-Owns:
+Mastra owns the runtime behavior:
 
-- User memory.
-- Agent memory.
-- Project memory.
-- Thread summary.
-- Memory write confirmation strategy.
-- Memory deletion strategy.
+- Memory runtime.
+- Conversation history.
+- Working memory.
+- Semantic recall.
+- Memory processors.
+- Thread summary behavior when Mastra is the chosen runtime path.
+
+AeloKit owns the product boundary:
+
+- Auth/session/user identity.
+- User consent.
+- Memory enable/disable policy.
+- Memory UI entry and display.
+- Memory source/audit metadata when needed.
+- v0.2 chat persistence links.
 
 Memory is durable behavioral/context memory. It records things the system may reuse later.
 
 ### 7.5 Knowledge Base
 
-Owns:
+Mastra owns the retrieval pipeline:
 
-- Knowledge base.
-- Documents.
-- Chunks.
-- Embeddings.
-- Retrieval metadata.
-- Sources.
-- Citations.
-- File storage relationships.
+- Document chunking.
+- Embedding.
+- Vector retrieval.
+- Rerank / RAG pipeline.
+
+AeloKit owns the product boundary:
+
+- Knowledge source ownership metadata.
+- Source file relationships through `@repo/storage`.
+- UI entry and display.
+- Citation/source rendering.
+- Access control and user consent.
+- Usage audit.
 
 Knowledge is source-grounded content. It should preserve provenance and citation paths.
 
@@ -399,13 +428,13 @@ Runtime responsibilities should be layered:
 
 ## 9. AI Workflow Modules
 
-Mastra should be used when direct chat routing is not enough:
+Mastra should be used when direct chat routing is not enough. In v0.3, memory and knowledge integration is Mastra-first rather than AeloKit self-building the runtime engines:
 
 - Multi-step tools.
 - Agent workflows.
 - Human-in-the-loop review.
-- Memory-aware agents.
-- RAG pipelines.
+- Memory runtime, conversation history, working memory, semantic recall, and memory processors.
+- Document chunking, embedding, vector retrieval, rerank, and RAG pipeline.
 - MCP-connected tools.
 - Long-running workflow runs.
 

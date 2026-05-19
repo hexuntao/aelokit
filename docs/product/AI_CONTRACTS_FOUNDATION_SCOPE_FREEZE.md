@@ -461,9 +461,9 @@ ai_usage ─── auth.user
 
 以下内容不在 v0.2 minimal schema 范围内：
 
-- **Memory persistence tables**：属于 v0.3。
-- **Knowledge base tables**：属于 v0.3。
-- **Embedding tables**：属于 v0.3。
+- **Memory integration metadata**：属于 v0.3 Mastra-first scope，不代表自研完整 memory engine。
+- **Knowledge source/citation metadata**：属于 v0.3 Mastra-first scope，不代表自研完整 knowledge base 或 RAG pipeline。
+- **Embedding/vector/rerank internals**：由 Mastra runtime owning，AeloKit 不在 v0.3 自研 vector abstraction 或 reranker。
 - **MCP credential tables**：属于 v0.4。
 - **Cost event / credit settlement tables**：属于 v0.5。
 - **Admin audit UI shape**：不属于 schema 范畴。
@@ -588,14 +588,26 @@ v0.2 才允许在单独确认后处理：
 - minimal chat persistence schema。
 - usage audit persistence。
 
-v0.3 才允许在单独 scope freeze 后处理：
+v0.3 才允许在单独 scope freeze 后处理 Mastra-first Memory + Knowledge Integration：
 
-- Memory persistence。
-- Knowledge base。
-- RAG。
-- Embeddings。
-- Thread summaries。
-- Sources / citations persistence。
+- 在现有 `POST /api/ai/chat` 上增强 Mastra memory/retrieval context。
+- 通过 `apps/web/src/ai` 接入 Mastra runtime，不进入 `packages/ai`。
+- 用户同意、memory enable/disable policy、route access control。
+- Knowledge source ownership metadata。
+- UI entry/display 和 citation/source rendering。
+- usage audit 与 v0.2 chat persistence 的衔接。
+- 必要的 AeloKit-owned metadata persistence，且必须先确认 schema/migration。
+
+v0.3 不允许：
+
+- 自研完整 memory engine。
+- 自研完整 RAG pipeline。
+- 自研 vector abstraction。
+- 自研 reranker。
+- 自研 workflow engine。
+- 把 Mastra runtime 放进 `packages/ai`。
+- 创建 `/api/chat` 或重写 `POST /api/ai/chat`。
+- 接 MCP、credits charging、worker/gateway/studio。
 
 ## 11. 风险与假设
 

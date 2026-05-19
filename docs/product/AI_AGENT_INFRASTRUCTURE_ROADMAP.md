@@ -11,8 +11,8 @@
 ```txt
 Current Task：Monorepo Evolution Planning
 v0.1：AI Contracts + Data Model Foundation
-v0.2：assistant-ui + AI SDK + Mastra Chat + Minimal Persistence
-v0.3：Memory + Knowledge Base
+v0.2：assistant-ui + Vercel AI SDK Chat + Minimal Persistence
+v0.3：Mastra-first Memory + Knowledge Integration
 v0.4：Skills / Tools / MCP
 v0.5：Usage / Credits / Admin Audit
 v0.6：Worker / Gateway / Studio 拆分评估
@@ -125,11 +125,11 @@ Create the reusable AI infrastructure core package with stable contracts, lightw
 
 ---
 
-## v0.2: assistant-ui + AI SDK + Mastra Chat + Minimal Persistence
+## v0.2: assistant-ui + Vercel AI SDK Chat + Minimal Persistence
 
 **Goal**
 
-Add the first working AI chat path inside `apps/web` using assistant-ui and Vercel AI SDK, with Mastra used in-process where agent orchestration is actually needed, and persist the minimal chat data needed for product use.
+Add the first working AI chat path inside `apps/web` using assistant-ui and Vercel AI SDK, with Mastra reserved for agent orchestration only where needed, and persist the minimal chat data needed for product use.
 
 **Scope**
 
@@ -195,48 +195,65 @@ Add the first working AI chat path inside `apps/web` using assistant-ui and Verc
 
 ---
 
-## v0.3: Memory + Knowledge Base
+## v0.3: Mastra-first Memory + Knowledge Integration
 
 **Goal**
 
-Add persistent memory, thread summaries, and source-grounded knowledge base infrastructure on top of the stable chat path.
+Integrate Mastra-owned memory and knowledge retrieval into the existing v0.2 chat path. v0.3 enhances `POST /api/ai/chat`; it does not rewrite v0.1 contracts, replace v0.2 assistant-ui/Vercel AI SDK chat, or create a parallel `/api/chat` route.
 
 **Scope**
 
-- Extend AI DB schema after v0.3 schema scope freeze.
-- Add user memory, agent memory, project memory, and thread summary persistence.
-- Add memory write confirmation and deletion policies.
-- Add thread summary strategy.
-- Add knowledge base, documents, chunks, embeddings, retrieval metadata, sources, citations.
-- Connect source files to `@repo/storage`.
-- Add background job plan for embeddings and summarization.
+- Keep `packages/ai` as the v0.1 contracts foundation: contracts, adapter-compatible types, and runtime type definitions only.
+- Keep v0.2 assistant-ui + Vercel AI SDK chat + minimal persistence unchanged.
+- Enhance the existing `/api/ai/chat` route with Mastra memory and retrieval context through `apps/web/src/ai` app runtime wiring.
+- Use Mastra as the owner of memory runtime, conversation history, working memory, semantic recall, memory processors, document chunking, embedding, vector retrieval, rerank/RAG pipeline, and future agent/workflow/tool orchestration.
+- Keep AeloKit responsible for auth/session/user identity, route access control, user consent, memory enable/disable policy, knowledge source ownership metadata, UI entry and display, citation/source rendering, usage audit, v0.2 chat persistence, and the future credits boundary.
+- Connect knowledge source files through `@repo/storage` only as AeloKit-owned source ownership and file metadata.
+- Design any AeloKit-owned memory/knowledge metadata or persistence extensions only after a v0.3 scope freeze and explicit schema/migration confirmation.
 
 **Non-goals**
 
+- No self-built complete memory engine.
+- No self-built complete RAG pipeline.
+- No self-built vector abstraction.
+- No self-built reranker.
+- No self-built workflow engine.
+- No Mastra runtime inside `packages/ai`.
+- No rewrite of `POST /api/ai/chat`.
+- No `/api/chat`.
 - No uncontrolled user tool execution.
 - No local stdio MCP.
 - No complete tool marketplace.
 - No credits billing enforcement.
+- No MCP integration.
+- No worker/gateway/studio split.
 - No app split by default.
+- No schema, migration, or lockfile changes without a separate confirmed implementation task.
 
 **Prerequisites**
 
 - v0.2 chat path stable.
-- v0.2 minimal schema and chat persistence are stable.
-- v0.3 schema extensions are reviewed.
-- User confirms migration/schema work.
+- v0.2 login, send message, streaming response, thread/message/message part persistence, and usage audit are stable.
+- v0.2 OpenAI native and OpenAI-compatible relay provider paths are stable.
+- User confirms the v0.3 Mastra-first scope freeze.
+- User confirms dependency changes before any Mastra-related package installation.
+- User confirms migration/schema work before any AeloKit-owned metadata persistence is added.
 - Storage and retention policy are defined.
 
 **Acceptance Criteria**
 
-- Memory and knowledge are separate concepts in code and docs.
-- Knowledge citations can trace back to sources.
-- Memory write/delete policy is documented.
+- v0.3 is documented as Mastra-first Memory + Knowledge Integration.
+- `packages/ai` remains contracts/adapters/runtime-types only and does not initialize or import Mastra runtime.
+- The existing `/api/ai/chat` path remains the chat path and is enhanced with memory/retrieval context.
+- Mastra owns memory runtime, conversation history, working memory, semantic recall, memory processors, document chunking, embedding, vector retrieval, rerank/RAG pipeline, and future agent/workflow/tool orchestration.
+- AeloKit owns auth/session/user identity, route access control, user consent, memory enable/disable policy, knowledge source ownership metadata, UI entry/display, citation/source rendering, usage audit, v0.2 chat persistence, and future credits boundary.
+- Documentation explicitly says v0.3 does not self-build memory, RAG, vector, reranker, or workflow engines.
 - Schema and migrations are generated only after approval.
 
 **Creates app/package?**
 
-- May extend `packages/db/src/ai.schema.ts` with memory and knowledge tables.
+- No new app/package expected.
+- May extend `packages/db/src/ai.schema.ts` only for AeloKit-owned metadata after explicit schema/migration confirmation.
 - Does not create new app/package by default.
 
 **Needs user confirmation?**

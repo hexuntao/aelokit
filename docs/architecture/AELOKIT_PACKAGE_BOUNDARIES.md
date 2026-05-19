@@ -44,7 +44,7 @@ Package boundaries should preserve the current monorepo shape:
 
 | Package | Responsibility | Allowed dependencies | Forbidden dependencies | Suggested exports | Create when | Horizon |
 | --- | --- | --- | --- | --- | --- | --- |
-| `@repo/ai` | Cross-app AI infrastructure core | `@repo/config`, `@repo/env`, `@repo/shared`; lightweight AI SDK/Mastra adapter type dependencies only when confirmed | React UI, assistant-ui components, Next route handlers, cookies, server actions, `apps/web`, dashboard pages, direct session lookup, DB queries, provider SDK initialization, credits ledger mutation, live AI SDK/Mastra runtime execution | `.`, `./providers`, `./models`, `./agents`, `./tools`, `./skills`, `./memory`, `./knowledge`, `./mcp`, `./usage`, `./permissions`, `./errors`, `./adapters/ai-sdk`, `./adapters/mastra`, `./runtime-types` | v0.1 after explicit confirmation and data model freeze | v0.1 |
+| `@repo/ai` | Cross-app AI infrastructure core | `@repo/config`, `@repo/env`, `@repo/shared`; lightweight AI SDK/Mastra adapter type dependencies only when confirmed | React UI, assistant-ui components, Next route handlers, cookies, server actions, `apps/web`, dashboard pages, direct session lookup, DB queries, provider SDK initialization, credits ledger mutation, live AI SDK/Mastra runtime execution, Mastra memory/RAG runtime, vector abstraction, reranker, workflow engine | `.`, `./providers`, `./models`, `./agents`, `./tools`, `./skills`, `./memory`, `./knowledge`, `./mcp`, `./usage`, `./permissions`, `./errors`, `./adapters/ai-sdk`, `./adapters/mastra`, `./runtime-types` | Already exists as v0.1 contracts foundation | v0.1 |
 | `@repo/design-system` | Product-level design system | `@repo/shared`, React, styling deps, icon deps; optional framework adapters by subpath only | DB, auth session, payment logic, credits ledger, server actions, route handlers, hard-bound page queries | `.`, `./ui`, `./blocks`, `./marketing`, `./ai`, `./dashboard`, `./forms`, `./layouts`, `./icons`, `./tokens`, `./styles`, `./hooks`, `./utils` | v0.7 after component audit and extraction scope freeze | v0.7 |
 | `@repo/api-client` | Typed API client and generated contract consumers | Future `contracts`, fetch/runtime-safe helpers, auth token types | Direct DB access, provider SDK implementations, UI pages | `.`, `./client`, `./types`, `./errors`, `./ai`, `./admin` | When `apps/gateway` or public API contracts exist | v0.6+ |
 | `@repo/logger` | Structured logging and redaction | `@repo/env`, `@repo/shared` | UI, analytics dashboards, DB persistence by default | `.`, `./types`, `./server`, `./redaction`, `./fields` | When worker/gateway need consistent logs | v0.6+ |
@@ -89,6 +89,9 @@ It should not own:
 - Direct app billing UI or settings UI.
 - Real Vercel AI SDK runtime calls.
 - Real Mastra agent instances.
+- Mastra memory/RAG runtime.
+- Vector abstraction or reranker implementation.
+- Workflow engine implementation.
 - Provider SDK initialization.
 - DB queries.
 - Credits ledger mutation.
@@ -114,7 +117,9 @@ packages/db/src/ai.schema.ts = AI database schema; minimal chat persistence may 
 
 - v0.1 freezes the minimal AI data model in docs/contracts only.
 - v0.2 may add minimal chat persistence schema: `ai_provider`, `ai_model`, `ai_user_model_setting`, `ai_agent`, `ai_thread`, `ai_message`, `ai_message_part`, `ai_tool_call`, and `ai_usage`.
-- v0.3 may extend the same schema for memory and knowledge: `ai_memory`, `ai_thread_summary`, `ai_knowledge_base`, `ai_knowledge_document`, `ai_knowledge_chunk`, `ai_embedding`, `ai_mcp_server`, `ai_mcp_tool`, and `ai_mcp_credential`.
+- v0.3 may add only AeloKit-owned memory/knowledge metadata after Mastra-first scope freeze, such as consent state, memory enable/disable policy state, knowledge source ownership metadata, citation/source rendering metadata, or links from v0.2 chat persistence to Mastra-managed memory/retrieval resources.
+- v0.3 must not use `packages/db` to recreate Mastra memory internals, document chunking, embeddings, vector retrieval, rerank, or a complete RAG pipeline.
+- MCP server/tool/credential persistence belongs to v0.4 or later, not v0.3.
 - Schema creation and migration generation require explicit user confirmation in their own implementation task.
 
 ---

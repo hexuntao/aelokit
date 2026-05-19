@@ -147,7 +147,7 @@ TASK-003 dependency install plan 后执行。
 
 - `apps/web/src/db/**` 写真实 schema。
 - 未确认运行 db generate / migrate / push。
-- 添加 v0.3 memory/knowledge/RAG tables。
+- 添加 v0.3 Mastra-first memory/knowledge metadata，或任何自建 memory/RAG/vector schema。
 - 添加 v0.4 MCP credential tables。
 - 添加 v0.5 credits settlement tables。
 
