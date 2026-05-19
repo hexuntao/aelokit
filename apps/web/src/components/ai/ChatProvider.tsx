@@ -52,6 +52,8 @@ interface ChatContextType {
   setSelectedModelId: (modelId: string) => void;
   clearError: () => void;
   threadId?: string;
+  memoryEnabled: boolean;
+  setMemoryEnabled: (enabled: boolean) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -72,11 +74,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   );
   const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
   const [threadId, setThreadId] = useState<string | undefined>();
+  const [memoryEnabled, setMemoryEnabled] = useState<boolean>(false);
   const threadIdRef = useRef<string | undefined>(undefined);
   const selectedModelIdRef = useRef(selectedModelId);
+  const memoryEnabledRef = useRef(memoryEnabled);
 
   threadIdRef.current = threadId;
   selectedModelIdRef.current = selectedModelId;
+  memoryEnabledRef.current = memoryEnabled;
 
   const clearError = useCallback(() => {
     setError(null);
@@ -94,6 +99,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             messages,
             threadId: threadIdRef.current,
             modelId: selectedModelIdRef.current || undefined,
+            memoryEnabled: memoryEnabledRef.current,
           },
         }),
       }),
@@ -127,6 +133,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           setSelectedModelId,
           clearError,
           threadId,
+          memoryEnabled,
+          setMemoryEnabled,
         }}
       >
         {children}
