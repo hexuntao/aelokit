@@ -32,6 +32,11 @@ import {
   getMemoryContextForChat,
   isMemoryEnabledForRequest,
 } from '@/ai/memory';
+import {
+  retrieveKnowledgeContext,
+  formatRetrievalContextForPrompt,
+  isKnowledgeRetrievalEnabled,
+} from '@/ai/knowledge';
 
 export const maxDuration = 30;
 
@@ -41,6 +46,7 @@ type ChatRequestBody = {
   readonly modelId?: string;
   readonly tools?: Record<string, unknown>;
   readonly memoryEnabled?: boolean;
+  readonly knowledgeEnabled?: boolean;
 };
 
 function jsonError(error: unknown, status: number): Response {
@@ -98,9 +104,12 @@ export async function POST(req: Request) {
       modelId,
       tools,
       memoryEnabled: requestMemoryEnabled,
+      knowledgeEnabled: requestKnowledgeEnabled,
     }: ChatRequestBody = await req.json();
 
     const memoryEnabled = isMemoryEnabledForRequest(requestMemoryEnabled);
+    const knowledgeEnabled =
+      requestKnowledgeEnabled === true && isKnowledgeRetrievalEnabled();
 
     const lastUserMessage = getLastUserMessage(messages);
     if (!lastUserMessage) {
@@ -255,10 +264,44 @@ export async function POST(req: Request) {
 
     const messagesForModel = [...memoryContextMessages, ...messages];
 
+    // 6.6. Knowledge retrieval context injection (v0.3 TASK-008)
+    let knowledgeContextText = '';
+    let knowledgeCitations: readonly unknown[] = [];
+    let knowledgeChunks: readonly unknown[] = [];
+
+    if (knowledgeEnabled && lastUserMessage) {
+      const userQuery = lastUserMessage.parts
+        .filter(
+          (part): part is { type: 'text'; text: string } => part.type === 'text'
+        )
+        .map((part) => part.text)
+        .join(' ');
+
+      if (userQuery.trim()) {
+        const retrievalResult = await retrieveKnowledgeContext(userQuery, {
+          userId: context.userId,
+          topK: 5,
+          minScore: 0.0,
+          includeOtherUserPublic: false,
+        });
+
+        if (retrievalResult.success && retrievalResult.chunks.length > 0) {
+          knowledgeContextText =
+            formatRetrievalContextForPrompt(retrievalResult);
+          knowledgeCitations = retrievalResult.citations;
+          knowledgeChunks = retrievalResult.chunks;
+        }
+      }
+    }
+
+    const systemPrompt = knowledgeContextText
+      ? `${getSystemPrompt()}\n\n${knowledgeContextText}`
+      : getSystemPrompt();
+
     // 7. Stream text from the model
     const result = streamText({
       model: resolvedModel.model,
-      system: getSystemPrompt(),
+      system: systemPrompt,
       messages: await convertToModelMessages(messagesForModel),
       tools: frontendTools(
         (tools ?? {}) as Parameters<typeof frontendTools>[0]
@@ -270,6 +313,9 @@ export async function POST(req: Request) {
     });
 
     // 8. Return UI message stream response
+    const citationsJson =
+      knowledgeCitations.length > 0 ? JSON.stringify(knowledgeCitations) : '';
+
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       generateMessageId: () => assistantMessageId,
@@ -279,6 +325,9 @@ export async function POST(req: Request) {
         'x-ai-message-id': assistantMessageId,
         'x-ai-memory-enabled': String(memoryEnabled),
         'x-ai-memory-context-count': String(memoryContextMessages.length),
+        'x-ai-knowledge-enabled': String(knowledgeEnabled),
+        'x-ai-knowledge-chunk-count': String(knowledgeChunks.length),
+        ...(citationsJson ? { 'x-ai-knowledge-citations': citationsJson } : {}),
       },
       onFinish: async ({ responseMessage, finishReason, isAborted }) => {
         const status = isAborted ? 'aborted' : 'complete';

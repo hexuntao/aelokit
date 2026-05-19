@@ -35,12 +35,47 @@ export type {
   KnowledgeSourceRecord,
   KnowledgeDocumentRecord,
 } from './ingestion';
+export {
+  retrieveKnowledgeContext,
+  formatRetrievalContextForPrompt,
+  isKnowledgeRetrievalEnabled,
+  RETRIEVAL_WIRED,
+} from './retrieval';
+export type {
+  RetrievedChunk,
+  SourceCitationMetadata,
+  KnowledgeRetrievalResult,
+  KnowledgeRetrievalOptions,
+} from './retrieval';
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const KNOWLEDGE_RETRIEVAL_WIRED = true;
 
-export const KNOWLEDGE_SKELETON_STATUS = 'PARTIAL_UNTIL_WIRED' as const;
-
-export const KNOWLEDGE_SKELETON_NOTE =
-  'This knowledge ingestion service provides minimal manual text source ingestion using Mastra RAG. ' +
-  'Supports chunking, embedding, and vector storage. ' +
-  'Retrieval is NOT wired to chat route - that belongs to TASK-008.';
+export const SOURCE_CITATION_METADATA_SHAPE = {
+  description:
+    'Source/citation metadata shape for knowledge retrieval results. ' +
+    'Each citation includes: sourceId (unique source identifier), ' +
+    'title (human-readable source title), documentId (reference to indexed document), ' +
+    'chunkId (reference to specific chunk), provenance (origin information), ' +
+    'score (relevance score from retrieval), provider (embedding provider used).',
+  fields: {
+    sourceId: 'string - unique identifier for the source',
+    title: 'string - human-readable source title',
+    documentId: 'string - reference to the indexed document',
+    chunkId: 'string - reference to the indexed chunk',
+    provenance:
+      'string - origin information (e.g., "manual-note:sourceId" or URL)',
+    score: 'number - relevance score from vector similarity search',
+    provider:
+      'string - retrieval/embedding provider used (e.g., "openai-embedding")',
+  },
+  persistence: {
+    mode: 'response-only',
+    reason:
+      'Citations are returned in response metadata and stream headers. ' +
+      'They are NOT persisted to ai_message_part by default in v0.3. ' +
+      'TASK-009 may add UI rendering and optional persistence.',
+    provenancePath:
+      'Provenance is carried through stream response headers (x-ai-knowledge-citations) ' +
+      'and can be reconstructed from vector store metadata.',
+  },
+} as const;
