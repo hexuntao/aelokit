@@ -22,6 +22,23 @@ export type AIKnowledgeDocumentStatus =
   | 'archived'
   | 'failed';
 
+export type AIKnowledgeSourceVisibility = 'private' | 'shared' | 'public';
+
+export interface AIKnowledgeSourceOwnership {
+  readonly sourceId: AIKnowledgeSourceId;
+  readonly userId: string;
+  readonly visibility: AIKnowledgeSourceVisibility;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface AIKnowledgeSourceAccessPolicy {
+  readonly sourceId: AIKnowledgeSourceId;
+  readonly ownerUserId: string;
+  readonly visibility: AIKnowledgeSourceVisibility;
+  readonly allowedUserIds?: readonly string[];
+}
+
 export interface AIKnowledgeBaseReference {
   readonly knowledgeBaseId: AIKnowledgeBaseId;
 }
@@ -89,4 +106,29 @@ export interface AIKnowledgeRetrievalReference {
   readonly chunkId: AIKnowledgeChunkId;
   readonly citationId?: AIKnowledgeCitationId;
   readonly retrieval: AIKnowledgeRetrievalMetadata;
+}
+
+export interface AIKnowledgeIngestionConfig {
+  readonly chunkStrategy: 'recursive' | 'character' | 'token' | 'sentence';
+  readonly chunkSize: number;
+  readonly chunkOverlap: number;
+  readonly embeddingModel: string;
+  readonly embeddingDimensions?: number;
+}
+
+export interface AIKnowledgeIngestionResult {
+  readonly sourceId: AIKnowledgeSourceId;
+  readonly documentId: AIKnowledgeDocumentId;
+  readonly chunkCount: number;
+  readonly vectorCount: number;
+  readonly status: 'success' | 'partial' | 'failed';
+  readonly error?: string;
+  readonly indexedAt: string;
+}
+
+export interface AIKnowledgeManualSourceInput {
+  readonly title: string;
+  readonly text: string;
+  readonly userId: string;
+  readonly visibility?: AIKnowledgeSourceVisibility;
 }
