@@ -1,8 +1,8 @@
 'use client';
 
+import { useComposerRuntime, useThread } from '@assistant-ui/react';
 import { AlertCircle, Lock, Server, Clock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useChatContext } from './ChatProvider';
 
 export type ChatErrorType =
   | 'unauthenticated'
@@ -111,7 +111,19 @@ export function ChatErrorState({
   errorCode: propErrorCode,
   metadata,
 }: ChatErrorStateProps) {
-  const { messages, setInput } = useChatContext();
+  const composerRuntime = useComposerRuntime();
+  const lastUserMessageText = useThread((thread) => {
+    const lastUserMessage = [...thread.messages]
+      .reverse()
+      .find((message) => message.role === 'user');
+
+    return (
+      lastUserMessage?.content
+        .filter((part) => part.type === 'text')
+        .map((part) => part.text)
+        .join('\n') ?? ''
+    );
+  });
 
   // Determine error type from props or error code
   let errorType: ChatErrorType = 'unknown';
@@ -142,19 +154,12 @@ export function ChatErrorState({
             <div className="text-sm opacity-90">{config.message}</div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {config.showRetry && messages.length > 0 && (
+            {config.showRetry && lastUserMessageText && (
               <Button
                 variant="secondary"
                 size="sm"
                 className="w-fit"
-                onClick={() => {
-                  const lastUserMessage = [...messages]
-                    .reverse()
-                    .find((m) => m.role === 'user');
-                  if (lastUserMessage) {
-                    setInput(lastUserMessage.content);
-                  }
-                }}
+                onClick={() => composerRuntime.setText(lastUserMessageText)}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try again

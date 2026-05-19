@@ -1,8 +1,8 @@
 'use client';
 
+import { useComposerRuntime } from '@assistant-ui/react';
 import { MessageCircle, Code, Lightbulb, FileText, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useChatContext } from './ChatProvider';
 
 interface QuickPrompt {
   text: string;
@@ -10,7 +10,7 @@ interface QuickPrompt {
 }
 
 export function ChatEmptyState() {
-  const { setInput } = useChatContext();
+  const composerRuntime = useComposerRuntime();
 
   const quickPrompts: QuickPrompt[] = [
     {
@@ -48,7 +48,7 @@ export function ChatEmptyState() {
               key={index}
               variant="secondary"
               className="h-auto py-4 px-6 justify-start text-left hover:bg-muted transition-all group"
-              onClick={() => setInput(prompt.text)}
+              onClick={() => composerRuntime.setText(prompt.text)}
             >
               <Icon className="h-4 w-4 mr-3 text-muted-foreground group-hover:text-primary transition-colors" />
               <span>{prompt.text}</span>

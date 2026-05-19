@@ -7,7 +7,9 @@ import {
   aiMessagePart,
   aiToolCall,
 } from '@repo/db/ai-schema';
+import { nanoid } from 'nanoid';
 import { eq, and, desc, sql } from 'drizzle-orm';
+import type { UIMessage } from 'ai';
 
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 export type MessageStatus = 'streaming' | 'complete' | 'error' | 'aborted';
@@ -70,12 +72,66 @@ export interface PersistenceResult<T> {
   readonly error?: Error;
 }
 
+function createThreadTitle(message?: UIMessage): string | undefined {
+  const text = message?.parts
+    .filter((part) => part.type === 'text')
+    .map((part) => part.text)
+    .join(' ')
+    .trim();
+
+  if (!text) {
+    return undefined;
+  }
+
+  return text.length > 80 ? `${text.slice(0, 77)}...` : text;
+}
+
+export async function ensureThread(options: {
+  readonly threadId?: string;
+  readonly userId: string;
+  readonly providerId?: string;
+  readonly modelId?: string;
+  readonly firstMessage?: UIMessage;
+}): Promise<PersistenceResult<ThreadData>> {
+  if (options.threadId) {
+    const existingThread = await getThread(options.threadId, options.userId);
+    if (!existingThread.success) {
+      return {
+        success: false,
+        error: existingThread.error,
+      };
+    }
+
+    if (!existingThread.data) {
+      return {
+        success: false,
+        error: new Error('Thread not found.'),
+      };
+    }
+
+    return {
+      success: true,
+      data: existingThread.data,
+    };
+  }
+
+  return createThread({
+    userId: options.userId,
+    title: createThreadTitle(options.firstMessage),
+    providerId: options.providerId,
+    modelId: options.modelId,
+    metadata: {
+      runtimeFormat: 'aisdk-v6',
+    },
+  });
+}
+
 export async function createThread(
   options: CreateThreadOptions
 ): Promise<PersistenceResult<ThreadData>> {
   try {
     const db = await getDb();
-    const id = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `thread-${nanoid()}`;
 
     const [thread] = await db
       .insert(aiThread)
@@ -245,7 +301,9 @@ export async function createMessage(
 
     const nextSortOrder = (maxSortOrderResult[0]?.max ?? -1) + 1;
 
-    const id = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `msg-${nanoid()}`;
+    const status = options.status ?? 'complete';
+    const completedAt = status === 'complete' ? new Date() : undefined;
 
     const [message] = await db
       .insert(aiMessage)
@@ -253,17 +311,20 @@ export async function createMessage(
         id,
         threadId: options.threadId,
         role: options.role,
-        status: options.status ?? 'complete',
+        status,
         sortOrder: nextSortOrder,
         metadata: options.metadata ?? {},
         createdAt: new Date(),
+        completedAt,
         parentMessageId: options.parentMessageId,
       })
       .returning();
 
-    await saveMessageParts(id, options.content);
+    await saveMessageParts(id, options.content, {
+      threadId: options.threadId,
+    });
 
-    if (options.status === 'complete') {
+    if (status === 'complete') {
       await db
         .update(aiThread)
         .set({ updatedAt: new Date() })
@@ -289,16 +350,19 @@ export async function createMessage(
   }
 }
 
-async function saveMessageParts(
+export async function saveMessageParts(
   messageId: string,
-  content: unknown
+  content: unknown,
+  options?: {
+    readonly threadId?: string;
+  }
 ): Promise<void> {
   const db = await getDb();
 
   if (!content) return;
 
-  const parts = Array.isArray(content)
-    ? content
+  const parts: Array<UIMessage['parts'][number]> = Array.isArray(content)
+    ? (content as Array<UIMessage['parts'][number]>)
     : [{ type: 'text', text: String(content) }];
 
   for (let i = 0; i < parts.length; i++) {
@@ -306,6 +370,7 @@ async function saveMessageParts(
     let partType: MessagePartType = 'text';
     const partTypeValue = part.type as string;
     const runtimePartType: string = partTypeValue;
+    let toolCallId: string | null = null;
 
     switch (partTypeValue) {
       case 'text':
@@ -327,26 +392,90 @@ async function saveMessageParts(
         partType = 'image';
         break;
       case 'source':
+      case 'source-url':
+      case 'source-document':
         partType = 'source';
         break;
       default:
-        if (partTypeValue.startsWith('tool-')) {
+        if (
+          partTypeValue === 'dynamic-tool' ||
+          partTypeValue.startsWith('tool-')
+        ) {
           partType = 'tool-call';
         } else if (partTypeValue.startsWith('data-')) {
           partType = 'data';
         }
     }
 
+    if (partType === 'tool-call' && options?.threadId) {
+      toolCallId = await persistToolCallFromMessagePart({
+        threadId: options.threadId,
+        messageId,
+        part,
+        runtimePartType,
+      });
+    }
+
     await db.insert(aiMessagePart).values({
-      id: `part-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `part-${nanoid()}`,
       messageId,
       partType,
       runtimePartType,
       content: part as Record<string, unknown>,
+      toolCallId,
       sortOrder: i,
       createdAt: new Date(),
     });
   }
+}
+
+async function persistToolCallFromMessagePart(options: {
+  readonly threadId: string;
+  readonly messageId: string;
+  readonly part: Record<string, unknown>;
+  readonly runtimePartType: string;
+}): Promise<string | null> {
+  const toolCallId =
+    typeof options.part.toolCallId === 'string'
+      ? options.part.toolCallId
+      : `tc-${nanoid()}`;
+  const toolName =
+    typeof options.part.toolName === 'string'
+      ? options.part.toolName
+      : options.runtimePartType.replace(/^tool-/, '');
+  const state =
+    typeof options.part.state === 'string' ? options.part.state : undefined;
+  const status: ToolCallStatus =
+    state === 'output-available'
+      ? 'success'
+      : state === 'output-error' || state === 'output-denied'
+        ? 'error'
+        : state === 'input-streaming'
+          ? 'running'
+          : 'pending';
+
+  const result = await createToolCall({
+    id: toolCallId,
+    threadId: options.threadId,
+    messageId: options.messageId,
+    toolName,
+    status,
+    input:
+      typeof options.part.input === 'object' && options.part.input !== null
+        ? (options.part.input as Record<string, unknown>)
+        : undefined,
+    output:
+      typeof options.part.output === 'object' && options.part.output !== null
+        ? (options.part.output as Record<string, unknown>)
+        : undefined,
+    errorMessage:
+      typeof options.part.errorText === 'string'
+        ? options.part.errorText
+        : undefined,
+    providerExecuted: Boolean(options.part.providerExecuted),
+  });
+
+  return result.success ? (result.data?.id ?? null) : null;
 }
 
 export async function getMessages(
@@ -424,17 +553,20 @@ export async function updateMessageStatus(
 }
 
 export async function createToolCall(options: {
+  readonly id?: string;
   readonly threadId: string;
   readonly messageId: string;
   readonly toolName: string;
   readonly toolId?: string;
   readonly status?: ToolCallStatus;
   readonly input?: Record<string, unknown>;
+  readonly output?: Record<string, unknown>;
+  readonly errorMessage?: string;
   readonly providerExecuted?: boolean;
 }): Promise<PersistenceResult<{ id: string }>> {
   try {
     const db = await getDb();
-    const id = `tc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = options.id ?? `tc-${nanoid()}`;
 
     const [toolCall] = await db
       .insert(aiToolCall)
@@ -446,8 +578,32 @@ export async function createToolCall(options: {
         toolId: options.toolId,
         status: options.status ?? 'pending',
         input: options.input,
+        output: options.output,
         providerExecuted: options.providerExecuted ?? false,
+        errorMessage: options.errorMessage,
+        startedAt:
+          options.status === 'running' || options.status === 'success'
+            ? new Date()
+            : undefined,
+        completedAt:
+          options.status === 'success' || options.status === 'error'
+            ? new Date()
+            : undefined,
         createdAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: aiToolCall.id,
+        set: {
+          status: options.status ?? 'pending',
+          input: options.input,
+          output: options.output,
+          providerExecuted: options.providerExecuted ?? false,
+          errorMessage: options.errorMessage,
+          completedAt:
+            options.status === 'success' || options.status === 'error'
+              ? new Date()
+              : undefined,
+        },
       })
       .returning();
 

@@ -1,6 +1,9 @@
 import 'server-only';
 
 import type { LanguageModel } from 'ai';
+import { and, eq } from 'drizzle-orm';
+import { getDb } from '@/db';
+import { aiModel, aiProvider, aiUserModelSetting } from '@repo/db/ai-schema';
 import type {
   AIModelId,
   AIModelReference,
@@ -36,70 +39,240 @@ const DEFAULT_OPENAI_MODELS: ReadonlyArray<{
   readonly id: AIModelId;
   readonly providerModelId: string;
   readonly isDefault: boolean;
+  readonly displayName: string;
+  readonly capabilities: ReadonlyArray<string>;
+  readonly contextWindowTokens: number;
 }> = [
-  { id: 'gpt-4.1-mini', providerModelId: 'gpt-4.1-mini', isDefault: true },
-  { id: 'gpt-4.1', providerModelId: 'gpt-4.1', isDefault: false },
-  { id: 'gpt-4o-mini', providerModelId: 'gpt-4o-mini', isDefault: false },
-  { id: 'gpt-4o', providerModelId: 'gpt-4o', isDefault: false },
+  {
+    id: 'gpt-4.1-mini',
+    providerModelId: 'gpt-4.1-mini',
+    displayName: 'GPT-4.1 Mini',
+    isDefault: true,
+    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+    contextWindowTokens: 1_047_576,
+  },
+  {
+    id: 'gpt-4.1',
+    providerModelId: 'gpt-4.1',
+    displayName: 'GPT-4.1',
+    isDefault: false,
+    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+    contextWindowTokens: 1_047_576,
+  },
+  {
+    id: 'gpt-4o-mini',
+    providerModelId: 'gpt-4o-mini',
+    displayName: 'GPT-4o Mini',
+    isDefault: false,
+    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+    contextWindowTokens: 128_000,
+  },
+  {
+    id: 'gpt-4o',
+    providerModelId: 'gpt-4o',
+    displayName: 'GPT-4o',
+    isDefault: false,
+    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+    contextWindowTokens: 128_000,
+  },
 ];
 
-function findModelConfig(
+const DEFAULT_PROVIDER_ID = 'openai';
+const DEFAULT_MODEL_ID = 'gpt-4.1-mini';
+
+export async function ensureAIModelCatalog(): Promise<void> {
+  const db = await getDb();
+  const updatedAt = new Date();
+
+  await db
+    .insert(aiProvider)
+    .values({
+      id: DEFAULT_PROVIDER_ID,
+      displayName: 'OpenAI',
+      description: 'OpenAI models for AeloKit v0.2 chat.',
+      documentationUrl: 'https://platform.openai.com/docs/models',
+      capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+      status: 'enabled',
+      sortOrder: 0,
+      createdAt: updatedAt,
+      updatedAt,
+    })
+    .onConflictDoUpdate({
+      target: aiProvider.id,
+      set: {
+        displayName: 'OpenAI',
+        description: 'OpenAI models for AeloKit v0.2 chat.',
+        documentationUrl: 'https://platform.openai.com/docs/models',
+        capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+        status: 'enabled',
+        sortOrder: 0,
+        updatedAt,
+      },
+    });
+
+  for (const [index, model] of DEFAULT_OPENAI_MODELS.entries()) {
+    await db
+      .insert(aiModel)
+      .values({
+        id: model.id,
+        providerId: DEFAULT_PROVIDER_ID,
+        providerModelId: model.providerModelId,
+        displayName: model.displayName,
+        capabilities: model.capabilities,
+        contextWindowTokens: model.contextWindowTokens,
+        status: 'enabled',
+        isDefault: false,
+        sortOrder: index,
+        createdAt: updatedAt,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: aiModel.id,
+        set: {
+          providerId: DEFAULT_PROVIDER_ID,
+          providerModelId: model.providerModelId,
+          displayName: model.displayName,
+          capabilities: model.capabilities,
+          contextWindowTokens: model.contextWindowTokens,
+          status: 'enabled',
+          sortOrder: index,
+          updatedAt,
+        },
+      });
+  }
+
+  const existingDefault = await db
+    .select({ id: aiModel.id })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, DEFAULT_PROVIDER_ID),
+        eq(aiModel.isDefault, true)
+      )
+    )
+    .limit(1);
+
+  if (existingDefault.length === 0) {
+    await db
+      .update(aiModel)
+      .set({ isDefault: true, updatedAt })
+      .where(
+        and(
+          eq(aiModel.providerId, DEFAULT_PROVIDER_ID),
+          eq(aiModel.id, DEFAULT_MODEL_ID)
+        )
+      );
+  }
+}
+
+async function findModelConfig(
   providerId: AIProviderId,
   modelId: AIModelId
-): { readonly providerModelId: string } | null {
-  if (providerId !== 'openai') {
+): Promise<{ readonly providerModelId: string } | null> {
+  const db = await getDb();
+  const [model] = await db
+    .select({
+      id: aiModel.id,
+      providerModelId: aiModel.providerModelId,
+      status: aiModel.status,
+    })
+    .from(aiModel)
+    .where(and(eq(aiModel.providerId, providerId), eq(aiModel.id, modelId)))
+    .limit(1);
+
+  if (!model || model.status !== 'enabled') {
     return null;
   }
-  const config = DEFAULT_OPENAI_MODELS.find((m) => m.id === modelId);
-  return config ? { providerModelId: config.providerModelId } : null;
+
+  return { providerModelId: model.providerModelId };
 }
 
-function getDefaultModelForProvider(
+async function getDefaultModelForProvider(
   providerId: AIProviderId
-): AIModelReference | null {
-  if (providerId !== 'openai') {
+): Promise<AIModelReference | null> {
+  const db = await getDb();
+  const [model] = await db
+    .select({ id: aiModel.id })
+    .from(aiModel)
+    .where(
+      and(
+        eq(aiModel.providerId, providerId),
+        eq(aiModel.isDefault, true),
+        eq(aiModel.status, 'enabled')
+      )
+    )
+    .limit(1);
+
+  if (model) {
+    return { providerId, modelId: model.id };
+  }
+
+  if (providerId !== DEFAULT_PROVIDER_ID) {
     return null;
   }
-  const defaultModel = DEFAULT_OPENAI_MODELS.find((m) => m.isDefault);
-  if (!defaultModel) {
+
+  const fallbackModel = DEFAULT_OPENAI_MODELS.find((m) => m.isDefault);
+  if (!fallbackModel) {
     return null;
   }
-  return { providerId, modelId: defaultModel.id };
+  return { providerId, modelId: fallbackModel.id };
 }
 
-function getSystemDefaultModel(): AIModelReference | null {
-  if (!isProviderAvailable('openai')) {
+async function getSystemDefaultModel(): Promise<AIModelReference | null> {
+  if (!isProviderAvailable(DEFAULT_PROVIDER_ID)) {
     return null;
   }
-  return getDefaultModelForProvider('openai');
+  return getDefaultModelForProvider(DEFAULT_PROVIDER_ID);
 }
 
-export function resolveModel(
+export async function getUserDefaultModelReference(
+  userId: string
+): Promise<AIModelReference | null> {
+  await ensureAIModelCatalog();
+
+  const db = await getDb();
+  const [setting] = await db
+    .select({
+      providerId: aiUserModelSetting.providerId,
+      modelId: aiUserModelSetting.modelId,
+    })
+    .from(aiUserModelSetting)
+    .where(eq(aiUserModelSetting.userId, userId))
+    .limit(1);
+
+  if (!setting) {
+    return null;
+  }
+
+  return {
+    providerId: setting.providerId,
+    modelId: setting.modelId,
+  };
+}
+
+export async function resolveModel(
   threadModel?: AIModelReference,
   userDefaultModel?: AIModelReference
-): ModelResolutionResult {
-  const selectionOrder: ReadonlyArray<{
-    reference: AIModelReference;
-    source: AIModelSelectionSource;
-  }> = [
-    ...(threadModel
-      ? [{ reference: threadModel, source: 'thread' as const }]
-      : []),
-    ...(userDefaultModel
-      ? [{ reference: userDefaultModel, source: 'user-default' as const }]
-      : []),
-  ];
+): Promise<ModelResolutionResult> {
+  await ensureAIModelCatalog();
 
-  for (const { reference, source } of selectionOrder) {
-    const result = tryResolveModel(reference, source);
-    if (result.success) {
-      return result;
+  if (threadModel) {
+    return tryResolveModel(threadModel, 'thread');
+  }
+
+  if (userDefaultModel) {
+    const userDefaultResult = await tryResolveModel(
+      userDefaultModel,
+      'user-default'
+    );
+    if (userDefaultResult.success) {
+      return userDefaultResult;
     }
   }
 
-  const systemDefault = getSystemDefaultModel();
+  const systemDefault = await getSystemDefaultModel();
   if (systemDefault) {
-    const result = tryResolveModel(systemDefault, 'system-default');
+    const result = await tryResolveModel(systemDefault, 'system-default');
     if (result.success) {
       return result;
     }
@@ -115,11 +288,28 @@ export function resolveModel(
   };
 }
 
-function tryResolveModel(
+async function tryResolveModel(
   reference: AIModelReference,
   source: AIModelSelectionSource
-): ModelResolutionResult {
+): Promise<ModelResolutionResult> {
   const { providerId, modelId } = reference;
+  const db = await getDb();
+  const [provider] = await db
+    .select({ id: aiProvider.id, status: aiProvider.status })
+    .from(aiProvider)
+    .where(eq(aiProvider.id, providerId))
+    .limit(1);
+
+  if (!provider || provider.status !== 'enabled') {
+    return {
+      success: false,
+      error: {
+        code: 'provider-unavailable',
+        message: `Provider "${providerId}" is not enabled.`,
+        providerId,
+      },
+    };
+  }
 
   if (!isProviderAvailable(providerId)) {
     return {
@@ -132,7 +322,7 @@ function tryResolveModel(
     };
   }
 
-  const modelConfig = findModelConfig(providerId, modelId);
+  const modelConfig = await findModelConfig(providerId, modelId);
   if (!modelConfig) {
     return {
       success: false,

@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  useComposer,
+  useComposerRuntime,
+  useThread,
+  useThreadRuntime,
+} from '@assistant-ui/react';
 import { useChatContext, AVAILABLE_MODELS } from './ChatProvider';
 import { Send, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,15 +19,21 @@ import {
 } from '@/components/ui/select';
 
 export function ChatComposer() {
-  const {
-    input,
-    setInput,
-    handleSubmit,
-    isLoading,
-    stop,
-    selectedModelId,
-    setSelectedModelId,
-  } = useChatContext();
+  const { selectedModelId, setSelectedModelId, clearError } = useChatContext();
+  const composerRuntime = useComposerRuntime();
+  const threadRuntime = useThreadRuntime();
+  const input = useComposer((composer) => composer.text);
+  const canSend = useComposer((composer) => composer.canSend);
+  const isLoading = useThread((thread) => thread.isRunning);
+
+  const handleSubmit = (event?: React.FormEvent) => {
+    event?.preventDefault();
+    if (!canSend || isLoading) {
+      return;
+    }
+    clearError();
+    composerRuntime.send();
+  };
 
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -52,7 +64,7 @@ export function ChatComposer() {
             <Textarea
               placeholder="Type a message..."
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => composerRuntime.setText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -68,7 +80,7 @@ export function ChatComposer() {
                   type="button"
                   variant="destructive"
                   size="icon"
-                  onClick={stop}
+                  onClick={() => threadRuntime.cancelRun()}
                 >
                   <StopCircle className="h-4 w-4" />
                 </Button>
@@ -76,7 +88,7 @@ export function ChatComposer() {
                 <Button
                   type="submit"
                   size="icon"
-                  disabled={!input.trim()}
+                  disabled={!canSend}
                   className="bg-primary hover:bg-primary/90"
                 >
                   <Send className="h-4 w-4" />
