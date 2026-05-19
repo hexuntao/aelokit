@@ -9,6 +9,8 @@ import {
 } from 'react';
 import { nanoid } from 'nanoid';
 import type { Message } from './types';
+import type { ChatErrorType } from './ChatErrorState';
+import { parseErrorType, getErrorMetadata } from './ChatErrorState';
 
 const API_URL = '/api/ai/chat';
 
@@ -19,16 +21,25 @@ const AVAILABLE_MODELS = [
   { id: 'gpt-4o', name: 'GPT-4o' },
 ];
 
+// Extended error type that can hold structured error information
+interface ChatError extends Error {
+  code?: string;
+  metadata?: Record<string, unknown>;
+}
+
 interface ChatContextType {
   messages: Message[];
   input: string;
   isLoading: boolean;
   error: Error | null;
+  errorType: ChatErrorType;
+  errorMetadata: Record<string, unknown>;
   selectedModelId: string;
   setInput: (value: string) => void;
   setSelectedModelId: (modelId: string) => void;
   handleSubmit: (e?: React.FormEvent) => void;
   stop: () => void;
+  clearError: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -41,14 +52,48 @@ export function useChatContext() {
   return context;
 }
 
+// Helper to create a chat error from response data
+function createChatErrorFromResponse(
+  errorData: {
+    code?: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+  },
+  status?: number
+): ChatError {
+  const error = new Error(errorData.message) as ChatError;
+  error.code = errorData.code;
+  error.metadata = errorData.metadata;
+
+  // If we have a status code, include it in metadata
+  if (status) {
+    error.metadata = {
+      ...error.metadata,
+      status,
+    };
+  }
+
+  return error;
+}
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [errorType, setErrorType] = useState<ChatErrorType>('unknown');
+  const [errorMetadata, setErrorMetadata] = useState<Record<string, unknown>>(
+    {}
+  );
   const [selectedModelId, setSelectedModelId] =
     useState<string>('gpt-4.1-mini');
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const clearError = useCallback(() => {
+    setError(null);
+    setErrorType('unknown');
+    setErrorMetadata({});
+  }, []);
 
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -77,7 +122,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setMessages((prev) => [...prev, userMessage]);
       setInput('');
       setIsLoading(true);
-      setError(null);
+      clearError();
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -96,12 +141,39 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
+          // Try to parse structured error from response
+          let parsedError: ChatError;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              parsedError = createChatErrorFromResponse(
+                errorData.error,
+                response.status
+              );
+            } else {
+              throw new Error('No error field in response');
+            }
+          } catch {
+            // If parsing fails, create a generic error
+            parsedError = new Error(
+              `Request failed with status ${response.status}`
+            ) as ChatError;
+            parsedError.metadata = { status: response.status };
+          }
+
+          // Set error state
+          setError(parsedError);
+          setErrorType(parseErrorType(parsedError));
+          setErrorMetadata(getErrorMetadata(parsedError));
+          return;
         }
 
         const reader = response.body?.getReader();
         if (!reader) {
-          throw new Error('No response body');
+          const noBodyError = new Error('No response body') as ChatError;
+          setError(noBodyError);
+          setErrorType('stream-failed');
+          return;
         }
 
         const decoder = new TextDecoder();
@@ -143,14 +215,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   );
                 }
               } catch {
-                // Ignore parse errors
+                // Ignore parse errors for individual chunks
               }
             }
           }
         }
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
-          setError(err);
+          const chatError = err as ChatError;
+          setError(chatError);
+          setErrorType(parseErrorType(chatError));
+          setErrorMetadata(getErrorMetadata(chatError));
           console.error('Chat error:', err);
         }
       } finally {
@@ -160,7 +235,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-    [input, isLoading, messages, selectedModelId]
+    [input, isLoading, messages, selectedModelId, clearError]
   );
 
   return (
@@ -170,11 +245,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         input,
         isLoading,
         error,
+        errorType,
+        errorMetadata,
         selectedModelId,
         setInput,
         setSelectedModelId,
         handleSubmit,
         stop,
+        clearError,
       }}
     >
       {children}

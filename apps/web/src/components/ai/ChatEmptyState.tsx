@@ -1,17 +1,34 @@
 'use client';
 
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Code, Lightbulb, FileText, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatContext } from './ChatProvider';
+
+interface QuickPrompt {
+  text: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 export function ChatEmptyState() {
   const { setInput } = useChatContext();
 
-  const quickPrompts = [
-    'Help me write some code',
-    'Explain a concept to me',
-    'Brainstorm some ideas',
-    'Write an email draft',
+  const quickPrompts: QuickPrompt[] = [
+    {
+      text: 'Help me write some code',
+      icon: Code,
+    },
+    {
+      text: 'Explain a concept to me',
+      icon: Brain,
+    },
+    {
+      text: 'Brainstorm some ideas',
+      icon: Lightbulb,
+    },
+    {
+      text: 'Write an email draft',
+      icon: FileText,
+    },
   ];
 
   return (
@@ -21,19 +38,23 @@ export function ChatEmptyState() {
       </div>
       <h2 className="text-2xl font-semibold mb-2">How can I help you today?</h2>
       <p className="text-muted-foreground mb-8 max-w-md">
-        Start a conversation or select a quick prompt below.
+        Start a conversation or select a quick prompt below to get started.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
-        {quickPrompts.map((prompt, index) => (
-          <Button
-            key={index}
-            variant="secondary"
-            className="h-auto py-4 px-6 justify-start text-left hover:bg-muted"
-            onClick={() => setInput(prompt)}
-          >
-            {prompt}
-          </Button>
-        ))}
+        {quickPrompts.map((prompt, index) => {
+          const Icon = prompt.icon;
+          return (
+            <Button
+              key={index}
+              variant="secondary"
+              className="h-auto py-4 px-6 justify-start text-left hover:bg-muted transition-all group"
+              onClick={() => setInput(prompt.text)}
+            >
+              <Icon className="h-4 w-4 mr-3 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span>{prompt.text}</span>
+            </Button>
+          );
+        })}
       </div>
     </div>
   );
