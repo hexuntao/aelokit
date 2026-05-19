@@ -44,10 +44,18 @@ const DEFAULT_OPENAI_MODELS: ReadonlyArray<{
   readonly contextWindowTokens: number;
 }> = [
   {
+    id: 'gpt-5.5',
+    providerModelId: 'gpt-5.5',
+    displayName: 'GPT-5.5',
+    isDefault: true,
+    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
+    contextWindowTokens: 1_050_000,
+  },
+  {
     id: 'gpt-4.1-mini',
     providerModelId: 'gpt-4.1-mini',
     displayName: 'GPT-4.1 Mini',
-    isDefault: true,
+    isDefault: false,
     capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
     contextWindowTokens: 1_047_576,
   },
@@ -78,7 +86,7 @@ const DEFAULT_OPENAI_MODELS: ReadonlyArray<{
 ];
 
 const DEFAULT_PROVIDER_ID = 'openai';
-const DEFAULT_MODEL_ID = 'gpt-4.1-mini';
+const DEFAULT_MODEL_ID = 'gpt-5.5';
 
 export async function ensureAIModelCatalog(): Promise<void> {
   const db = await getDb();

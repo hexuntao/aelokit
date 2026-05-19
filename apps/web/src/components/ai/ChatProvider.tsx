@@ -20,6 +20,7 @@ import { parseErrorType, getErrorMetadata } from './ChatErrorState';
 const API_URL = '/api/ai/chat';
 
 const AVAILABLE_MODELS = [
+  { id: 'gpt-5.5', name: 'GPT-5.5' },
   { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
   { id: 'gpt-4.1', name: 'GPT-4.1' },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
@@ -69,8 +70,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [errorMetadata, setErrorMetadata] = useState<Record<string, unknown>>(
     {}
   );
-  const [selectedModelId, setSelectedModelId] =
-    useState<string>('gpt-4.1-mini');
+  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
   const [threadId, setThreadId] = useState<string | undefined>();
   const threadIdRef = useRef<string | undefined>(undefined);
   const selectedModelIdRef = useRef(selectedModelId);
