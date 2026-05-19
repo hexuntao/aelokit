@@ -28,6 +28,10 @@ import {
   saveMessageParts,
   updateMessageStatus,
 } from '@/ai/persistence';
+import {
+  getMemoryContextForChat,
+  isMemoryEnabledForRequest,
+} from '@/ai/memory';
 
 export const maxDuration = 30;
 
@@ -36,6 +40,7 @@ type ChatRequestBody = {
   readonly threadId?: string;
   readonly modelId?: string;
   readonly tools?: Record<string, unknown>;
+  readonly memoryEnabled?: boolean;
 };
 
 function jsonError(error: unknown, status: number): Response {
@@ -92,7 +97,10 @@ export async function POST(req: Request) {
       threadId,
       modelId,
       tools,
+      memoryEnabled: requestMemoryEnabled,
     }: ChatRequestBody = await req.json();
+
+    const memoryEnabled = isMemoryEnabledForRequest(requestMemoryEnabled);
 
     const lastUserMessage = getLastUserMessage(messages);
     if (!lastUserMessage) {
@@ -206,11 +214,52 @@ export async function POST(req: Request) {
       return jsonError(error, 400);
     }
 
+    // 6.5. Memory context injection (v0.3 TASK-005)
+    // Read-only memory recall - does NOT create/confirm/delete/disable memory
+    const memoryResult = await getMemoryContextForChat(
+      context.userId,
+      persistedThread.id,
+      memoryEnabled
+    );
+
+    const memoryContextMessages: UIMessage[] = [];
+    if (memoryResult.success && memoryResult.messages.length > 0) {
+      for (const msg of memoryResult.messages) {
+        const mastraMsg = msg as {
+          role?: string;
+          content?: unknown;
+          id?: string;
+        };
+        if (mastraMsg.role === 'user' || mastraMsg.role === 'assistant') {
+          const content = mastraMsg.content;
+          let textContent = '';
+          if (typeof content === 'string') {
+            textContent = content;
+          } else if (
+            content &&
+            typeof content === 'object' &&
+            'text' in content
+          ) {
+            textContent = String((content as { text: unknown }).text);
+          }
+          if (textContent) {
+            memoryContextMessages.push({
+              id: mastraMsg.id ?? `memory-${Date.now()}-${Math.random()}`,
+              role: mastraMsg.role as 'user' | 'assistant',
+              parts: [{ type: 'text' as const, text: textContent }],
+            });
+          }
+        }
+      }
+    }
+
+    const messagesForModel = [...memoryContextMessages, ...messages];
+
     // 7. Stream text from the model
     const result = streamText({
       model: resolvedModel.model,
       system: getSystemPrompt(),
-      messages: await convertToModelMessages(messages),
+      messages: await convertToModelMessages(messagesForModel),
       tools: frontendTools(
         (tools ?? {}) as Parameters<typeof frontendTools>[0]
       ),
@@ -228,6 +277,8 @@ export async function POST(req: Request) {
       headers: {
         'x-ai-thread-id': persistedThread.id,
         'x-ai-message-id': assistantMessageId,
+        'x-ai-memory-enabled': String(memoryEnabled),
+        'x-ai-memory-context-count': String(memoryContextMessages.length),
       },
       onFinish: async ({ responseMessage, finishReason, isAborted }) => {
         const status = isAborted ? 'aborted' : 'complete';
