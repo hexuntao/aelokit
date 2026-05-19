@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Brain, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -29,11 +29,7 @@ export function MemorySidebar({ className }: MemorySidebarProps) {
     confirmMemory,
     disableMemory,
     deleteMemory,
-  } = useMemoryControls({ initialEnabled: memoryEnabled });
-
-  React.useEffect(() => {
-    setMemoryEnabled(memoryEnabled);
-  }, [memoryEnabled, setMemoryEnabled]);
+  } = useMemoryControls(memoryEnabled);
 
   return (
     <Sheet>
@@ -72,6 +68,8 @@ export function MemorySidebar({ className }: MemorySidebarProps) {
               id: m.id,
               title: m.title,
               createdAt: m.createdAt,
+              confirmed: m.confirmed,
+              disabled: m.disabled,
             }))}
             onCreateMemory={createMemory}
             onConfirmMemory={confirmMemory}
@@ -108,7 +106,7 @@ export function MemorySidebar({ className }: MemorySidebarProps) {
 
 export function MemoryToggleButton({ className }: { className?: string }) {
   const { memoryEnabled, setMemoryEnabled } = useChatContext();
-  const { memories } = useMemoryControls({ initialEnabled: memoryEnabled });
+  const { memories } = useMemoryControls(memoryEnabled);
 
   return (
     <Button

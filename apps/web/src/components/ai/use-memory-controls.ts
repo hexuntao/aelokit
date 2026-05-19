@@ -11,13 +11,7 @@ import {
   type MemoryActionResult,
 } from '@/actions/memory';
 
-export interface UseMemoryControlsOptions {
-  readonly initialEnabled?: boolean;
-}
-
 export interface UseMemoryControlsReturn {
-  readonly memoryEnabled: boolean;
-  readonly setMemoryEnabled: (enabled: boolean) => void;
   readonly memories: readonly MemoryThread[];
   readonly isLoading: boolean;
   readonly error: string | null;
@@ -29,11 +23,8 @@ export interface UseMemoryControlsReturn {
 }
 
 export function useMemoryControls(
-  options: UseMemoryControlsOptions = {}
+  memoryEnabled: boolean
 ): UseMemoryControlsReturn {
-  const { initialEnabled = false } = options;
-
-  const [memoryEnabled, setMemoryEnabled] = React.useState(initialEnabled);
   const [memories, setMemories] = React.useState<readonly MemoryThread[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -93,6 +84,7 @@ export function useMemoryControls(
 
       try {
         const result = await confirmUserMemoryAction({ threadId });
+        console.log('[useMemoryControls] confirmMemory result:', result);
 
         if (result.data?.success) {
           await refreshMemories();
@@ -102,6 +94,7 @@ export function useMemoryControls(
         setError(result.data?.error?.message ?? 'Failed to confirm memory');
         return false;
       } catch (err) {
+        console.error('[useMemoryControls] confirmMemory error:', err);
         setError(
           err instanceof Error ? err.message : 'Failed to confirm memory'
         );
@@ -174,8 +167,6 @@ export function useMemoryControls(
   }, [memoryEnabled, refreshMemories]);
 
   return {
-    memoryEnabled,
-    setMemoryEnabled,
     memories,
     isLoading,
     error,

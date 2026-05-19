@@ -10,6 +10,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -58,6 +59,8 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
+const MEMORY_ENABLED_KEY = 'aelokit-memory-enabled';
+
 export function useChatContext() {
   const context = useContext(ChatContext);
   if (!context) {
@@ -74,10 +77,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   );
   const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
   const [threadId, setThreadId] = useState<string | undefined>();
-  const [memoryEnabled, setMemoryEnabled] = useState<boolean>(false);
+  const [memoryEnabled, setMemoryEnabledState] = useState<boolean>(false);
   const threadIdRef = useRef<string | undefined>(undefined);
   const selectedModelIdRef = useRef(selectedModelId);
   const memoryEnabledRef = useRef(memoryEnabled);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(MEMORY_ENABLED_KEY);
+      if (stored === 'true') {
+        setMemoryEnabledState(true);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  const setMemoryEnabled = useCallback((enabled: boolean) => {
+    setMemoryEnabledState(enabled);
+    try {
+      localStorage.setItem(MEMORY_ENABLED_KEY, String(enabled));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
 
   threadIdRef.current = threadId;
   selectedModelIdRef.current = selectedModelId;

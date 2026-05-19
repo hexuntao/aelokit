@@ -17,6 +17,8 @@ export type MemoryThread = {
   id: string;
   title?: string;
   createdAt: Date;
+  confirmed: boolean;
+  disabled: boolean;
 };
 
 export type MemoryActionResult<T> = MemoryServiceResult<T>;

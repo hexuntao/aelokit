@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { Memory } from '@mastra/memory';
+import type { PostgresStore } from '@mastra/pg';
 import { getMastraStorage } from './mastra/storage';
 
 export interface UserMemoryEntry {
@@ -28,32 +29,58 @@ export interface MemoryServiceResult<T> {
   };
 }
 
+let cachedStorage: PostgresStore | null = null;
 let cachedMemory: Memory | null = null;
+let storageInitialized = false;
+
+function getStorage(): PostgresStore {
+  if (!cachedStorage) {
+    cachedStorage = getMastraStorage();
+  }
+  return cachedStorage;
+}
+
+async function ensureStorageInitialized(): Promise<void> {
+  if (storageInitialized) return;
+
+  const storage = getStorage();
+  try {
+    await storage.init();
+    storageInitialized = true;
+  } catch (error) {
+    console.error('[Memory Service] Storage init error:', error);
+    throw error;
+  }
+}
 
 function getOrCreateMemory(): Memory {
-  if (cachedMemory) {
-    return cachedMemory;
+  if (!cachedMemory) {
+    const storage = getStorage();
+    cachedMemory = new Memory({
+      storage,
+      options: {
+        lastMessages: 20,
+        generateTitle: false,
+        semanticRecall: false,
+      },
+    });
   }
-  const storage = getMastraStorage();
-  cachedMemory = new Memory({
-    storage,
-    options: {
-      lastMessages: 20,
-      generateTitle: false,
-      semanticRecall: false,
-    },
-  });
   return cachedMemory;
 }
 
-export async function listUserMemoryThreads(
-  resourceId: string
-): Promise<
+export async function listUserMemoryThreads(resourceId: string): Promise<
   MemoryServiceResult<
-    readonly { id: string; title?: string; createdAt: Date }[]
+    readonly {
+      id: string;
+      title?: string;
+      createdAt: Date;
+      confirmed: boolean;
+      disabled: boolean;
+    }[]
   >
 > {
   try {
+    await ensureStorageInitialized();
     const memory = getOrCreateMemory();
     const result = await memory.listThreads({
       filter: { resourceId },
@@ -64,11 +91,16 @@ export async function listUserMemoryThreads(
 
     return {
       success: true,
-      data: threads.map((thread) => ({
-        id: thread.id,
-        title: thread.title,
-        createdAt: thread.createdAt,
-      })),
+      data: threads.map((thread) => {
+        const metadata = thread.metadata as Record<string, unknown> | undefined;
+        return {
+          id: thread.id,
+          title: thread.title,
+          createdAt: thread.createdAt,
+          confirmed: (metadata?.confirmed as boolean) ?? false,
+          disabled: (metadata?.disabled as boolean) ?? false,
+        };
+      }),
     };
   } catch (error) {
     console.error('[Memory Service] listUserMemoryThreads error:', error);
@@ -89,6 +121,7 @@ export async function createMemoryThread(
   input: CreateMemoryInput
 ): Promise<MemoryServiceResult<{ threadId: string; messageId: string }>> {
   try {
+    await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
     const thread = await memory.createThread({
@@ -96,7 +129,7 @@ export async function createMemoryThread(
       title: `User Memory: ${input.content.slice(0, 50)}...`,
       metadata: {
         type: 'user-confirmed-memory',
-        confirmed: true,
+        confirmed: false,
         disabled: false,
         createdAt: new Date().toISOString(),
       },
@@ -127,6 +160,8 @@ export async function confirmMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    await ensureStorageInitialized();
+    const storage = getStorage();
     const memory = getOrCreateMemory();
 
     const existingThread = await memory.getThreadById({ threadId });
@@ -151,15 +186,28 @@ export async function confirmMemoryThread(
       };
     }
 
-    await memory.updateThread({
-      id: threadId,
-      title: existingThread.title ?? '',
-      metadata: {
-        ...existingThread.metadata,
-        confirmed: true,
-        confirmedAt: new Date().toISOString(),
-      },
+    const existingMetadata =
+      (existingThread.metadata as Record<string, unknown>) ?? {};
+
+    const newMetadata = {
+      ...existingMetadata,
+      confirmed: true,
+      confirmedAt: new Date().toISOString(),
+    };
+
+    console.log('[Memory Service] confirmMemoryThread - updating metadata:', {
+      threadId,
+      newMetadata,
     });
+
+    await storage.db.none(
+      `UPDATE mastra.mastra_threads 
+       SET metadata = $1, "updatedAt" = NOW()
+       WHERE id = $2`,
+      [JSON.stringify(newMetadata), threadId]
+    );
+
+    console.log('[Memory Service] confirmMemoryThread - update successful');
 
     return {
       success: true,
@@ -183,6 +231,8 @@ export async function disableMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    await ensureStorageInitialized();
+    const storage = getStorage();
     const memory = getOrCreateMemory();
 
     const existingThread = await memory.getThreadById({ threadId });
@@ -207,15 +257,24 @@ export async function disableMemoryThread(
       };
     }
 
-    await memory.updateThread({
-      id: threadId,
-      title: existingThread.title ?? '',
-      metadata: {
-        ...existingThread.metadata,
-        disabled: true,
-        disabledAt: new Date().toISOString(),
-      },
-    });
+    const existingMetadata =
+      (existingThread.metadata as Record<string, unknown>) ?? {};
+
+    const newDisabled = !(existingMetadata.disabled as boolean);
+
+    await storage.db.none(
+      `UPDATE mastra.mastra_threads 
+       SET metadata = $1, "updatedAt" = NOW()
+       WHERE id = $2`,
+      [
+        JSON.stringify({
+          ...existingMetadata,
+          disabled: newDisabled,
+          disabledAt: newDisabled ? new Date().toISOString() : undefined,
+        }),
+        threadId,
+      ]
+    );
 
     return {
       success: true,
@@ -239,6 +298,8 @@ export async function deleteMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    await ensureStorageInitialized();
+    const storage = getStorage();
     const memory = getOrCreateMemory();
 
     const existingThread = await memory.getThreadById({ threadId });
@@ -263,12 +324,14 @@ export async function deleteMemoryThread(
       };
     }
 
-    const { messages } = await memory.recall({ threadId, perPage: false });
-    const messageIds = messages.map((msg) => msg.id);
+    await storage.db.none(
+      `DELETE FROM mastra.mastra_messages WHERE "thread_id" = $1`,
+      [threadId]
+    );
 
-    if (messageIds.length > 0) {
-      await memory.deleteMessages(messageIds);
-    }
+    await storage.db.none(`DELETE FROM mastra.mastra_threads WHERE id = $1`, [
+      threadId,
+    ]);
 
     return {
       success: true,
@@ -298,6 +361,7 @@ export async function getMemoryThreadContent(
   }>
 > {
   try {
+    await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
     const thread = await memory.getThreadById({ threadId });
