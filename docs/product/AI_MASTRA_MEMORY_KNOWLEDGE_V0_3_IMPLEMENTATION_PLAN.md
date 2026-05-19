@@ -12,18 +12,18 @@
 
 ## 1. Phase Summary
 
-| TASK | Title | Type | Main path status |
-| --- | --- | --- | --- |
-| TASK-001 | v0.3 planning docs review only | docs/review | N/A |
-| TASK-002 | Mastra dependency / runtime placement decision | plan | N/A |
-| TASK-003 | Mastra dependency + env + package boundary setup | setup after confirmation | PARTIAL UNTIL WIRED |
-| TASK-004 | App-local Mastra runtime skeleton | runtime skeleton | PARTIAL UNTIL WIRED |
-| TASK-005 | Wire confirmed Mastra Memory into Chat Context | runtime integration | Must wire `/api/ai/chat` |
-| TASK-006 | Add User-confirmed Memory Controls | UI integration | Must wire UI |
-| TASK-007 | Mastra Knowledge minimal ingestion | ingestion | PARTIAL UNTIL RETRIEVAL WIRED |
-| TASK-008 | Knowledge retrieval into `/api/ai/chat` | runtime integration | Must wire `/api/ai/chat` |
-| TASK-009 | Citation/source rendering | UI + persistence metadata | Must wire UI |
-| TASK-010 | v0.3 integration acceptance | validation | N/A |
+| TASK | Title | Type | Main path status | Result |
+| --- | --- | --- | --- | --- |
+| TASK-001 | v0.3 planning docs review only | docs/review | N/A | DONE |
+| TASK-002 | Mastra dependency / runtime placement decision | plan | N/A | DONE |
+| TASK-003 | Mastra dependency + env + package boundary setup | setup after confirmation | PARTIAL UNTIL WIRED | DONE |
+| TASK-004 | App-local Mastra runtime skeleton | runtime skeleton | PARTIAL UNTIL WIRED | DONE |
+| TASK-005 | Wire confirmed Mastra Memory into Chat Context | runtime integration | Must wire `/api/ai/chat` | DONE |
+| TASK-006 | Add User-confirmed Memory Controls | UI integration | Must wire UI | DONE |
+| TASK-007 | Mastra Knowledge minimal ingestion | ingestion | PARTIAL UNTIL RETRIEVAL WIRED | DONE |
+| TASK-008 | Knowledge retrieval into `/api/ai/chat` | runtime integration | Must wire `/api/ai/chat` | DONE |
+| TASK-009 | Citation/source rendering | UI + persistence metadata | Must wire UI | DONE |
+| TASK-010 | v0.3 integration acceptance | validation | N/A | ACCEPTED WITH NOTES |
 
 ## 2. TASK-001: v0.3 Planning Docs Review Only
 
@@ -516,3 +516,20 @@ v0.2 Regression Checks: normal chat, persistence and usage audit still pass; cre
 Completion Report Format: final result must be `ACCEPTED`, `ACCEPTED WITH NOTES`, or `REJECTED`.
 
 Suggested Commit Message: `chore(ai): validate v0.3 mastra memory knowledge integration`.
+
+### TASK-010 Validation Result
+
+- **Final Decision**: `ACCEPTED WITH NOTES`
+- **Validation Date**: 2026-05-19
+- **Full Report**: `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_VALIDATION_REPORT.md`
+
+Static Checks: all 6 passed.
+
+Runtime Smoke: code-level review passed; end-to-end browser smoke requires DB + embedding config.
+
+Key Notes:
+
+1. Knowledge ingestion DB schema (`knowledge.schema.ts`) created but runtime not fully wired to these tables
+2. Citations are response-only, not persisted to `ai_message_part`
+3. `@mastra/rag` installed but unused
+4. Memory disable/confirm tracked via Mastra thread metadata, no AeloKit-owned memory metadata table
