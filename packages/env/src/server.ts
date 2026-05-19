@@ -60,6 +60,7 @@ export const serverEnv = createEnv({
     FAL_API_KEY: optionalString,
     FIREWORKS_API_KEY: optionalString,
     OPENAI_API_KEY: optionalString,
+    OPENAI_BASE_URL: optionalUrl,
     REPLICATE_API_TOKEN: optionalString,
     GOOGLE_GENERATIVE_AI_API_KEY: optionalString,
     DEEPSEEK_API_KEY: optionalString,

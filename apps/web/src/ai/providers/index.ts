@@ -1,11 +1,9 @@
 import 'server-only';
 
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import { serverEnv } from '@repo/env/server';
 import type { AIProviderId } from '@repo/ai/providers';
-
-export type OpenAIProvider = typeof openai;
 
 export interface AIProviderConfig {
   readonly id: AIProviderId;
@@ -13,12 +11,24 @@ export interface AIProviderConfig {
   readonly createModel: (modelId: string) => LanguageModel | null;
 }
 
-function createOpenAIModel(modelId: string): LanguageModel | null {
+function createOpenAIProvider() {
   const apiKey = serverEnv.OPENAI_API_KEY;
   if (!apiKey) {
     return null;
   }
-  return openai(modelId);
+  const baseURL = serverEnv.OPENAI_BASE_URL;
+  return createOpenAI({
+    apiKey,
+    baseURL: baseURL || undefined,
+  });
+}
+
+function createOpenAIModel(modelId: string): LanguageModel | null {
+  const provider = createOpenAIProvider();
+  if (!provider) {
+    return null;
+  }
+  return provider.chat(modelId);
 }
 
 export const providerRegistry: ReadonlyMap<AIProviderId, AIProviderConfig> =
