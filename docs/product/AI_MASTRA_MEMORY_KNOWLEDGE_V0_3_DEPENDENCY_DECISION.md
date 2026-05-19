@@ -22,12 +22,17 @@
 
 ### 2.1 必需包
 
-| Package | 版本范围 | 用途 | 为什么需要 |
+| Package | 安装方式 | 用途 | 为什么需要 |
 | --- | --- | --- | --- |
-| `@mastra/core` | `^0.1.0` (latest) | Mastra 核心框架 | Agent、workflow、tool、memory 基础类型和 runtime |
-| `@mastra/memory` | `^0.1.0` (latest) | Memory 系统 | Memory runtime、conversation history、working memory、semantic recall、memory processors |
-| `@mastra/pg` | `^0.1.0` (latest) | PostgreSQL Storage + PgVector | PostgresStore 用于 memory storage；PgVector 用于 vector retrieval；同一包提供两种能力 |
-| `@mastra/rag` | `^0.1.0` (latest) | RAG/Document 处理 | MDocument、chunking、document processing |
+| `@mastra/core` | `@latest` | Mastra 核心框架 | Agent、workflow、tool、memory 基础类型和 runtime |
+| `@mastra/memory` | `@latest` | Memory 系统 | Memory runtime、conversation history、working memory、semantic recall、memory processors |
+| `@mastra/pg` | `@latest` | PostgreSQL Storage + PgVector | PostgresStore 用于 memory storage；PgVector 用于 vector retrieval；同一包提供两种能力 |
+| `@mastra/rag` | `@latest` | RAG/Document 处理 | MDocument、chunking、document processing |
+
+**重要：**
+- 使用 `@latest` tag 安装，不预设具体版本范围。
+- TASK-003 安装后必须记录实际 resolved version 到 `apps/web/package.json`。
+- 后续 TASK 必须基于实际安装版本验证 API exports 和 TypeScript signatures。
 
 ### 2.2 可选包（v0.3 不安装）
 
@@ -147,19 +152,24 @@ v0.3 需要在 runtime 启动时检测 embedding 能力：
 
 ### 7.1 Mastra 自管理 Tables
 
-Mastra PostgreSQL storage 自动创建和管理以下 tables：
+Mastra PostgreSQL storage 自动创建和管理 storage tables。
 
-| Table | 用途 |
+**可能的 Mastra 表名（示例，以实际安装版本为准）：**
+
+| 可能的 Table | 用途 |
 | --- | --- |
-| `mastra_workflow_snapshot` | Workflow state |
-| `mastra_evals` | Evaluation results |
-| `mastra_threads` | Conversation threads |
-| `mastra_messages` | Messages |
-| `mastra_traces` | Telemetry/tracing |
-| `mastra_scorers` | Scoring data |
-| `mastra_resources` | Resource working memory |
+| `mastra_workflow_snapshot` | Workflow state（示例） |
+| `mastra_evals` | Evaluation results（示例） |
+| `mastra_threads` | Conversation threads（示例） |
+| `mastra_messages` | Messages（示例） |
+| `mastra_traces` | Telemetry/tracing（示例） |
+| `mastra_scorers` | Scoring data（示例） |
+| `mastra_resources` | Resource working memory（示例） |
 
-**这些 tables 由 Mastra 自动创建，不需要 AeloKit 生成 migration。**
+**重要：**
+- 以上表名为示例，实际表名以 Mastra 安装版本创建为准。
+- TASK-004/TASK-005 必须验证实际创建的表名。
+- 这些 tables 由 Mastra 自动创建，不需要 AeloKit 生成 migration。
 
 ### 7.2 AeloKit 可能需要的 Metadata Tables
 
@@ -269,6 +279,11 @@ Mastra 不替换 Vercel AI SDK streaming，而是：
    - 将 source metadata 附加到 response 的 message parts 或 metadata
    - UI 通过 `ai_message_part.part_type = 'source'` 渲染 citations
 
+**注意：**
+- 以上 API 名称（`queryThreads`、`getThreadById`、`saveMessages`、`PgVector.query()`）为示例。
+- TASK-004/TASK-005/TASK-007 必须验证实际安装包的 exports 和 TypeScript signatures。
+- 实现必须遵循安装包的实际类型定义和 Mastra 官方最新文档。
+
 ### 9.3 不改变的部分
 
 - `/api/ai/chat` 仍是唯一 chat stream route
@@ -309,31 +324,36 @@ Mastra 不替换 Vercel AI SDK streaming，而是：
 
 ## 11. Open Questions 更新
 
-以下 Open Questions 在本 TASK 中得到 defaulted 状态：
+以下 Open Questions 在本 TASK 中得到 proposed 状态，待用户确认后变为 defaulted：
 
 | Question | 状态 | 决策 |
 | --- | --- | --- |
-| Q001: 是否安装 Mastra runtime | defaulted | 安装，exact packages 见本文档 |
-| Q002: Mastra runtime 放在哪里 | defaulted | `apps/web/src/ai/mastra/**` |
-| Q003: 是否先 in-process | defaulted | 是 |
-| Q004: 使用哪些 Mastra packages | defaulted | `@mastra/core`、`@mastra/memory`、`@mastra/pg`、`@mastra/rag` |
-| Q005: 是否使用 Mastra PostgreSQL Storage | defaulted | 是 |
-| Q006: 是否使用 PgVector | defaulted | 是，需确认 extension 可用 |
-| Q007: 是否需要单独 vector DB | defaulted | 否 |
-| Q008: 是否使用当前 relay 做 embedding | defaulted | 优先检测，fallback 到官方 OpenAI |
-| Q009: Relay 不支持 embedding 的 fallback | defaulted | Fallback 到官方 OpenAI；如果没有 key，Knowledge blocked |
-| Q010: 是否需要新增 embedding model env | defaulted | 可选，优先复用现有 env |
-| Q019: 是否接 Mastra Agent | defaulted | 否，只用 Memory/RAG context |
-| Q020: 是否继续由 AI SDK 负责 streaming | defaulted | 是 |
-| Q022: Mastra AI SDK integration 对齐 | defaulted | 不照搬 Mastra 并行 route，以 AeloKit 现有路径为主 |
+| Q001: 是否安装 Mastra runtime | proposed → 待确认后 defaulted | 安装，exact packages 见本文档 |
+| Q002: Mastra runtime 放在哪里 | proposed → 待确认后 defaulted | `apps/web/src/ai/mastra/**` |
+| Q003: 是否先 in-process | proposed → 待确认后 defaulted | 是 |
+| Q004: 使用哪些 Mastra packages | proposed → 待确认后 defaulted | `@mastra/core`、`@mastra/memory`、`@mastra/pg`、`@mastra/rag` |
+| Q005: 是否使用 Mastra PostgreSQL Storage | proposed → 待确认后 defaulted | 是 |
+| Q006: 是否使用 PgVector | proposed → 待确认后 defaulted | 是，需确认 extension 可用 |
+| Q007: 是否需要单独 vector DB | proposed → 待确认后 defaulted | 否 |
+| Q008: 是否使用当前 relay 做 embedding | proposed → 待确认后 defaulted | 优先检测，fallback 到官方 OpenAI |
+| Q009: Relay 不支持 embedding 的 fallback | proposed → 待确认后 defaulted | Fallback 到官方 OpenAI；如果没有 key，Knowledge blocked |
+| Q010: 是否需要新增 embedding model env | proposed → 待确认后 defaulted | 可选，优先复用现有 env |
+| Q019: 是否接 Mastra Agent | proposed → 待确认后 defaulted | 否，只用 Memory/RAG context |
+| Q020: 是否继续由 AI SDK 负责 streaming | proposed → 待确认后 defaulted | 是 |
+| Q022: Mastra AI SDK integration 对齐 | proposed → 待确认后 defaulted | 不照搬 Mastra 并行 route，以 AeloKit 现有路径为主 |
+
+**注意：** 以上状态在用户确认 10.1 必须确认项后，从 proposed 变为 defaulted。
 
 ## 12. Storage / DB / Vector 验证计划
+
+**注意：以下代码示例仅为示意，实际 API 以安装包 exports 和官方文档为准。**
 
 ### 12.1 PostgreSQL Storage 验证
 
 安装后验证：
 
 ```typescript
+// 示例：验证 Mastra PostgreSQL Storage
 import { PostgresStore } from '@mastra/pg';
 
 const storage = new PostgresStore({
@@ -353,6 +373,11 @@ const tables = await storage.db.any(`
 console.log('Mastra tables:', tables);
 ```
 
+**TASK-004 必须验证：**
+- `PostgresStore` 构造函数参数签名
+- `init()` 方法是否存在或自动调用
+- `db` 属性访问方式
+
 ### 12.2 PgVector 验证
 
 ```sql
@@ -364,6 +389,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
 ```typescript
+// 示例：验证 PgVector
 import { PgVector } from '@mastra/pg';
 
 const vector = new PgVector({
@@ -378,9 +404,15 @@ await vector.createIndex({
 });
 ```
 
+**TASK-007 必须验证：**
+- `PgVector` 构造函数参数签名
+- `createIndex()` 方法签名和返回类型
+- `upsert()` 和 `query()` 方法签名
+
 ### 12.3 Embedding Provider 验证
 
 ```typescript
+// 示例：验证 embedding
 import { embed } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
@@ -392,6 +424,10 @@ const { embedding } = await embed({
 
 console.log('Embedding dimension:', embedding.length);
 ```
+
+**TASK-007 必须验证：**
+- `ai` package 的 `embed` 函数签名
+- `@ai-sdk/openai` 的 `openai.embedding()` 方法签名
 
 ## 13. 完成标准
 

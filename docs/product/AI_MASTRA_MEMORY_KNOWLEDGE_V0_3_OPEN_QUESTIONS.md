@@ -28,11 +28,11 @@
 
 ## Q004: 使用哪些 Mastra packages？
 
-- Status: open
-- Default Decision: TASK-002 依据最新官方文档确认，预计至少包含 core/runtime、memory/storage、RAG/document、vector/pg 相关包。
-- Reason: Mastra package names and integration APIs must not be guessed.
+- Status: proposed
+- Proposed Decision: `@mastra/core`、`@mastra/memory`、`@mastra/pg`、`@mastra/rag`，使用 `@latest` tag 安装。
+- Reason: Mastra package names and integration APIs must not be guessed. TASK-002 已依据官方文档确认包名，但需要用户确认后才能安装。
 - Blocks: TASK-003
-- Needs User Confirmation Before: 安装依赖。
+- Needs User Confirmation Before: 安装依赖。确认后状态变为 defaulted。
 
 ## Q005: 是否使用 Mastra PostgreSQL Storage？
 
