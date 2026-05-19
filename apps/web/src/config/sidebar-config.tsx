@@ -5,6 +5,7 @@ import { Routes } from '@/routes';
 import type { NestedMenuItem } from '@/types';
 import {
   BellIcon,
+  BookOpenIcon,
   CircleUserRoundIcon,
   CoinsIcon,
   CreditCardIcon,
@@ -40,6 +41,12 @@ export function useSidebarLinks(): NestedMenuItem[] {
       title: t('chat.title'),
       icon: <MessageCircleIcon className="size-4 shrink-0" />,
       href: Routes.Chat,
+      external: false,
+    },
+    {
+      title: t('knowledge.title'),
+      icon: <BookOpenIcon className="size-4 shrink-0" />,
+      href: Routes.Knowledge,
       external: false,
     },
     {

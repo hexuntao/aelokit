@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # Use pgvector/pgvector image for vector support (required for knowledge/RAG)
+    # Neon and Supabase have pgvector pre-installed in production
+    image: pgvector/pgvector:pg16
     container_name: aelokit-postgres
     restart: unless-stopped
     ports:

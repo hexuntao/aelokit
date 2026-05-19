@@ -421,6 +421,10 @@
     "dashboard": {
       "title": "工作台"
     },
+    "knowledge": {
+      "title": "知识库",
+      "description": "添加和管理 AI 检索的知识源"
+    },
     "admin": {
       "title": "系统管理",
       "users": {

@@ -20,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:enable-pgvector": "tsx scripts/enable-pgvector.ts"
   },
   "dependencies": {
     "@repo/env": "workspace:*",
@@ -31,6 +32,7 @@
     "@next/env": "^16.1.6",
     "@types/node": "^25.0.10",
     "drizzle-kit": "^0.30.4",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }

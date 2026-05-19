@@ -421,6 +421,10 @@
     "dashboard": {
       "title": "Workspace"
     },
+    "knowledge": {
+      "title": "Knowledge",
+      "description": "Add and manage knowledge sources for AI retrieval"
+    },
     "admin": {
       "title": "Admin",
       "users": {
