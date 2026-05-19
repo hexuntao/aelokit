@@ -126,6 +126,19 @@ Planning for Memory, PostgreSQL Storage, RAG, chunking, embedding, vector retrie
 
 Decide app-local runtime placement, auth/consent/source ownership boundaries, env and package ownership.
 
+## Output Requirements
+
+- Must output a `User Confirmation Required Before TASK-003` section.
+- Must list exact packages with version ranges.
+- Must list exact install command.
+- Must list all env variable names required.
+- Must state whether PgVector is required.
+- Must state which embedding provider is required.
+- Must state whether new metadata schema/migration is required.
+- Must list blocked items that cannot proceed without user confirmation.
+- Must NOT write unconfirmed content as facts.
+- Must NOT proceed to TASK-003 without user confirmation of this output.
+
 ## Implementation Requirements
 
 - Output where Mastra runtime goes.
@@ -141,6 +154,7 @@ Decide app-local runtime placement, auth/consent/source ownership boundaries, en
 - Dependency plan is concrete enough for TASK-003.
 - Open Questions are updated or referenced.
 - No package/lockfile/source changes.
+- Output includes `User Confirmation Required Before TASK-003` section.
 
 ## Static Checks
 
@@ -162,7 +176,7 @@ Confirm `/api/ai/chat` and UI untouched.
 
 ## Completion Report
 
-Must include default decisions and confirmation blockers.
+Must include default decisions and confirmation blockers. Must include the `User Confirmation Required Before TASK-003` section.
 
 # TASK-003: Add Mastra Dependencies and Env
 
@@ -231,9 +245,12 @@ Package ownership, server-only env validation, no client secret exposure.
 ```bash
 pnpm check:env
 pnpm check:package-exports
+pnpm --filter @repo/env typecheck
 pnpm --filter @repo/web typecheck
 git diff --check -- apps/web/package.json pnpm-lock.yaml packages/env/src/server.ts env.example
 ```
+
+Note: If `pnpm --filter @repo/env typecheck` script does not exist, report N/A in completion report. Do not pretend it passed.
 
 ## Runtime Smoke
 
@@ -293,6 +310,21 @@ App-local Mastra runtime factory/config skeleton only.
 
 Keep runtime in app layer and secrets server-only.
 
+## Skeleton Scope Guardrail
+
+- TASK-004 MUST ONLY create:
+  - Runtime factory functions
+  - Config resolvers
+  - Storage/vector constructor wrappers
+- TASK-004 MUST NOT create:
+  - Memory service implementation
+  - Knowledge service implementation
+  - Chat route integration
+  - UI components
+  - Any live runtime execution
+- All skeleton code MUST be marked `PARTIAL UNTIL WIRED`.
+- No skeleton code may be called from production routes until explicitly wired by later TASKs.
+
 ## Implementation Requirements
 
 - Use `server-only` where appropriate.
@@ -300,12 +332,14 @@ Keep runtime in app layer and secrets server-only.
 - Do not export live Mastra runtime from `packages/ai`.
 - No DB writes.
 - No chat route change.
+- Only create factory/config/constructor wrappers.
 
 ## Acceptance Criteria
 
 - Skeleton typechecks.
 - `packages/ai` remains runtime-free.
 - No secret reaches client.
+- No production route calls skeleton code.
 
 ## Static Checks
 
@@ -328,13 +362,13 @@ Confirm `/api/ai/chat` untouched.
 
 ## Completion Report
 
-Must say `PARTIAL UNTIL WIRED`.
+Must say `PARTIAL UNTIL WIRED`. List all skeleton modules created. Explicitly state none are wired to production routes.
 
-# TASK-005: Integrate Mastra Memory into Chat Context
+# TASK-005: Wire Confirmed Mastra Memory into Chat Context
 
 ## Goal
 
-Wire Mastra Memory into real `POST /api/ai/chat`.
+Inject already-confirmed/already-enabled Mastra Memory into real `POST /api/ai/chat`.
 
 ## Must Read
 
@@ -359,6 +393,8 @@ Wire Mastra Memory into real `POST /api/ai/chat`.
 - unconfirmed schema/migration
 - credits/payment files
 - full automatic memory consolidation
+- memory creation/confirmation/deletion/disabling logic (belongs to TASK-006)
+- UI for memory controls (belongs to TASK-006)
 
 ## Main Path Requirement
 
@@ -366,11 +402,19 @@ Must wire real `/api/ai/chat`.
 
 ## Mastra Capability Used
 
-Memory runtime, threads/resources, conversation history, working memory or semantic recall according to confirmed design.
+Memory read path, threads/resources, conversation history, working memory or semantic recall according to confirmed design.
 
 ## AeloKit Responsibility
 
 Auth, consent, enable/disable policy, ownership mapping, v0.2 persistence and usage audit preservation.
+
+## Critical Guardrail
+
+- TASK-005 MUST NOT automatically create durable memory.
+- TASK-005 MUST NOT create/confirm/delete/disable memory entries.
+- TASK-005 can ONLY read already-confirmed/already-enabled memory and inject it into chat context.
+- Durable memory creation/confirmation/deletion/disabling MUST be done through TASK-006 user-confirmed UI or explicit API.
+- If no confirmed/enabled memory exists, chat proceeds without memory context (v0.2 behavior).
 
 ## Implementation Requirements
 
@@ -379,6 +423,7 @@ Auth, consent, enable/disable policy, ownership mapping, v0.2 persistence and us
 - Durable memory must not be silently saved without user confirmation.
 - Response metadata or UI-observable evidence must show memory was used.
 - Do not replace AI SDK streaming unless explicitly confirmed.
+- Do not create/confirm/delete/disable any memory entries.
 
 ## Acceptance Criteria
 
@@ -386,6 +431,7 @@ Auth, consent, enable/disable policy, ownership mapping, v0.2 persistence and us
 - Memory-enabled chat uses memory.
 - Memory-disabled chat does not use memory.
 - Usage audit still writes.
+- No memory creation/deletion performed by this TASK.
 
 ## Static Checks
 
@@ -398,8 +444,7 @@ pnpm check:package-exports
 ## Runtime Smoke
 
 - Send normal chat.
-- Enable memory.
-- Confirm/create memory.
+- Enable memory through TASK-006 UI (or assume pre-confirmed memory exists).
 - Ask a related follow-up.
 - Verify memory usage evidence.
 
@@ -413,13 +458,13 @@ Verify thread/message/message_part/usage audit still write.
 
 ## Completion Report
 
-Include proof from the real route.
+Include proof from the real route. Explicitly state no memory creation/deletion was performed.
 
-# TASK-006: Add User-confirmed Memory UI
+# TASK-006: Add User-confirmed Memory Controls
 
 ## Goal
 
-Add minimal memory UI for enable/disable, create/confirm, delete/disable.
+Add minimal UI and API for memory enable/disable, create/confirm, delete/disable.
 
 ## Must Read
 
@@ -455,6 +500,13 @@ Memory write/delete/disable capability according to selected storage/runtime.
 
 Consent UI, user control, source/audit display, no silent sensitive memory save.
 
+## Critical Guardrail
+
+- All durable memory creation/confirmation/deletion/disabling MUST go through this TASK's user-confirmed UI or explicit API.
+- TASK-005 MUST NOT create/confirm/delete/disable memory; it only reads memory created/confirmed through this TASK.
+- User must explicitly confirm before any durable memory is saved.
+- No automatic memory consolidation without user opt-in.
+
 ## Implementation Requirements
 
 - Memory toggle.
@@ -462,6 +514,7 @@ Consent UI, user control, source/audit display, no silent sensitive memory save.
 - Delete/disable memory.
 - Clear disabled state behavior.
 - UI copy must not claim automatic memory if it is not implemented.
+- All memory lifecycle operations require explicit user action.
 
 ## Acceptance Criteria
 
@@ -469,6 +522,7 @@ Consent UI, user control, source/audit display, no silent sensitive memory save.
 - User can create/confirm memory.
 - User can delete/disable memory.
 - Disabled memory is not used by chat.
+- No memory is created without explicit user confirmation.
 
 ## Static Checks
 
@@ -490,7 +544,7 @@ Plain chat remains usable with memory disabled.
 
 ## Completion Report
 
-Include UI path and evidence.
+Include UI path and evidence. List all memory lifecycle operations supported.
 
 # TASK-007: Add Minimal Knowledge Ingestion
 
@@ -519,6 +573,8 @@ Add minimal manual knowledge source ingestion with Mastra chunking/embedding/vec
 - complex knowledge admin
 - self-built RAG/vector/rerank engine
 - unconfirmed schema/migration
+- batch import functionality
+- file upload UI or API
 
 ## Main Path Requirement
 
@@ -532,19 +588,39 @@ RAG, document chunking, embedding, vector store.
 
 Source ownership metadata, visibility/access policy, mapping and provenance.
 
+## Ingestion Scope Guardrail
+
+- TASK-007 MUST ONLY support:
+  - Manual text source input (paste/type text)
+  - Single source ingestion at a time
+  - Mastra official chunking/embedding/vector flow
+- TASK-007 MUST NOT support:
+  - File upload
+  - Batch import
+  - Worker/background indexing
+  - Full knowledge admin UI
+  - External document connectors
+- If embedding provider is not configured, TASK-007 MUST be marked BLOCKED.
+- TASK-007 MUST NOT bypass embedding requirement.
+- TASK-007 MUST NOT proceed without valid embedding provider configuration.
+
 ## Implementation Requirements
 
-- Manual source only.
+- Manual text source only.
 - Use Mastra official chunking/embedding/vector flow.
 - Verify chunk/vector creation.
 - Preserve source provenance.
 - Do not create worker or full file lifecycle.
+- Do not support file upload.
+- Do not support batch import.
+- Fail gracefully if embedding provider is not configured.
 
 ## Acceptance Criteria
 
-- One manual source can be indexed.
+- One manual text source can be indexed.
 - Chunk/vector count can be verified.
 - Source ownership is preserved.
+- Embedding provider is confirmed configured and used.
 
 ## Static Checks
 
@@ -555,7 +631,7 @@ pnpm check:env
 
 ## Runtime Smoke
 
-Create one minimal source and index it.
+Create one minimal text source and index it.
 
 ## Storage / DB / Vector Verification
 
@@ -567,7 +643,7 @@ Plain chat route still works.
 
 ## Completion Report
 
-Must state whether retrieval is wired.
+Must state whether retrieval is wired. Must confirm embedding provider was configured and used.
 
 # TASK-008: Wire Knowledge Retrieval into Chat
 
@@ -609,6 +685,21 @@ Vector retrieval and optional Mastra RAG/rerank path if confirmed.
 
 Source access policy, retrieval context injection, citation metadata, usage audit preservation.
 
+## Citation Metadata Requirement
+
+- TASK-008 MUST define the source/citation message metadata shape or `ai_message_part` source part shape.
+- Minimum required fields for source/citation:
+  - `sourceId`: unique identifier for the source
+  - `title`: human-readable source title
+  - `documentId` or `chunkId`: reference to the indexed document or chunk
+  - `provenance`: origin information (e.g., URL, file path, or manual entry indicator)
+  - `score`: relevance score from retrieval
+  - `provider`: retrieval/embedding provider used
+- If citation is not persisted to DB, TASK-008 MUST document:
+  - Response-only metadata path
+  - How provenance is carried through stream
+  - Acceptance limitations for non-persisted citations
+
 ## Implementation Requirements
 
 - Retrieve only user-accessible sources.
@@ -616,12 +707,14 @@ Source access policy, retrieval context injection, citation metadata, usage audi
 - Attach provenance to response metadata or source parts.
 - Do not replace v0.2 persistence.
 - Do not bypass usage audit.
+- Define and document the source/citation metadata shape.
 
 ## Acceptance Criteria
 
 - Query about indexed source returns grounded answer.
 - Retrieval evidence includes source/chunk provenance.
 - Ordinary chat still works without knowledge source.
+- Source/citation metadata shape is defined and documented.
 
 ## Static Checks
 
@@ -645,7 +738,7 @@ Verify normal chat streaming, thread/message/message_part and usage audit.
 
 ## Completion Report
 
-Include proof from real route.
+Include proof from real route. Include the defined source/citation metadata shape.
 
 # TASK-009: Render Citations / Sources
 
@@ -686,18 +779,36 @@ Retrieval source/citation metadata.
 
 Citation rendering, access-safe source display, message part/metadata persistence where selected.
 
+## Citation Data Shape Requirement
+
+- TASK-009 MUST render citations using the source/citation metadata shape defined in TASK-008.
+- Each rendered citation MUST display at minimum:
+  - Source title
+  - Provenance indicator (e.g., "Manual entry", "Uploaded document", URL if applicable)
+  - Relevance score (optional in UI, but must be in metadata)
+- If citation is persisted to `ai_message_part`:
+  - `part_type` MUST be `'source'`
+  - `content` MUST contain the full source/citation metadata JSON
+  - Query verification: `SELECT id, message_id, runtime_part_type, content FROM ai_message_part WHERE part_type = 'source' ORDER BY created_at DESC LIMIT 20;`
+- If citation is response-only (not persisted):
+  - Document why persistence is not selected
+  - Document how provenance is carried through stream response
+  - Document acceptance limitations (e.g., citations not visible in history)
+
 ## Implementation Requirements
 
 - UI displays citation/source.
 - Source title/URI/reference does not leak unauthorized data.
 - Provenance survives stream and persistence path if persistence is selected.
 - Existing message rendering remains intact.
+- Use the source/citation metadata shape defined in TASK-008.
 
 ## Acceptance Criteria
 
 - Citation/source visible in UI.
 - Source provenance can be inspected.
 - Existing text/tool/file rendering still works.
+- Citation data shape matches TASK-008 definition.
 
 ## Static Checks
 
@@ -729,7 +840,7 @@ Verify ordinary chat UI still works.
 
 ## Completion Report
 
-Include citation rendering evidence.
+Include citation rendering evidence. Explicitly state whether citations are persisted or response-only and the implications.
 
 # TASK-010: v0.3 Integration Acceptance
 
