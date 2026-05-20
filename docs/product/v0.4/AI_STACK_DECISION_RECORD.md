@@ -1,8 +1,25 @@
 # v0.4 AI Stack Decision Record
 
-状态：PROPOSED
+状态：FROZEN_FOR_V0_4_IMPLEMENTATION
 
 日期：2026-05-20
+
+## 0. v0.4 Review Result
+
+本记录已按 v0.4 implementation prompt、`SCOPE_FREEZE.md`,
+`ACCEPTANCE_CRITERIA.md`, `IMPLEMENTATION_PLAN.md`, current repo manifests,
+and `OFFICIAL_DOCS_RESEARCH.md` 复核。
+
+- Freeze result: ACCEPTED.
+- Official docs age: 0 days on 2026-05-20; no refresh required by the 7-day rule.
+- Repo evidence: `apps/web/package.json` uses `@assistant-ui/react`,
+  `@assistant-ui/react-ai-sdk`, `ai@^6`, `@ai-sdk/react@^3`,
+  `@ai-sdk/openai@^3`, and app-local Mastra packages.
+- Boundary evidence: `packages/ai/package.json` exposes contract/type subpaths
+  and has no runtime/provider/Mastra dependencies.
+- Implementation constraint: this freeze does not authorize Assistant Cloud,
+  real MCP, local stdio MCP, schema/migration, dependency changes, or credits
+  charging.
 
 ## 1. Decision
 
