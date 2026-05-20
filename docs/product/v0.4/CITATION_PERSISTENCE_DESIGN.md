@@ -1,8 +1,42 @@
 # v0.4 Citation Persistence Design
 
-状态：DESIGN_ONLY
+状态：ACCEPTED_DESIGN_FOR_V0_4
 
 本文件设计 citation persistence。它不授权 schema 修改、migration、DB push、DB reset 或 destructive migration。
+
+## 0. v0.4 Final Design Decision
+
+日期：2026-05-20
+
+Decision: v0.4 选择 Path A, no-migration source/data part persistence, as the
+recommended implementation path.
+
+Code evidence:
+
+- `packages/db/src/ai.schema.ts` already defines `ai_message_part.part_type`
+  values including `source` and `data`, with JSONB `content` and
+  `runtime_part_type`.
+- `apps/web/src/ai/persistence/index.ts` already maps AI SDK
+  `source-url` / `source-document` parts to `partType='source'` and `data-*`
+  parts to `partType='data'`.
+- Current retrieval citations already carry compact source metadata:
+  `sourceId`, `title`, `documentId`, `chunkId`, `provenance`, `score`, and
+  `provider`.
+- Current historical `getMessages()` returns message metadata with empty
+  content, so replayable citations require loading persisted message parts; it
+  must not rerun retrieval to reconstruct historical citation facts.
+
+T05 may implement this path only if it keeps all of the following true:
+
+- no schema edits.
+- no migration generation or execution.
+- no dependency changes.
+- no full raw source body persistence by default.
+- no dedicated citation table.
+- no provider or embedding secret exposure to client.
+- live citation display remains supported.
+- historical reload renders citations from persisted message parts.
+- historical replay does not rerun retrieval as evidence.
 
 ## 1. Current State
 
@@ -87,6 +121,8 @@ Persisted source part should include:
 - Reloaded thread can render citations without response header.
 - No DB schema or migration changes.
 - Existing response metadata/header may remain for live UI, but is not the only persistence path.
+- Citation acceptance becomes RUNTIME REPLAY PASS only after both fresh streamed
+  citations and reloaded historical citations are verified from persisted parts.
 
 ## 5. Future Path B: Dedicated Citation Table
 
@@ -184,8 +220,12 @@ Dedicated table path:
 
 ## 10. Open Decision
 
-Recommended v0.4 default:
+Resolved v0.4 default:
 
 - Keep this file as the design record.
-- During implementation, first attempt no-migration source/data part persistence only if user explicitly opens citation persistence implementation.
-- Do not create dedicated citation table in v0.4 default scope.
+- Implement no-migration source/data part persistence in V0.4-T05 because the
+  current implementation prompt explicitly approves T05 under strict no-migration
+  constraints.
+- Do not create a dedicated citation table in v0.4.
+- If T05 is skipped or blocked, citation acceptance must be reported as
+  DESIGN ACCEPTED / RUNTIME PERSISTENCE NOT IMPLEMENTED.
