@@ -191,3 +191,48 @@ Stop and update `OPEN_QUESTIONS.md` if:
 - official docs require unstable API to satisfy acceptance.
 - runtime smoke requires DB-mutating commands without user confirmation.
 - boundary checks conflict with current repo rules.
+
+## 8. V0.4-T02 Runtime Boundary Audit Result
+
+日期：2026-05-20
+
+Status: PASS. No blocking runtime boundary drift was found.
+
+Code-grounded findings:
+
+- Route boundary: `apps/web/src/app/api/ai/chat/route.ts` is present and
+  `apps/web/src/app/api/chat/route.ts` is absent. Search hits for `/api/chat`
+  are documentation guardrails only.
+- Transport boundary: `apps/web/src/components/ai/ChatProvider.tsx` uses
+  `AssistantChatTransport` with `API_URL = '/api/ai/chat'` and
+  `useChatRuntime`; no `TextStreamChatTransport` is used for the main chat.
+- Secret boundary: provider and embedding env names are not read in
+  `apps/web/src/components/ai`; visible component mentions are display-only env
+  names. Client env exposes analytics/Turnstile public keys only.
+- Package boundary: `packages/ai/src` has no live provider SDK, DB, Next,
+  React UI or Mastra runtime imports. The only Mastra hit is a runtime-free
+  adapter comment.
+- DB shim boundary: `apps/web/src/db/*.ts` source files re-export `@repo/db`
+  surfaces. No Drizzle table definitions were found in `apps/web/src/db`.
+- Usage and credits boundary: AI runtime/package searches found no
+  `@repo/credits` ledger import or mutation; the `consumeStream` hit in
+  `/api/ai/chat` is AI SDK stream consumption, not credits consumption.
+- Memory boundary: `ai_memory_draft` supports pending/confirmed/deleted plus
+  disabled state, and recall filters confirmed, not-disabled rows for the
+  current `resourceId`.
+- Knowledge boundary: retrieval overfetches with `vectorTopK = topK * 5` and
+  then filters against owner/public/shared access before citations are built.
+- Citation boundary: current live citations are carried by
+  `x-ai-knowledge-citations` and finish `messageMetadata.citations`.
+  `saveMessageParts()` can persist AI SDK `source-url` / `source-document`
+  parts as `partType='source'`, but current retrieval citations are not yet
+  emitted as persisted source/data parts. This is the expected T04/T05 citation
+  persistence surface, not an unrelated boundary drift.
+
+T03 decision:
+
+- No mandatory runtime boundary hardening patch is required by T02.
+- T03 should be marked SKIPPED unless a later validation command exposes a new
+  blocking boundary issue.
+- T05 may proceed only after T04 confirms the no-migration citation persistence
+  path and all T05 prompt conditions remain true.
