@@ -8,7 +8,7 @@ import {
   aiToolCall,
 } from '@repo/db/ai-schema';
 import { nanoid } from 'nanoid';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import type { UIMessage } from 'ai';
 
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
@@ -72,6 +72,16 @@ export interface PersistenceResult<T> {
   readonly error?: Error;
 }
 
+interface PersistedCitationMetadata {
+  readonly sourceId: string;
+  readonly title: string;
+  readonly documentId: string;
+  readonly chunkId: string;
+  readonly provenance: string;
+  readonly score: number;
+  readonly provider: string;
+}
+
 function createThreadTitle(message?: UIMessage): string | undefined {
   const text = message?.parts
     .filter((part) => part.type === 'text')
@@ -84,6 +94,80 @@ function createThreadTitle(message?: UIMessage): string | undefined {
   }
 
   return text.length > 80 ? `${text.slice(0, 77)}...` : text;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getStringField(
+  value: Record<string, unknown>,
+  field: string
+): string | undefined {
+  const fieldValue = value[field];
+  return typeof fieldValue === 'string' ? fieldValue : undefined;
+}
+
+function getNumberField(
+  value: Record<string, unknown>,
+  field: string
+): number | undefined {
+  const fieldValue = value[field];
+  return typeof fieldValue === 'number' ? fieldValue : undefined;
+}
+
+function getCitationMetadata(
+  part: Record<string, unknown>
+): PersistedCitationMetadata | undefined {
+  const sourceId = getStringField(part, 'sourceId');
+  const title = getStringField(part, 'title');
+  const documentId = getStringField(part, 'documentId');
+  const chunkId = getStringField(part, 'chunkId');
+  const provenance = getStringField(part, 'provenance');
+  const score = getNumberField(part, 'score');
+  const provider = getStringField(part, 'provider');
+
+  if (
+    !sourceId ||
+    !title ||
+    !documentId ||
+    !chunkId ||
+    !provenance ||
+    score === undefined ||
+    !provider
+  ) {
+    return undefined;
+  }
+
+  return {
+    sourceId,
+    title,
+    documentId,
+    chunkId,
+    provenance,
+    score,
+    provider,
+  };
+}
+
+function normalizePersistedPart(part: {
+  readonly partType: string;
+  readonly runtimePartType: string;
+  readonly content: unknown;
+}): Record<string, unknown> {
+  const content = asRecord(part.content);
+
+  if (part.partType === 'source') {
+    return {
+      ...content,
+      type: 'source',
+      runtimePartType: part.runtimePartType,
+    };
+  }
+
+  return content;
 }
 
 export async function ensureThread(options: {
@@ -495,12 +579,49 @@ export async function getMessages(
       messages.length = Math.min(messages.length, options.limit);
     }
 
-    const uiMessages = messages.map((msg) => ({
-      id: msg.id,
-      role: msg.role,
-      content: [],
-      metadata: msg.metadata,
-    }));
+    const messageIds = messages.map((message) => message.id);
+    const partsByMessageId = new Map<string, Record<string, unknown>[]>();
+
+    if (messageIds.length > 0) {
+      const messageParts = await db
+        .select()
+        .from(aiMessagePart)
+        .where(inArray(aiMessagePart.messageId, messageIds))
+        .orderBy(aiMessagePart.messageId, aiMessagePart.sortOrder);
+
+      for (const part of messageParts) {
+        const normalizedPart = normalizePersistedPart({
+          partType: part.partType,
+          runtimePartType: part.runtimePartType,
+          content: part.content,
+        });
+        const currentParts = partsByMessageId.get(part.messageId) ?? [];
+        currentParts.push(normalizedPart);
+        partsByMessageId.set(part.messageId, currentParts);
+      }
+    }
+
+    const uiMessages = messages.map((msg) => {
+      const parts = partsByMessageId.get(msg.id) ?? [];
+      const citations = parts
+        .map(getCitationMetadata)
+        .filter(
+          (citation): citation is PersistedCitationMetadata =>
+            citation !== undefined
+        );
+      const metadata = {
+        ...asRecord(msg.metadata),
+        ...(citations.length > 0 ? { citations } : {}),
+      };
+
+      return {
+        id: msg.id,
+        role: msg.role,
+        content: parts,
+        parts,
+        metadata,
+      };
+    });
 
     return { success: true, data: uiMessages };
   } catch (error) {

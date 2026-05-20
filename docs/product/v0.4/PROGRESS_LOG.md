@@ -75,3 +75,30 @@
   - Replay semantics, access relationship, raw content minimization, and migration gate are documented.
 - commit: pending; actual SHA will be backfilled in T09 final acceptance.
 - next task decision: continue to V0.4-T05 because the current prompt explicitly approves the no-migration citation persistence patch under strict constraints.
+
+## V0.4-T05 Optional No-Migration Citation Persistence Patch
+
+- status: PASS
+- changed files:
+  - `apps/web/src/app/api/ai/chat/route.ts`
+  - `apps/web/src/ai/persistence/index.ts`
+  - `apps/web/src/ai/knowledge/index.ts`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands:
+  - `pnpm check:env`
+  - `pnpm check:package-exports`
+  - `pnpm check:db-shims`
+  - `pnpm format`
+  - `pnpm lint`
+  - `pnpm --filter @repo/ai typecheck`
+  - `pnpm --filter @repo/db typecheck`
+  - `pnpm --filter @repo/web typecheck`
+  - `git diff --check`
+- result:
+  - Required validation commands passed.
+  - Retrieval citations are converted to compact `source-document` snapshots and persisted through existing `ai_message_part` source-part support.
+  - Live response metadata/header citation display is preserved.
+  - Historical message loading now reconstructs persisted parts and citation metadata from `ai_message_part` without rerunning retrieval.
+  - No schema, migration, dependency, manifest, lockfile, raw full source body, or dedicated citation table change was made.
+- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- next task decision: continue to V0.4-T06 Smoke Environment Readiness.

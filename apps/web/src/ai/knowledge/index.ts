@@ -69,16 +69,15 @@ export const SOURCE_CITATION_METADATA_SHAPE = {
       'string - retrieval/embedding provider used (e.g., "openai-embedding")',
   },
   persistence: {
-    mode: 'response-only',
+    mode: 'message-source-parts',
     reason:
-      'Citations are returned in response metadata and stream headers. ' +
-      'They are NOT persisted to ai_message_part by default in v0.3. ' +
-      'Refreshing the chat or loading historical messages will not restore ' +
-      'these citations until citation persistence is implemented.',
+      'Citations are returned in response metadata and stream headers for live ' +
+      'display, and v0.4 persists compact citation snapshots as source message ' +
+      'parts in ai_message_part without schema changes.',
     provenancePath:
       'Provenance is carried through stream response headers (x-ai-knowledge-citations) ' +
-      'and response message metadata for immediate UI rendering. AeloKit DB ' +
-      'metadata keeps source/document/chunk ownership, but the per-response ' +
-      'citation list remains response-only.',
+      'and response message metadata for immediate UI rendering. Historical ' +
+      'replay uses persisted source message parts with source/document/chunk ' +
+      'metadata and does not rerun retrieval as historical evidence.',
   },
 } as const;

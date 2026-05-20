@@ -37,6 +37,8 @@ import {
   retrieveKnowledgeContext,
   formatRetrievalContextForPrompt,
   isKnowledgeRetrievalEnabled,
+  type RetrievedChunk,
+  type SourceCitationMetadata,
 } from '@/ai/knowledge';
 
 export const maxDuration = 30;
@@ -49,6 +51,43 @@ type ChatRequestBody = {
   readonly memoryEnabled?: boolean;
   readonly knowledgeEnabled?: boolean;
 };
+
+const CITATION_SOURCE_PART_TYPE = 'source-document';
+
+function createCitationSourceParts(
+  citations: readonly SourceCitationMetadata[],
+  retrievedAt: string
+): UIMessage['parts'] {
+  return citations.map(
+    (citation, index) =>
+      ({
+        type: CITATION_SOURCE_PART_TYPE,
+        id: `${citation.sourceId}:${citation.chunkId}`,
+        mediaType: 'text/plain',
+        sourceId: citation.sourceId,
+        documentId: citation.documentId,
+        chunkId: citation.chunkId,
+        title: citation.title,
+        provenance: citation.provenance,
+        score: citation.score,
+        provider: citation.provider,
+        citationIndex: index + 1,
+        retrievedAt,
+      }) as UIMessage['parts'][number]
+  );
+}
+
+function withCitationSourceParts(
+  parts: UIMessage['parts'],
+  citations: readonly SourceCitationMetadata[],
+  retrievedAt: string
+): UIMessage['parts'] {
+  if (citations.length === 0) {
+    return parts;
+  }
+
+  return [...parts, ...createCitationSourceParts(citations, retrievedAt)];
+}
 
 function jsonError(error: unknown, status: number): Response {
   return new Response(JSON.stringify({ error }), {
@@ -258,8 +297,8 @@ export async function POST(req: Request) {
 
     // 6.6. Knowledge retrieval context injection (v0.3 TASK-008)
     let knowledgeContextText = '';
-    let knowledgeCitations: readonly unknown[] = [];
-    let knowledgeChunks: readonly unknown[] = [];
+    let knowledgeCitations: readonly SourceCitationMetadata[] = [];
+    let knowledgeChunks: readonly RetrievedChunk[] = [];
 
     if (knowledgeEnabled && lastUserMessage) {
       const userQuery = lastUserMessage.parts
@@ -323,9 +362,17 @@ export async function POST(req: Request) {
       },
       onFinish: async ({ responseMessage, finishReason, isAborted }) => {
         const status = isAborted ? 'aborted' : 'complete';
-        await saveMessageParts(assistantMessageId, responseMessage.parts, {
-          threadId: persistedThread.id,
-        });
+        await saveMessageParts(
+          assistantMessageId,
+          withCitationSourceParts(
+            responseMessage.parts,
+            knowledgeCitations,
+            new Date(startTime).toISOString()
+          ),
+          {
+            threadId: persistedThread.id,
+          }
+        );
         await updateMessageStatus(assistantMessageId, status, new Date());
 
         const totalUsage = await result.totalUsage;
