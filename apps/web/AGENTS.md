@@ -21,7 +21,7 @@
 
 ## AI Web App 边界
 
-v0.2 AI 目录规则：
+当前 AI Web App 边界：
 
 ```txt
 apps/web/src/ai              # app-level runtime wiring
@@ -30,19 +30,17 @@ apps/web/src/app/api/ai      # AI API routes
 ```
 
 - `apps/web/src/ai` 可以连接 `@repo/auth`、`@repo/storage`、`@repo/db`、`@repo/analytics` 和已创建的 `@repo/ai` contracts。
-- `apps/web/src/ai` 负责 web app runtime wiring，不应该定义跨 app contracts。
+- `apps/web/src/ai` 负责 web app runtime wiring，包括 provider 初始化、session/context 注入、model/agent/tool selection、Mastra/AI SDK runtime 连接、usage audit 和 app policy；不应该定义跨 app contracts。
 - `apps/web/src/components/ai` 负责 app-local AI UI，不应该做 provider 初始化、credits ledger mutation、DB schema。
-- 首个 chat streaming route 使用 `/api/ai/chat`，文件规划为 `apps/web/src/app/api/ai/chat/route.ts`。
-- 不要使用 `/api/chat` 作为首个 AI route。
-- v0.2 只做 usage audit，不做 credits 扣费。
-- v0.5 之后的 credits preflight/reservation/settlement 必须通过 `@repo/credits`，AI runtime 不得直接改 ledger。
-- v0.2 执行入口文档是 `docs/product/AI_CHAT_V0_2_*`。
+- `apps/web/src/app/api/ai/chat/route.ts` 是当前 AI chat stream route，对外为 `POST /api/ai/chat`。
+- 不要使用 `/api/chat` 作为 AI chat route。
+- Usage audit 不等于 credits charging；AI runtime 不得直接改 credits ledger。
+- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前版本 Scope Freeze 明确打开后实现。
 - 涉及 assistant-ui、Vercel AI SDK、Mastra 或 provider SDK 时，必须先执行 External Docs Gate，查官方最新文档，不允许凭旧 API 或记忆实现。
-- TASK-003 只输出 dependency install plan；只有 TASK-003B 可实际安装 v0.2 AI dependencies。
-- TASK-003B 之外的其他 TASK 不允许顺手修改 `apps/web/package.json` 或 `pnpm-lock.yaml`。
-- TASK-004 只输出 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`，不创建 schema/migration。
-- TASK-005 只有在用户确认 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts` 和 migration。
-- 不实现 v0.3+ memory/RAG/MCP/credits charging，不创建 worker/gateway/studio/design-system split。
+- v0.1 / v0.2 / v0.3 gate 只作为 historical regression guardrail，不能定义当前版本 scope。
+- 当前版本 AI scope 只能由 `docs/product/v0.x/SCOPE_FREEZE.md`、`ACCEPTANCE_CRITERIA.md` 和 `IMPLEMENTATION_PLAN.md` 定义。
+- v0.4 默认不接真实 third-party MCP，不启用 local stdio MCP，不接 Assistant Cloud，不做 credits charging，除非当前版本 Scope Freeze 和用户确认明确打开。
+- 没有当前版本 Scope Freeze 和用户确认，不创建 worker/gateway/studio/design-system split。
 
 ## UI 组件边界
 

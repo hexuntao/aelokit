@@ -216,15 +216,15 @@ ANSWERED
 
 ### Final choice
 
-TBD
+A。更新 `packages/AGENTS.md`：`packages/ai` 已存在，只能作为 contracts / runtime-types / adapter-compatible types package 维护；`packages/design-system` 仍是未来规划。
 
 ### Rationale
 
-本轮只允许生成 v0.4 planning docs，不修改 agent rules。该冲突不阻塞 v0.4 planning，但会影响 future implementation 的 path interpretation。
+Q008 的冲突来自 nearest package rules 与当前仓库事实不一致。选择 A 可以让 future v0.4 implementation 在读取 `packages/AGENTS.md` 时正确识别 `packages/ai` 是现有 `@repo/ai` contracts 包，同时继续禁止把 `packages/ai` 扩展成 runtime、route、UI、DB query、schema、migration 或 provider SDK initialization 层。本次只更新 agent rule 文档，不修改业务代码、`package.json` 或 package exports。
 
 ### Requires human confirmation
 
-YES
+ANSWERED
 
 ## Q009
 
@@ -244,12 +244,12 @@ YES
 
 ### Final choice
 
-TBD
+A。更新 `apps/web/AGENTS.md`，保留 `/api/ai/chat`、`apps/web/src/ai`、`apps/web/src/components/ai` 的长期边界，并移除 v0.2 当前任务语气。
 
 ### Rationale
 
-本轮只允许生成 v0.4 planning docs，不修改 app agent rules。该冲突不阻塞 planning，但应在进入 runtime implementation 前确认。
+Q009 的冲突来自 `apps/web/AGENTS.md` 仍把 v0.2 task gate 写成当前执行规则。选择 A 可以保留已验证的 AI Web App ownership，同时明确 v0.1/v0.2/v0.3 gate 只作为 historical regression guardrail。v0.4 仍默认不接真实 third-party MCP、不启用 local stdio MCP、不接 Assistant Cloud、不做 credits charging，除非当前版本 Scope Freeze 和用户确认明确打开。本次只更新 agent rule 文档，不修改业务代码。
 
 ### Requires human confirmation
 
-YES
+ANSWERED

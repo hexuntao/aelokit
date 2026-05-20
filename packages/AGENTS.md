@@ -29,7 +29,16 @@
   - exports plan。
   - validation commands。
   - user confirmation。
-- `packages/ai`、`packages/design-system` 是未来规划；当前不要创建。
+- `packages/ai` 已存在，不属于 future package creation。
+- `packages/design-system` 仍是未来规划；当前不要创建。
+
+## AI package boundary
+
+- `packages/ai` 是 `@repo/ai` contracts / runtime-types / adapter-compatible types package。
+- `packages/ai` 可以维护 provider、model、agent、tool、skill、memory、knowledge、MCP、usage、permission、error 和 runtime type contracts。
+- `packages/ai` 可以维护 lightweight AI SDK / Mastra adapter-compatible types，但不得初始化或执行 live runtime。
+- `packages/ai` 不得放 Next route、React UI、assistant-ui components、DB query、DB schema、migration、provider SDK initialization、app session/cookies/headers、server actions 或 credits ledger mutation。
+- 更新 agent rule 不代表允许修改 `package.json` 或 package exports；manifest/export 变更必须由单独 scope 和验证要求明确打开。
 
 ## Implementation rules
 
