@@ -42,3 +42,19 @@
   - Citation response-only limitation remains confirmed and is assigned to T04/T05, not T03.
 - commit: pending; actual SHA will be backfilled in T09 final acceptance.
 - next task decision: mark V0.4-T03 SKIPPED unless validation exposes a new boundary issue, then continue to V0.4-T04.
+
+## V0.4-T03 Runtime Boundary Hardening Patch
+
+- status: SKIPPED
+- changed files:
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands:
+  - `git diff --check`
+  - `git diff --stat`
+  - `git diff --name-only`
+- result:
+  - T02 found no blocking runtime boundary drift requiring a code hardening patch.
+  - No runtime, UI, package, schema, migration, manifest, lockfile, env, or CI files were changed.
+  - Citation replay remains assigned to T04/T05 under the explicit no-migration citation persistence rules.
+- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- next task decision: continue to V0.4-T04 Citation Persistence Final Design.
