@@ -3,14 +3,17 @@ import 'server-only';
 import { Memory } from '@mastra/memory';
 import type { MastraDBMessage } from '@mastra/core/agent';
 import type { PostgresStore } from '@mastra/pg';
+import { and, desc, eq, isNotNull, ne } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { getDb } from '@repo/db';
+import { aiMemoryDraft } from '@repo/db/ai-schema';
 import { getMastraStorage } from './mastra/storage';
 
 export interface UserMemoryEntry {
   readonly id: string;
   readonly content: string;
   readonly createdAt: Date;
-  readonly threadId?: string;
+  readonly threadId?: string | null;
   readonly resourceId: string;
   readonly confirmed: boolean;
   readonly disabled: boolean;
@@ -35,6 +38,8 @@ export interface ConfirmedMemoryMessagesResult {
   readonly messages: readonly MastraDBMessage[];
   readonly threadIds: readonly string[];
 }
+
+type MemoryDraftRow = typeof aiMemoryDraft.$inferSelect;
 
 let cachedStorage: PostgresStore | null = null;
 let cachedMemory: Memory | null = null;
@@ -84,6 +89,60 @@ function getMemoryMetadataBoolean(
 
 function isUserMemoryThread(metadata: Record<string, unknown> | undefined) {
   return metadata?.type === 'user-confirmed-memory';
+}
+
+function createMemoryTitle(content: string): string {
+  const trimmed = content.replace(/\s+/g, ' ').trim();
+  if (trimmed.length <= 50) {
+    return trimmed || 'User Memory';
+  }
+  return `${trimmed.slice(0, 50)}...`;
+}
+
+function toMemoryThreadSummary(row: MemoryDraftRow): {
+  id: string;
+  title?: string;
+  createdAt: Date;
+  confirmed: boolean;
+  disabled: boolean;
+} {
+  return {
+    id: row.id,
+    title: row.title ?? createMemoryTitle(row.content),
+    createdAt: row.createdAt,
+    confirmed: row.status === 'confirmed',
+    disabled: row.disabled,
+  };
+}
+
+async function getMemoryDraftById(
+  id: string,
+  resourceId: string
+): Promise<MemoryDraftRow | undefined> {
+  const db = await getDb();
+  const [draft] = await db
+    .select()
+    .from(aiMemoryDraft)
+    .where(and(eq(aiMemoryDraft.id, id), eq(aiMemoryDraft.userId, resourceId)))
+    .limit(1);
+
+  return draft;
+}
+
+async function listActiveMemoryDrafts(
+  resourceId: string
+): Promise<MemoryDraftRow[]> {
+  const db = await getDb();
+  return db
+    .select()
+    .from(aiMemoryDraft)
+    .where(
+      and(
+        eq(aiMemoryDraft.userId, resourceId),
+        ne(aiMemoryDraft.status, 'deleted')
+      )
+    )
+    .orderBy(desc(aiMemoryDraft.createdAt));
 }
 
 export function extractMemoryMessageText(message: unknown): string {
@@ -156,30 +215,65 @@ export async function listUserMemoryThreads(resourceId: string): Promise<
   >
 > {
   try {
-    await ensureStorageInitialized();
-    const memory = getOrCreateMemory();
-    const result = await memory.listThreads({
-      filter: {
-        resourceId,
-        metadata: { type: 'user-confirmed-memory' },
-      },
-      perPage: false,
-    });
+    const draftRows = await listActiveMemoryDrafts(resourceId);
+    const draftThreadIds = new Set(
+      draftRows
+        .map((row) => row.mastraThreadId)
+        .filter((threadId): threadId is string => Boolean(threadId))
+    );
 
-    const threads = result?.threads ?? [];
+    let legacyThreads: {
+      id: string;
+      title?: string;
+      createdAt: Date;
+      confirmed: boolean;
+      disabled: boolean;
+    }[] = [];
+
+    try {
+      await ensureStorageInitialized();
+      const memory = getOrCreateMemory();
+      const result = await memory.listThreads({
+        filter: {
+          resourceId,
+          metadata: { type: 'user-confirmed-memory' },
+        },
+        perPage: false,
+      });
+
+      legacyThreads = (result?.threads ?? [])
+        .filter((thread) => {
+          const metadata = thread.metadata as
+            | Record<string, unknown>
+            | undefined;
+          return (
+            isUserMemoryThread(metadata) &&
+            getMemoryMetadataBoolean(metadata, 'confirmed') &&
+            !draftThreadIds.has(thread.id)
+          );
+        })
+        .map((thread) => {
+          const metadata = thread.metadata as
+            | Record<string, unknown>
+            | undefined;
+          return {
+            id: thread.id,
+            title: thread.title,
+            createdAt: thread.createdAt,
+            confirmed: true,
+            disabled: getMemoryMetadataBoolean(metadata, 'disabled'),
+          };
+        });
+    } catch (error) {
+      console.error(
+        '[Memory Service] list legacy memory threads error:',
+        error
+      );
+    }
 
     return {
       success: true,
-      data: threads.map((thread) => {
-        const metadata = thread.metadata as Record<string, unknown> | undefined;
-        return {
-          id: thread.id,
-          title: thread.title,
-          createdAt: thread.createdAt,
-          confirmed: (metadata?.confirmed as boolean) ?? false,
-          disabled: (metadata?.disabled as boolean) ?? false,
-        };
-      }),
+      data: [...draftRows.map(toMemoryThreadSummary), ...legacyThreads],
     };
   } catch (error) {
     console.error('[Memory Service] listUserMemoryThreads error:', error);
@@ -198,39 +292,31 @@ export async function listUserMemoryThreads(resourceId: string): Promise<
 
 export async function createMemoryThread(
   input: CreateMemoryInput
-): Promise<MemoryServiceResult<{ threadId: string; messageId: string }>> {
+): Promise<MemoryServiceResult<{ threadId: string; messageId?: string }>> {
   try {
-    await ensureStorageInitialized();
-    const memory = getOrCreateMemory();
     const now = new Date();
+    const db = await getDb();
+    const draftId = `memory-draft-${nanoid()}`;
+    const title = createMemoryTitle(input.content);
 
-    const thread = await memory.createThread({
-      resourceId: input.resourceId,
-      title: `User Memory: ${input.content.slice(0, 50)}...`,
-      metadata: {
-        type: 'user-confirmed-memory',
-        confirmed: false,
-        disabled: false,
-        createdAt: now.toISOString(),
-      },
-    });
-
-    const memoryMessage = createManualMemoryMessage({
-      threadId: thread.id,
-      resourceId: input.resourceId,
+    await db.insert(aiMemoryDraft).values({
+      id: draftId,
+      userId: input.resourceId,
+      title,
       content: input.content,
-      now,
-    });
-
-    await memory.saveMessages({
-      messages: [memoryMessage],
+      status: 'pending',
+      disabled: false,
+      metadata: {
+        source: 'manual-memory',
+      },
+      createdAt: now,
+      updatedAt: now,
     });
 
     return {
       success: true,
       data: {
-        threadId: thread.id,
-        messageId: memoryMessage.id,
+        threadId: draftId,
       },
     };
   } catch (error) {
@@ -251,6 +337,79 @@ export async function confirmMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    const draft = await getMemoryDraftById(threadId, resourceId);
+
+    if (draft) {
+      if (draft.status === 'deleted') {
+        return {
+          success: false,
+          error: {
+            code: 'memory-deleted',
+            message: 'Deleted memory cannot be confirmed',
+          },
+        };
+      }
+
+      if (draft.status === 'confirmed') {
+        return {
+          success: true,
+          data: { threadId: draft.id },
+        };
+      }
+
+      await ensureStorageInitialized();
+      const memory = getOrCreateMemory();
+      const now = new Date();
+      const title = draft.title ?? createMemoryTitle(draft.content);
+
+      const thread = await memory.createThread({
+        resourceId,
+        title,
+        metadata: {
+          type: 'user-confirmed-memory',
+          aelokitMemoryId: draft.id,
+          confirmed: true,
+          disabled: false,
+          createdAt: draft.createdAt.toISOString(),
+          confirmedAt: now.toISOString(),
+        },
+      });
+
+      const memoryMessage = createManualMemoryMessage({
+        threadId: thread.id,
+        resourceId,
+        content: draft.content,
+        now,
+      });
+
+      await memory.saveMessages({
+        messages: [memoryMessage],
+      });
+
+      const db = await getDb();
+      await db
+        .update(aiMemoryDraft)
+        .set({
+          status: 'confirmed',
+          disabled: false,
+          mastraThreadId: thread.id,
+          mastraMessageId: memoryMessage.id,
+          confirmedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(aiMemoryDraft.id, draft.id),
+            eq(aiMemoryDraft.userId, resourceId)
+          )
+        );
+
+      return {
+        success: true,
+        data: { threadId: draft.id },
+      };
+    }
+
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
@@ -278,6 +437,16 @@ export async function confirmMemoryThread(
 
     const existingMetadata =
       (existingThread.metadata as Record<string, unknown>) ?? {};
+
+    if (!isUserMemoryThread(existingMetadata)) {
+      return {
+        success: false,
+        error: {
+          code: 'invalid-memory-thread',
+          message: 'Memory thread is not a user memory',
+        },
+      };
+    }
 
     const newMetadata = {
       ...existingMetadata,
@@ -313,6 +482,79 @@ export async function disableMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    const draft = await getMemoryDraftById(threadId, resourceId);
+
+    if (draft) {
+      if (draft.status !== 'confirmed') {
+        return {
+          success: false,
+          error: {
+            code: 'memory-not-confirmed',
+            message: 'Confirm the memory before disabling it',
+          },
+        };
+      }
+
+      const newDisabled = !draft.disabled;
+      const now = new Date();
+
+      if (draft.mastraThreadId) {
+        await ensureStorageInitialized();
+        const memory = getOrCreateMemory();
+        const existingThread = await memory.getThreadById({
+          threadId: draft.mastraThreadId,
+        });
+
+        if (existingThread) {
+          const existingMetadata =
+            (existingThread.metadata as Record<string, unknown>) ?? {};
+
+          if (existingThread.resourceId !== resourceId) {
+            return {
+              success: false,
+              error: {
+                code: 'unauthorized',
+                message: 'You do not have permission to disable this memory',
+              },
+            };
+          }
+
+          await memory.updateThread({
+            id: draft.mastraThreadId,
+            title: existingThread.title ?? draft.title ?? 'User Memory',
+            metadata: {
+              ...existingMetadata,
+              disabled: newDisabled,
+              disabledAt: newDisabled ? now.toISOString() : undefined,
+            },
+          });
+        }
+      }
+
+      const db = await getDb();
+      await db
+        .update(aiMemoryDraft)
+        .set({
+          disabled: newDisabled,
+          updatedAt: now,
+          metadata: {
+            ...(draft.metadata as Record<string, unknown>),
+            disabledAt: newDisabled ? now.toISOString() : undefined,
+          },
+        })
+        .where(
+          and(
+            eq(aiMemoryDraft.id, draft.id),
+            eq(aiMemoryDraft.userId, resourceId)
+          )
+        );
+
+      return {
+        success: true,
+        data: { threadId: draft.id },
+      };
+    }
+
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
@@ -340,6 +582,16 @@ export async function disableMemoryThread(
 
     const existingMetadata =
       (existingThread.metadata as Record<string, unknown>) ?? {};
+
+    if (!isUserMemoryThread(existingMetadata)) {
+      return {
+        success: false,
+        error: {
+          code: 'invalid-memory-thread',
+          message: 'Memory thread is not a user memory',
+        },
+      };
+    }
 
     const newDisabled = !(existingMetadata.disabled as boolean);
 
@@ -375,6 +627,55 @@ export async function deleteMemoryThread(
   resourceId: string
 ): Promise<MemoryServiceResult<{ threadId: string }>> {
   try {
+    const draft = await getMemoryDraftById(threadId, resourceId);
+
+    if (draft) {
+      const now = new Date();
+
+      if (draft.mastraThreadId && draft.status === 'confirmed') {
+        await ensureStorageInitialized();
+        const memory = getOrCreateMemory();
+        const existingThread = await memory.getThreadById({
+          threadId: draft.mastraThreadId,
+        });
+
+        if (existingThread && existingThread.resourceId !== resourceId) {
+          return {
+            success: false,
+            error: {
+              code: 'unauthorized',
+              message: 'You do not have permission to delete this memory',
+            },
+          };
+        }
+
+        if (existingThread) {
+          await memory.deleteThread(draft.mastraThreadId);
+        }
+      }
+
+      const db = await getDb();
+      await db
+        .update(aiMemoryDraft)
+        .set({
+          status: 'deleted',
+          disabled: true,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(aiMemoryDraft.id, draft.id),
+            eq(aiMemoryDraft.userId, resourceId)
+          )
+        );
+
+      return {
+        success: true,
+        data: { threadId: draft.id },
+      };
+    }
+
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
@@ -396,6 +697,19 @@ export async function deleteMemoryThread(
         error: {
           code: 'unauthorized',
           message: 'You do not have permission to delete this memory',
+        },
+      };
+    }
+
+    const existingMetadata =
+      (existingThread.metadata as Record<string, unknown>) ?? {};
+
+    if (!isUserMemoryThread(existingMetadata)) {
+      return {
+        success: false,
+        error: {
+          code: 'invalid-memory-thread',
+          message: 'Memory thread is not a user memory',
         },
       };
     }
@@ -430,6 +744,67 @@ export async function getMemoryThreadContent(
   }>
 > {
   try {
+    const draft = await getMemoryDraftById(threadId, resourceId);
+
+    if (draft) {
+      if (draft.status !== 'confirmed' || !draft.mastraThreadId) {
+        return {
+          success: true,
+          data: {
+            content: draft.status === 'deleted' ? '' : draft.content,
+            confirmed: false,
+            disabled: draft.disabled,
+          },
+        };
+      }
+
+      await ensureStorageInitialized();
+      const memory = getOrCreateMemory();
+      const thread = await memory.getThreadById({
+        threadId: draft.mastraThreadId,
+      });
+
+      if (!thread) {
+        return {
+          success: false,
+          error: {
+            code: 'thread-not-found',
+            message: 'Memory thread not found',
+          },
+        };
+      }
+
+      if (thread.resourceId !== resourceId) {
+        return {
+          success: false,
+          error: {
+            code: 'unauthorized',
+            message: 'You do not have permission to access this memory',
+          },
+        };
+      }
+
+      const { messages } = await memory.recall({
+        threadId: draft.mastraThreadId,
+        resourceId,
+        perPage: false,
+      });
+
+      const content = messages
+        .map((msg) => extractMemoryMessageText(msg))
+        .filter(Boolean)
+        .join('\n');
+
+      return {
+        success: true,
+        data: {
+          content,
+          confirmed: true,
+          disabled: draft.disabled,
+        },
+      };
+    }
+
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
 
@@ -464,6 +839,16 @@ export async function getMemoryThreadContent(
 
     const metadata = thread.metadata as Record<string, unknown> | undefined;
 
+    if (!isUserMemoryThread(metadata)) {
+      return {
+        success: false,
+        error: {
+          code: 'invalid-memory-thread',
+          message: 'Memory thread is not a user memory',
+        },
+      };
+    }
+
     return {
       success: true,
       data: {
@@ -492,8 +877,36 @@ export async function getConfirmedUserMemoryMessages(
   options: { readonly lastMessages?: number } = {}
 ): Promise<MemoryServiceResult<ConfirmedMemoryMessagesResult>> {
   try {
+    const db = await getDb();
+    const confirmedDrafts = await db
+      .select()
+      .from(aiMemoryDraft)
+      .where(
+        and(
+          eq(aiMemoryDraft.userId, resourceId),
+          eq(aiMemoryDraft.status, 'confirmed'),
+          eq(aiMemoryDraft.disabled, false),
+          isNotNull(aiMemoryDraft.mastraThreadId)
+        )
+      );
+
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
+    const draftThreadIds = confirmedDrafts
+      .map((draft) => draft.mastraThreadId)
+      .filter((threadId): threadId is string => Boolean(threadId));
+
+    const draftMessagesByThread = await Promise.all(
+      draftThreadIds.map(async (threadId) => {
+        const recallResult = await memory.recall({
+          threadId,
+          resourceId,
+          perPage: false,
+        });
+        return recallResult.messages;
+      })
+    );
+
     const result = await memory.listThreads({
       filter: {
         resourceId,
@@ -502,17 +915,19 @@ export async function getConfirmedUserMemoryMessages(
       perPage: false,
     });
 
-    const activeThreads = (result?.threads ?? []).filter((thread) => {
+    const draftThreadIdSet = new Set(draftThreadIds);
+    const activeLegacyThreads = (result?.threads ?? []).filter((thread) => {
       const metadata = thread.metadata as Record<string, unknown> | undefined;
       return (
         isUserMemoryThread(metadata) &&
         getMemoryMetadataBoolean(metadata, 'confirmed') &&
-        !getMemoryMetadataBoolean(metadata, 'disabled')
+        !getMemoryMetadataBoolean(metadata, 'disabled') &&
+        !draftThreadIdSet.has(thread.id)
       );
     });
 
-    const messagesByThread = await Promise.all(
-      activeThreads.map(async (thread) => {
+    const legacyMessagesByThread = await Promise.all(
+      activeLegacyThreads.map(async (thread) => {
         const recallResult = await memory.recall({
           threadId: thread.id,
           resourceId,
@@ -522,7 +937,7 @@ export async function getConfirmedUserMemoryMessages(
       })
     );
 
-    const messages = messagesByThread
+    const messages = [...draftMessagesByThread, ...legacyMessagesByThread]
       .flat()
       .filter((message) => extractMemoryMessageText(message).trim().length > 0)
       .sort(
@@ -535,7 +950,10 @@ export async function getConfirmedUserMemoryMessages(
       success: true,
       data: {
         messages: messages.slice(-lastMessages),
-        threadIds: activeThreads.map((thread) => thread.id),
+        threadIds: [
+          ...draftThreadIds,
+          ...activeLegacyThreads.map((thread) => thread.id),
+        ],
       },
     };
   } catch (error) {

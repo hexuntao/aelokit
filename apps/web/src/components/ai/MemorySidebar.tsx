@@ -86,11 +86,11 @@ export function MemorySidebar({ className }: MemorySidebarProps) {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>Create memories to store important information</span>
+                <span>Create pending memory drafts before durable save</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span>Confirm memories before they become active</span>
+                <span>Confirm drafts before chat can recall them</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>

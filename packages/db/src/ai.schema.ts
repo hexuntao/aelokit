@@ -437,3 +437,43 @@ export const aiUsage = pgTable(
     ),
   })
 );
+
+export const aiMemoryDraft = pgTable(
+  'ai_memory_draft',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: text('title'),
+    content: text('content').notNull(),
+    status: text('status').notNull().default('pending'),
+    disabled: boolean('disabled').notNull().default(false),
+    mastraThreadId: text('mastra_thread_id'),
+    mastraMessageId: text('mastra_message_id'),
+    metadata: jsonb('metadata').notNull().default(emptyObject),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    confirmedAt: timestamp('confirmed_at'),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => ({
+    aiMemoryDraftUserStatusIdx: index('ai_memory_draft_user_status_idx').on(
+      table.userId,
+      table.status
+    ),
+    aiMemoryDraftUserCreatedIdx: index('ai_memory_draft_user_created_idx').on(
+      table.userId,
+      table.createdAt
+    ),
+    aiMemoryDraftMastraThreadUidx: uniqueIndex(
+      'ai_memory_draft_mastra_thread_uidx'
+    )
+      .on(table.mastraThreadId)
+      .where(sql`${table.mastraThreadId} is not null`),
+    aiMemoryDraftStatusCheck: check(
+      'ai_memory_draft_status_check',
+      sql`${table.status} in ('pending', 'confirmed', 'deleted')`
+    ),
+  })
+);

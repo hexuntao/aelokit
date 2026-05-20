@@ -78,6 +78,13 @@
       "when": 1779183327113,
       "tag": "0010_sticky_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779242524748,
+      "tag": "0011_stale_exiles",
+      "breakpoints": true
     }
   ]
 }

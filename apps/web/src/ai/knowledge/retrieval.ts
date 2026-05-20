@@ -232,6 +232,7 @@ export async function retrieveKnowledgeContext(
   }
 
   const topK = options.topK ?? 5;
+  const vectorTopK = topK * 5;
   const minScore = options.minScore ?? 0.0;
   const includeOtherUserPublic = options.includeOtherUserPublic ?? false;
 
@@ -253,7 +254,7 @@ export async function retrieveKnowledgeContext(
     const results = await vectorStore.query({
       indexName: KNOWLEDGE_INDEX_NAME,
       queryVector: [...queryEmbedding],
-      topK,
+      topK: vectorTopK,
     });
 
     if (!results || results.length === 0) {
@@ -296,7 +297,8 @@ export async function retrieveKnowledgeContext(
           provenance: candidate.provenance,
         };
       })
-      .filter((chunk): chunk is RetrievedChunk => Boolean(chunk));
+      .filter((chunk): chunk is RetrievedChunk => Boolean(chunk))
+      .slice(0, topK);
 
     const citations: SourceCitationMetadata[] = chunks.map((chunk) => ({
       sourceId: chunk.sourceId,

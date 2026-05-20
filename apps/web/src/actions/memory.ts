@@ -45,7 +45,7 @@ export const createUserMemoryAction = userActionClient
       parsedInput,
       ctx,
     }): Promise<
-      MemoryActionResult<{ threadId: string; messageId: string }>
+      MemoryActionResult<{ threadId: string; messageId?: string }>
     > => {
       const user = (ctx as { user: SessionUser }).user;
 

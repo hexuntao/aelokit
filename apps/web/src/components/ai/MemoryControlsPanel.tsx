@@ -53,9 +53,6 @@ export function MemoryControlsPanel({
   const [actionInProgress, setActionInProgress] = React.useState<string | null>(
     null
   );
-  const [expandedMemory, setExpandedMemory] = React.useState<string | null>(
-    null
-  );
 
   const handleCreateMemory = async () => {
     if (!newMemoryContent.trim()) return;
@@ -122,7 +119,7 @@ export function MemoryControlsPanel({
         <>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
-              {memories.length} memory thread{memories.length !== 1 ? 's' : ''}
+              {memories.length} memory draft{memories.length !== 1 ? 's' : ''}
             </span>
             <Button
               variant="outline"
@@ -142,8 +139,7 @@ export function MemoryControlsPanel({
                 <Brain className="size-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">No memories yet</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  Add your first memory to help the AI remember important
-                  information
+                  Create a pending draft, then confirm it to make it active
                 </p>
               </div>
             ) : (
@@ -172,6 +168,12 @@ export function MemoryControlsPanel({
                             Confirmed
                           </span>
                         )}
+                        {!memory.confirmed && (
+                          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                            <Loader2 className="size-3" />
+                            Pending
+                          </span>
+                        )}
                         {memory.disabled && (
                           <span className="flex items-center gap-0.5 text-xs text-orange-600">
                             <Power className="size-3" />
@@ -198,37 +200,38 @@ export function MemoryControlsPanel({
                           Confirm
                         </Button>
                       )}
-                      {memory.disabled ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDisableMemory(memory.id)}
-                          disabled={actionInProgress !== null}
-                          className="h-6 text-xs"
-                        >
-                          {actionInProgress === `disable-${memory.id}` ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
-                            <Power className="size-3" />
-                          )}
-                          Enable
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDisableMemory(memory.id)}
-                          disabled={actionInProgress !== null}
-                          className="h-6 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                        >
-                          {actionInProgress === `disable-${memory.id}` ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
-                            <X className="size-3" />
-                          )}
-                          Disable
-                        </Button>
-                      )}
+                      {memory.confirmed &&
+                        (memory.disabled ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDisableMemory(memory.id)}
+                            disabled={actionInProgress !== null}
+                            className="h-6 text-xs"
+                          >
+                            {actionInProgress === `disable-${memory.id}` ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              <Power className="size-3" />
+                            )}
+                            Enable
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDisableMemory(memory.id)}
+                            disabled={actionInProgress !== null}
+                            className="h-6 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                          >
+                            {actionInProgress === `disable-${memory.id}` ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              <X className="size-3" />
+                            )}
+                            Disable
+                          </Button>
+                        ))}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -260,8 +263,8 @@ export function MemoryControlsPanel({
               Create New Memory
             </DialogTitle>
             <DialogDescription>
-              Add information you want the AI to remember. You must confirm
-              before it becomes active.
+              Create a pending draft. It is not written to durable AI memory
+              until you confirm it.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4">
@@ -273,7 +276,8 @@ export function MemoryControlsPanel({
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              This memory will be stored securely and only accessible to you.
+              Pending drafts are only visible to you and are ignored by chat
+              recall until confirmed.
             </p>
           </div>
           <DialogFooter>
@@ -291,12 +295,12 @@ export function MemoryControlsPanel({
               {actionInProgress === 'create' ? (
                 <>
                   <Loader2 className="size-4 animate-spin mr-2" />
-                  Creating...
+                  Creating Draft...
                 </>
               ) : (
                 <>
                   <Plus className="size-4 mr-2" />
-                  Create Memory
+                  Create Draft
                 </>
               )}
             </Button>
