@@ -91,6 +91,55 @@ function isUserMemoryThread(metadata: Record<string, unknown> | undefined) {
   return metadata?.type === 'user-confirmed-memory';
 }
 
+function getThreadMetadata(thread: {
+  readonly metadata?: unknown;
+}): Record<string, unknown> {
+  if (
+    thread.metadata &&
+    typeof thread.metadata === 'object' &&
+    !Array.isArray(thread.metadata)
+  ) {
+    return thread.metadata as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+async function cleanupUnconfirmedMemoryThread(input: {
+  readonly memory: Memory;
+  readonly threadId: string;
+  readonly title: string;
+  readonly metadata: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await input.memory.deleteThread(input.threadId);
+    return;
+  } catch (deleteError) {
+    console.error(
+      '[Memory Service] cleanup delete unconfirmed memory thread error:',
+      deleteError
+    );
+  }
+
+  try {
+    await input.memory.updateThread({
+      id: input.threadId,
+      title: input.title,
+      metadata: {
+        ...input.metadata,
+        confirmed: false,
+        disabled: true,
+        cleanupFailedAt: new Date().toISOString(),
+      },
+    });
+  } catch (updateError) {
+    console.error(
+      '[Memory Service] cleanup mark unconfirmed memory thread error:',
+      updateError
+    );
+  }
+}
+
 function createMemoryTitle(content: string): string {
   const trimmed = content.replace(/\s+/g, ' ').trim();
   if (trimmed.length <= 50) {
@@ -351,6 +400,40 @@ export async function confirmMemoryThread(
       }
 
       if (draft.status === 'confirmed') {
+        if (draft.mastraThreadId) {
+          await ensureStorageInitialized();
+          const memory = getOrCreateMemory();
+          const existingThread = await memory.getThreadById({
+            threadId: draft.mastraThreadId,
+          });
+
+          if (existingThread && existingThread.resourceId === resourceId) {
+            const existingMetadata = getThreadMetadata(existingThread);
+
+            if (
+              isUserMemoryThread(existingMetadata) &&
+              (!getMemoryMetadataBoolean(existingMetadata, 'confirmed') ||
+                getMemoryMetadataBoolean(existingMetadata, 'disabled') !==
+                  draft.disabled)
+            ) {
+              await memory.updateThread({
+                id: draft.mastraThreadId,
+                title:
+                  existingThread.title ??
+                  draft.title ??
+                  createMemoryTitle(draft.content),
+                metadata: {
+                  ...existingMetadata,
+                  confirmed: true,
+                  disabled: draft.disabled,
+                  confirmedAt:
+                    existingMetadata.confirmedAt ?? new Date().toISOString(),
+                },
+              });
+            }
+          }
+        }
+
         return {
           success: true,
           data: { threadId: draft.id },
@@ -361,48 +444,76 @@ export async function confirmMemoryThread(
       const memory = getOrCreateMemory();
       const now = new Date();
       const title = draft.title ?? createMemoryTitle(draft.content);
+      const initialMetadata = {
+        type: 'user-confirmed-memory',
+        aelokitMemoryId: draft.id,
+        confirmed: false,
+        disabled: false,
+        createdAt: draft.createdAt.toISOString(),
+      };
 
-      const thread = await memory.createThread({
-        resourceId,
-        title,
-        metadata: {
-          type: 'user-confirmed-memory',
-          aelokitMemoryId: draft.id,
-          confirmed: true,
-          disabled: false,
-          createdAt: draft.createdAt.toISOString(),
-          confirmedAt: now.toISOString(),
-        },
-      });
+      let createdThreadId: string | null = null;
+      let dbConfirmed = false;
 
-      const memoryMessage = createManualMemoryMessage({
-        threadId: thread.id,
-        resourceId,
-        content: draft.content,
-        now,
-      });
+      try {
+        const thread = await memory.createThread({
+          resourceId,
+          title,
+          metadata: initialMetadata,
+        });
+        createdThreadId = thread.id;
 
-      await memory.saveMessages({
-        messages: [memoryMessage],
-      });
+        const memoryMessage = createManualMemoryMessage({
+          threadId: thread.id,
+          resourceId,
+          content: draft.content,
+          now,
+        });
 
-      const db = await getDb();
-      await db
-        .update(aiMemoryDraft)
-        .set({
-          status: 'confirmed',
-          disabled: false,
-          mastraThreadId: thread.id,
-          mastraMessageId: memoryMessage.id,
-          confirmedAt: now,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(aiMemoryDraft.id, draft.id),
-            eq(aiMemoryDraft.userId, resourceId)
-          )
-        );
+        await memory.saveMessages({
+          messages: [memoryMessage],
+        });
+
+        const db = await getDb();
+        await db
+          .update(aiMemoryDraft)
+          .set({
+            status: 'confirmed',
+            disabled: false,
+            mastraThreadId: thread.id,
+            mastraMessageId: memoryMessage.id,
+            confirmedAt: now,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(aiMemoryDraft.id, draft.id),
+              eq(aiMemoryDraft.userId, resourceId)
+            )
+          );
+        dbConfirmed = true;
+
+        await memory.updateThread({
+          id: thread.id,
+          title,
+          metadata: {
+            ...initialMetadata,
+            confirmed: true,
+            confirmedAt: now.toISOString(),
+          },
+        });
+      } catch (error) {
+        if (createdThreadId && !dbConfirmed) {
+          await cleanupUnconfirmedMemoryThread({
+            memory,
+            threadId: createdThreadId,
+            title,
+            metadata: initialMetadata,
+          });
+        }
+
+        throw error;
+      }
 
       return {
         success: true,
@@ -892,11 +1003,36 @@ export async function getConfirmedUserMemoryMessages(
 
     await ensureStorageInitialized();
     const memory = getOrCreateMemory();
-    const draftThreadIds = confirmedDrafts
-      .map((draft) => draft.mastraThreadId)
-      .filter((threadId): threadId is string => Boolean(threadId));
+    const draftThreadIds = (
+      await Promise.all(
+        confirmedDrafts.map(async (draft) => {
+          if (!draft.mastraThreadId) {
+            return null;
+          }
 
-    const draftMessagesByThread = await Promise.all(
+          const thread = await memory.getThreadById({
+            threadId: draft.mastraThreadId,
+          });
+
+          if (!thread || thread.resourceId !== resourceId) {
+            return null;
+          }
+
+          const metadata = getThreadMetadata(thread);
+          if (
+            !isUserMemoryThread(metadata) ||
+            !getMemoryMetadataBoolean(metadata, 'confirmed') ||
+            getMemoryMetadataBoolean(metadata, 'disabled')
+          ) {
+            return null;
+          }
+
+          return thread.id;
+        })
+      )
+    ).filter((threadId): threadId is string => Boolean(threadId));
+
+    const messagesByThread = await Promise.all(
       draftThreadIds.map(async (threadId) => {
         const recallResult = await memory.recall({
           threadId,
@@ -907,37 +1043,7 @@ export async function getConfirmedUserMemoryMessages(
       })
     );
 
-    const result = await memory.listThreads({
-      filter: {
-        resourceId,
-        metadata: { type: 'user-confirmed-memory' },
-      },
-      perPage: false,
-    });
-
-    const draftThreadIdSet = new Set(draftThreadIds);
-    const activeLegacyThreads = (result?.threads ?? []).filter((thread) => {
-      const metadata = thread.metadata as Record<string, unknown> | undefined;
-      return (
-        isUserMemoryThread(metadata) &&
-        getMemoryMetadataBoolean(metadata, 'confirmed') &&
-        !getMemoryMetadataBoolean(metadata, 'disabled') &&
-        !draftThreadIdSet.has(thread.id)
-      );
-    });
-
-    const legacyMessagesByThread = await Promise.all(
-      activeLegacyThreads.map(async (thread) => {
-        const recallResult = await memory.recall({
-          threadId: thread.id,
-          resourceId,
-          perPage: false,
-        });
-        return recallResult.messages;
-      })
-    );
-
-    const messages = [...draftMessagesByThread, ...legacyMessagesByThread]
+    const messages = messagesByThread
       .flat()
       .filter((message) => extractMemoryMessageText(message).trim().length > 0)
       .sort(
@@ -950,10 +1056,7 @@ export async function getConfirmedUserMemoryMessages(
       success: true,
       data: {
         messages: messages.slice(-lastMessages),
-        threadIds: [
-          ...draftThreadIds,
-          ...activeLegacyThreads.map((thread) => thread.id),
-        ],
+        threadIds: draftThreadIds,
       },
     };
   } catch (error) {
