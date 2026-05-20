@@ -51,4 +51,4 @@ export function resolveMastraMemoryOptions(): MastraMemoryOptions {
   };
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

@@ -46,4 +46,4 @@ export function isEmbeddingProviderConfigured(): boolean {
   return Boolean(config.embeddingApiKey);
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

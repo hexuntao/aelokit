@@ -24,4 +24,4 @@ export function resetMastraInstance(): void {
   mastraInstance = null;
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

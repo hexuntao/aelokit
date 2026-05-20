@@ -5,11 +5,11 @@ export * from './memory';
 export * from './config';
 export * from './instance';
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;
 
-export const MASTRA_SKELETON_STATUS = 'PARTIAL_UNTIL_WIRED' as const;
+export const MASTRA_SKELETON_STATUS =
+  'WIRED_FOR_V0_3_MEMORY_KNOWLEDGE' as const;
 
 export const MASTRA_SKELETON_NOTE =
-  'This Mastra runtime skeleton provides factory functions and config resolvers only. ' +
-  'No live runtime execution or route integration. ' +
-  'Must be explicitly wired by later TASKs before production use.';
+  'Mastra storage, memory, and vector wiring are used by the app-local v0.3 ' +
+  'memory/knowledge services. Mastra Agent/workflow runtime remains out of scope.';

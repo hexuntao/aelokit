@@ -48,4 +48,4 @@ export async function ensureKnowledgeVectorIndex(
   }
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

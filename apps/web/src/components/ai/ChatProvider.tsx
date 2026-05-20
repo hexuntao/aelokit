@@ -60,11 +60,14 @@ interface ChatContextType {
   setMemoryEnabled: (enabled: boolean) => void;
   lastCitations: readonly CitationMetadata[];
   knowledgeEnabled: boolean;
+  setKnowledgeEnabled: (enabled: boolean) => void;
+  lastKnowledgeActive: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
 const MEMORY_ENABLED_KEY = 'aelokit-memory-enabled';
+const KNOWLEDGE_ENABLED_KEY = 'aelokit-knowledge-enabled';
 
 export function useChatContext() {
   const context = useContext(ChatContext);
@@ -87,15 +90,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     readonly CitationMetadata[]
   >([]);
   const [knowledgeEnabled, setKnowledgeEnabled] = useState<boolean>(false);
+  const [lastKnowledgeActive, setLastKnowledgeActive] =
+    useState<boolean>(false);
   const threadIdRef = useRef<string | undefined>(undefined);
   const selectedModelIdRef = useRef(selectedModelId);
   const memoryEnabledRef = useRef(memoryEnabled);
+  const knowledgeEnabledRef = useRef(knowledgeEnabled);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(MEMORY_ENABLED_KEY);
       if (stored === 'true') {
         setMemoryEnabledState(true);
+      }
+      const storedKnowledge = localStorage.getItem(KNOWLEDGE_ENABLED_KEY);
+      if (storedKnowledge === 'true') {
+        setKnowledgeEnabled(true);
       }
     } catch {
       // Ignore localStorage errors
@@ -111,9 +121,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setKnowledgeEnabledPreference = useCallback((enabled: boolean) => {
+    setKnowledgeEnabled(enabled);
+    if (!enabled) {
+      setLastKnowledgeActive(false);
+      setLastCitations([]);
+    }
+    try {
+      localStorage.setItem(KNOWLEDGE_ENABLED_KEY, String(enabled));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
   threadIdRef.current = threadId;
   selectedModelIdRef.current = selectedModelId;
   memoryEnabledRef.current = memoryEnabled;
+  knowledgeEnabledRef.current = knowledgeEnabled;
 
   const clearError = useCallback(() => {
     setError(null);
@@ -132,6 +156,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             threadId: threadIdRef.current,
             modelId: selectedModelIdRef.current || undefined,
             memoryEnabled: memoryEnabledRef.current,
+            knowledgeEnabled: knowledgeEnabledRef.current,
           },
         }),
       }),
@@ -154,7 +179,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       const knowledgeEnabledMeta = message.metadata?.knowledgeEnabled;
-      setKnowledgeEnabled(knowledgeEnabledMeta === true);
+      setLastKnowledgeActive(knowledgeEnabledMeta === true);
     },
     onError: (runtimeError) => {
       const chatError = runtimeError as ChatError;
@@ -179,6 +204,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           setMemoryEnabled,
           lastCitations,
           knowledgeEnabled,
+          setKnowledgeEnabled: setKnowledgeEnabledPreference,
+          lastKnowledgeActive,
         }}
       >
         {children}

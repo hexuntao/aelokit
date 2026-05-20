@@ -3,6 +3,10 @@ import 'server-only';
 import { Memory } from '@mastra/memory';
 import type { PostgresStore } from '@mastra/pg';
 import { getMastraStorage } from '../mastra/storage';
+import {
+  extractMemoryMessageText,
+  getConfirmedUserMemoryMessages,
+} from '../memory-service';
 
 export interface MemoryContext {
   readonly threadId: string;
@@ -17,6 +21,7 @@ export interface MemoryConfig {
 export interface MemoryRecallResult {
   readonly success: boolean;
   readonly messages: readonly unknown[];
+  readonly threadIds?: readonly string[];
   readonly error?: string;
 }
 
@@ -83,14 +88,35 @@ export async function recallMemoryMessages(
 
 export async function getMemoryContextForChat(
   userId: string,
-  threadId: string,
+  _chatThreadId: string,
   memoryEnabled: boolean
 ): Promise<MemoryRecallResult> {
-  const context = resolveMemoryContext(userId, threadId);
-  return recallMemoryMessages(context, {
-    enabled: memoryEnabled,
+  if (!memoryEnabled) {
+    return {
+      success: true,
+      messages: [],
+      threadIds: [],
+    };
+  }
+
+  const result = await getConfirmedUserMemoryMessages(userId, {
     lastMessages: 20,
   });
+
+  if (!result.success || !result.data) {
+    return {
+      success: false,
+      messages: [],
+      threadIds: [],
+      error: result.error?.message ?? 'Failed to recall confirmed memories.',
+    };
+  }
+
+  return {
+    success: true,
+    messages: result.data.messages,
+    threadIds: result.data.threadIds,
+  };
 }
 
 export function isMemoryEnabledForRequest(
@@ -103,3 +129,5 @@ export function isMemoryEnabledForRequest(
 }
 
 export const MEMORY_WIRED = true;
+
+export { extractMemoryMessageText };

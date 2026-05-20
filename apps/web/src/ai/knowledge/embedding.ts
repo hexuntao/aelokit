@@ -61,4 +61,4 @@ export async function generateSingleEmbedding(
   return result.embeddings[0] ?? [];
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

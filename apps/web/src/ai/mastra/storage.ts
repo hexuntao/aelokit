@@ -46,4 +46,4 @@ export function getMastraStorage(): PostgresStore {
   return createMastraStorage(config);
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

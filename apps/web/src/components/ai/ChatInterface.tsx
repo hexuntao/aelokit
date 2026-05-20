@@ -7,15 +7,32 @@ import { ChatErrorState } from './ChatErrorState';
 import { useChatContext } from './ChatProvider';
 import { MemorySidebar, MemoryToggleButton } from './MemorySidebar';
 import { CitationList, CitationSummary } from './CitationList';
+import { Button } from '@/components/ui/button';
+import { BookOpen } from 'lucide-react';
+
+function KnowledgeToggleButton() {
+  const { knowledgeEnabled, setKnowledgeEnabled } = useChatContext();
+
+  return (
+    <Button
+      variant={knowledgeEnabled ? 'default' : 'outline'}
+      size="sm"
+      onClick={() => setKnowledgeEnabled(!knowledgeEnabled)}
+      className="gap-1.5"
+    >
+      <BookOpen className="size-4" />
+      {knowledgeEnabled ? 'Knowledge On' : 'Knowledge Off'}
+    </Button>
+  );
+}
 
 function ChatContent() {
   const {
     error,
     errorType,
     errorMetadata,
-    memoryEnabled,
     lastCitations,
-    knowledgeEnabled,
+    lastKnowledgeActive,
   } = useChatContext();
 
   return (
@@ -23,6 +40,7 @@ function ChatContent() {
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-2">
           <MemoryToggleButton />
+          <KnowledgeToggleButton />
         </div>
         <div className="flex items-center gap-3">
           {lastCitations.length > 0 && (
@@ -32,7 +50,7 @@ function ChatContent() {
         </div>
       </div>
       <ChatThread />
-      {knowledgeEnabled && lastCitations.length > 0 && (
+      {lastKnowledgeActive && lastCitations.length > 0 && (
         <div className="border-t px-4 py-3 bg-muted/30">
           <CitationList citations={lastCitations} />
         </div>

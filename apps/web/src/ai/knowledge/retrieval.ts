@@ -1,5 +1,12 @@
 import 'server-only';
 
+import { and, eq, inArray } from 'drizzle-orm';
+import { getDb } from '@repo/db';
+import {
+  knowledgeChunk,
+  knowledgeSource,
+  knowledgeSourceAccess,
+} from '@repo/db/knowledge-schema';
 import { getKnowledgeVectorStore, KNOWLEDGE_INDEX_NAME } from './vector';
 import { isEmbeddingProviderConfigured } from './config';
 import { generateSingleEmbedding } from './embedding';
@@ -19,6 +26,8 @@ export interface RetrievedChunk {
   readonly userId: string;
   readonly visibility: string;
   readonly indexedAt: string;
+  readonly provider: string;
+  readonly provenance: string;
 }
 
 export interface SourceCitationMetadata {
@@ -44,6 +53,157 @@ export interface KnowledgeRetrievalOptions {
   readonly topK?: number;
   readonly minScore?: number;
   readonly includeOtherUserPublic?: boolean;
+}
+
+interface VectorCandidate {
+  readonly id: string;
+  readonly score: number;
+  readonly sourceId: AIKnowledgeSourceId;
+  readonly documentId: AIKnowledgeDocumentId;
+  readonly chunkId: string;
+  readonly provider: string;
+  readonly provenance: string;
+  readonly indexedAt: string;
+}
+
+function getStringMetadata(
+  metadata: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const value = metadata[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function toVectorCandidate(
+  result: unknown,
+  minScore: number
+): VectorCandidate | undefined {
+  const resultRecord = result as {
+    id?: unknown;
+    score?: unknown;
+    metadata?: unknown;
+  };
+  const metadata = resultRecord.metadata as Record<string, unknown> | undefined;
+
+  if (!metadata) {
+    return undefined;
+  }
+
+  const score = typeof resultRecord.score === 'number' ? resultRecord.score : 0;
+
+  if (score < minScore) {
+    return undefined;
+  }
+
+  const sourceId = getStringMetadata(metadata, 'sourceId');
+  const documentId = getStringMetadata(metadata, 'documentId');
+  const chunkId = getStringMetadata(metadata, 'chunkId');
+
+  if (!sourceId || !documentId || !chunkId) {
+    return undefined;
+  }
+
+  return {
+    id: typeof resultRecord.id === 'string' ? resultRecord.id : chunkId,
+    score,
+    sourceId: sourceId as AIKnowledgeSourceId,
+    documentId: documentId as AIKnowledgeDocumentId,
+    chunkId,
+    provider:
+      getStringMetadata(metadata, 'provider') ??
+      getStringMetadata(metadata, 'embeddingModel') ??
+      'unknown',
+    provenance:
+      getStringMetadata(metadata, 'provenance') ?? `manual-note:${sourceId}`,
+    indexedAt: getStringMetadata(metadata, 'indexedAt') ?? '',
+  };
+}
+
+async function getAccessibleChunkRows(input: {
+  readonly candidates: readonly VectorCandidate[];
+  readonly userId: string;
+  readonly includeOtherUserPublic: boolean;
+}) {
+  const chunkIds = Array.from(
+    new Set(input.candidates.map((candidate) => candidate.chunkId))
+  );
+
+  if (chunkIds.length === 0) {
+    return new Map<
+      string,
+      {
+        readonly chunk: typeof knowledgeChunk.$inferSelect;
+        readonly source: typeof knowledgeSource.$inferSelect;
+      }
+    >();
+  }
+
+  const db = await getDb();
+  const rows = await db
+    .select({
+      chunk: knowledgeChunk,
+      source: knowledgeSource,
+    })
+    .from(knowledgeChunk)
+    .innerJoin(knowledgeSource, eq(knowledgeChunk.sourceId, knowledgeSource.id))
+    .where(
+      and(
+        inArray(knowledgeChunk.id, chunkIds),
+        eq(knowledgeSource.status, 'ready')
+      )
+    );
+
+  const sharedSourceIds = rows
+    .filter(
+      (row) =>
+        row.source.visibility === 'shared' && row.source.userId !== input.userId
+    )
+    .map((row) => row.source.id);
+
+  const sharedAccessSourceIds =
+    sharedSourceIds.length > 0
+      ? new Set(
+          (
+            await db
+              .select({ sourceId: knowledgeSourceAccess.sourceId })
+              .from(knowledgeSourceAccess)
+              .where(
+                and(
+                  eq(knowledgeSourceAccess.userId, input.userId),
+                  inArray(knowledgeSourceAccess.sourceId, sharedSourceIds),
+                  inArray(knowledgeSourceAccess.permission, [
+                    'read',
+                    'write',
+                    'admin',
+                  ])
+                )
+              )
+          ).map((row) => row.sourceId)
+        )
+      : new Set<string>();
+
+  return new Map(
+    rows
+      .filter((row) => {
+        if (row.source.userId === input.userId) {
+          return true;
+        }
+
+        if (
+          input.includeOtherUserPublic &&
+          row.source.visibility === 'public'
+        ) {
+          return true;
+        }
+
+        if (row.source.visibility === 'shared') {
+          return sharedAccessSourceIds.has(row.source.id);
+        }
+
+        return false;
+      })
+      .map((row) => [row.chunk.id, row])
+  );
 }
 
 export async function retrieveKnowledgeContext(
@@ -105,51 +265,47 @@ export async function retrieveKnowledgeContext(
       };
     }
 
-    const filteredResults = results.filter((result: any) => {
-      const metadata = result.metadata as Record<string, unknown> | undefined;
-      if (!metadata) return false;
-
-      const resultUserId = metadata.userId as string | undefined;
-      const resultVisibility = metadata.visibility as string | undefined;
-      const score = result.score ?? 0;
-
-      if (score < minScore) return false;
-
-      if (resultUserId === options.userId) {
-        return true;
-      }
-
-      if (includeOtherUserPublic && resultVisibility === 'public') {
-        return true;
-      }
-
-      return false;
+    const candidates = results
+      .map((result) => toVectorCandidate(result, minScore))
+      .filter((candidate): candidate is VectorCandidate => Boolean(candidate));
+    const accessibleChunkRows = await getAccessibleChunkRows({
+      candidates,
+      userId: options.userId,
+      includeOtherUserPublic,
     });
 
-    const chunks: RetrievedChunk[] = filteredResults.map((result: any) => {
-      const metadata = result.metadata as Record<string, unknown>;
-      return {
-        id: result.id as string,
-        sourceId: metadata.sourceId as AIKnowledgeSourceId,
-        documentId: metadata.documentId as AIKnowledgeDocumentId,
-        chunkId: metadata.chunkId as string,
-        text: metadata.text as string,
-        score: result.score as number,
-        title: metadata.title as string,
-        userId: metadata.userId as string,
-        visibility: metadata.visibility as string,
-        indexedAt: metadata.indexedAt as string,
-      };
-    });
+    const chunks: RetrievedChunk[] = candidates
+      .map((candidate): RetrievedChunk | undefined => {
+        const row = accessibleChunkRows.get(candidate.chunkId);
+        if (!row) {
+          return undefined;
+        }
+
+        return {
+          id: candidate.id,
+          sourceId: row.source.id as AIKnowledgeSourceId,
+          documentId: row.chunk.documentId as AIKnowledgeDocumentId,
+          chunkId: row.chunk.id,
+          text: row.chunk.text,
+          score: candidate.score,
+          title: row.source.title,
+          userId: row.source.userId,
+          visibility: row.source.visibility,
+          indexedAt: row.source.indexedAt?.toISOString() || candidate.indexedAt,
+          provider: candidate.provider,
+          provenance: candidate.provenance,
+        };
+      })
+      .filter((chunk): chunk is RetrievedChunk => Boolean(chunk));
 
     const citations: SourceCitationMetadata[] = chunks.map((chunk) => ({
       sourceId: chunk.sourceId,
       title: chunk.title,
       documentId: chunk.documentId,
       chunkId: chunk.chunkId,
-      provenance: `manual-note:${chunk.sourceId}`,
+      provenance: chunk.provenance,
       score: chunk.score,
-      provider: 'openai-embedding',
+      provider: chunk.provider,
     }));
 
     const contextText =

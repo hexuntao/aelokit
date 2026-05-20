@@ -55,4 +55,4 @@ export async function chunkMarkdown(
   }));
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

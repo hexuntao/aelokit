@@ -29,6 +29,7 @@ import {
   updateMessageStatus,
 } from '@/ai/persistence';
 import {
+  extractMemoryMessageText,
   getMemoryContextForChat,
   isMemoryEnabledForRequest,
 } from '@/ai/memory';
@@ -224,7 +225,8 @@ export async function POST(req: Request) {
     }
 
     // 6.5. Memory context injection (v0.3 TASK-005)
-    // Read-only memory recall - does NOT create/confirm/delete/disable memory
+    // Read-only durable memory recall by user/resourceId. The persisted chat
+    // thread remains separate from Mastra memory threads.
     const memoryResult = await getMemoryContextForChat(
       context.userId,
       persistedThread.id,
@@ -240,20 +242,10 @@ export async function POST(req: Request) {
           id?: string;
         };
         if (mastraMsg.role === 'user' || mastraMsg.role === 'assistant') {
-          const content = mastraMsg.content;
-          let textContent = '';
-          if (typeof content === 'string') {
-            textContent = content;
-          } else if (
-            content &&
-            typeof content === 'object' &&
-            'text' in content
-          ) {
-            textContent = String((content as { text: unknown }).text);
-          }
+          const textContent = extractMemoryMessageText(mastraMsg);
           if (textContent) {
             memoryContextMessages.push({
-              id: mastraMsg.id ?? `memory-${Date.now()}-${Math.random()}`,
+              id: mastraMsg.id ?? `memory-${crypto.randomUUID()}`,
               role: mastraMsg.role as 'user' | 'assistant',
               parts: [{ type: 'text' as const, text: textContent }],
             });

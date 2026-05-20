@@ -37,4 +37,4 @@ export function getMastraMemory(storage: PostgresStore): Memory {
   return createMastraMemory(config);
 }
 
-export const PARTIAL_UNTIL_WIRED = true;
+export const PARTIAL_UNTIL_WIRED = false;

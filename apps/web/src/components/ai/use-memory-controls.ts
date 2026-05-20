@@ -84,7 +84,6 @@ export function useMemoryControls(
 
       try {
         const result = await confirmUserMemoryAction({ threadId });
-        console.log('[useMemoryControls] confirmMemory result:', result);
 
         if (result.data?.success) {
           await refreshMemories();
@@ -94,7 +93,6 @@ export function useMemoryControls(
         setError(result.data?.error?.message ?? 'Failed to confirm memory');
         return false;
       } catch (err) {
-        console.error('[useMemoryControls] confirmMemory error:', err);
         setError(
           err instanceof Error ? err.message : 'Failed to confirm memory'
         );

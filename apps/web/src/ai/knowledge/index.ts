@@ -73,9 +73,12 @@ export const SOURCE_CITATION_METADATA_SHAPE = {
     reason:
       'Citations are returned in response metadata and stream headers. ' +
       'They are NOT persisted to ai_message_part by default in v0.3. ' +
-      'TASK-009 may add UI rendering and optional persistence.',
+      'Refreshing the chat or loading historical messages will not restore ' +
+      'these citations until citation persistence is implemented.',
     provenancePath:
       'Provenance is carried through stream response headers (x-ai-knowledge-citations) ' +
-      'and can be reconstructed from vector store metadata.',
+      'and response message metadata for immediate UI rendering. AeloKit DB ' +
+      'metadata keeps source/document/chunk ownership, but the per-response ' +
+      'citation list remains response-only.',
   },
 } as const;
