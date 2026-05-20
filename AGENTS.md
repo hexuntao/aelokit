@@ -1,46 +1,59 @@
 # 仓库规范
 
-本文件是 AeloKit 全仓的 AI 编码 Agent 基线规则。子目录可以用自己的
-`AGENTS.md` 进一步收紧规则，但不得放宽这里的安全、阶段性架构和禁止事项。
+本文件是 AeloKit 全仓 AI coding agent 的永久工程规则。子目录可以用自己的
+`AGENTS.md` 进一步收紧规则，但不得放宽这里的安全、scope、package、DB、env
+和 secret 边界。
 
-最后更新：2026-05-19
+最后更新：2026-05-20
 
-## AGENTS.md 优先级
+## 1. 文档入口与 Scope 规则
 
-- 根目录 `AGENTS.md` 定义全仓通用规则。
+- 后续 Codex / Claude Code / human 读取文档时，先从 `docs/INDEX.md` 开始。
+- Agent rule 文件体系见 `docs/agents/AGENT_RULES_INDEX.md`。
+- Codex 专属规则见 `docs/agents/CODEX_RULES.md`。
+- Claude Code 专属规则见 `docs/agents/CLAUDE_RULES.md` 和 `CLAUDE.md`。
+- 本文件定义工程边界，不定义 v0.4 或任何未来版本的产品 scope。
+- 当前版本 scope 只能由 `docs/product/v0.x/SCOPE_FREEZE.md` 定义。
+- 当前版本 acceptance 只能由 `docs/product/v0.x/ACCEPTANCE_CRITERIA.md` 定义。
+- 当前版本 implementation tasks 只能由 `docs/product/v0.x/IMPLEMENTATION_PLAN.md` 定义。
+- 当前版本最小输入集由 `docs/product/v0.x/DOCUMENT_INPUTS.md` 定义。
+- 旧 Prompt、旧 Implementation Plan、旧 Scope Freeze、旧 task list 和旧 Validation Report 不能作为当前需求。
+- v0.1 / v0.2 / v0.3 gate 只作为 historical regression guardrail；它们不能定义 v0.4 scope。
+
+## 2. AGENTS.md 优先级
+
+- 根目录 `AGENTS.md` 定义全仓通用永久规则。
 - 子目录 `AGENTS.md` 定义该目录下更具体的规则。
 - 当规则冲突时，以离目标文件最近的 `AGENTS.md` 为准。
-- 但子目录规则不得违反根目录的安全规则、阶段性约束和禁止事项。
-- Codex / AI 编码 Agent 修改文件前，必须先读取目标路径上所有相关 `AGENTS.md`。
+- 子目录规则不得违反根目录的安全、scope、package、DB、env 和 secret 边界。
+- 修改文件前，必须先读取目标路径上所有相关 `AGENTS.md`。
+- 如果文档冲突，写入或报告当前版本 `OPEN_QUESTIONS.md`，不要猜。
 
-## Monorepo 当前结构
+## 3. Monorepo 当前结构
 
 本项目使用 pnpm workspace + Turborepo 管理。
 
-- `apps/web/`：当前完整 SaaS 单体应用。
-- `apps/`：应用层目录；当前只有 `apps/web` 是实际应用。
-- `packages/config/`：跨 app/package 共享的核心 SaaS 静态配置和配置类型（`@repo/config`）。
-- `packages/shared/`：跨 app/package 共享的纯工具函数、常量、类型和少量通用 hook/context（`@repo/shared`）。
-- `packages/env/`：跨 app/package 共享的环境变量验证（`@repo/env`）。
-- `packages/i18n/`：跨 app/package 共享的国际化路由和消息工具（`@repo/i18n`）。
-- `packages/db/`：跨 app/package 共享的 Drizzle 数据库层（`@repo/db`）。
-- `packages/auth/`：跨 app/package 共享的认证核心层（`@repo/auth`）。
-- `packages/payment/`：跨 app/package 共享的支付领域包（`@repo/payment`）。
-- `packages/credits/`：跨 app/package 共享的积分领域包（`@repo/credits`）。
-- `packages/mail/`：跨 app/package 共享的事务邮件领域包（`@repo/mail`）。
-- `packages/newsletter/`：跨 app/package 共享的邮件订阅领域包（`@repo/newsletter`）。
-- `packages/notification/`：跨 app/package 共享的系统通知领域包（`@repo/notification`）。
-- `packages/storage/`：跨 app/package 共享的对象存储领域包（`@repo/storage`）。
-- `packages/analytics/`：跨 app/package 共享的统计分析领域包（`@repo/analytics`）。
-- `packages/ai/`：v0.1 已创建的 AI contracts/types/adapters/runtime-types 包（`@repo/ai`）。
-- `packages/`：后续拆包位置，但当前不要随意创建业务包。
-- `packages/design-system` 是未来规划，不是当前已存在目录。
-- 根目录：workspace 编排、turbo、CI、工程文档、AI 编码规则；不要放业务源码。
+- `apps/web/`: 当前完整 SaaS 单体应用。
+- `apps/`: 应用层目录；当前只有 `apps/web` 是实际应用。
+- `packages/config/`: 核心 SaaS 静态配置和配置类型（`@repo/config`）。
+- `packages/shared/`: 纯工具函数、常量、类型和少量通用 hook/context（`@repo/shared`）。
+- `packages/env/`: 环境变量验证（`@repo/env`）。
+- `packages/i18n/`: 国际化路由和消息工具（`@repo/i18n`）。
+- `packages/db/`: Drizzle 数据库层（`@repo/db`）。
+- `packages/auth/`: 认证核心层（`@repo/auth`）。
+- `packages/payment/`: 支付领域包（`@repo/payment`）。
+- `packages/credits/`: 积分领域包（`@repo/credits`）。
+- `packages/mail/`: 事务邮件领域包（`@repo/mail`）。
+- `packages/newsletter/`: 邮件订阅领域包（`@repo/newsletter`）。
+- `packages/notification/`: 系统通知领域包（`@repo/notification`）。
+- `packages/storage/`: 对象存储领域包（`@repo/storage`）。
+- `packages/analytics/`: 统计分析领域包（`@repo/analytics`）。
+- `packages/ai/`: AI contracts/types/adapters/runtime-types 包（`@repo/ai`）。
+- 根目录: workspace 编排、turbo、CI、工程文档、AI coding rules；不要放业务源码。
 
-## 常用命令
+## 4. 常用命令
 
 ```bash
-# Monorepo 级命令
 pnpm install
 pnpm dev
 pnpm build
@@ -48,7 +61,6 @@ pnpm lint
 pnpm format
 pnpm typecheck
 
-# Web 应用
 pnpm --filter @repo/web dev
 pnpm --filter @repo/web build
 pnpm --filter @repo/web content
@@ -56,321 +68,147 @@ pnpm --filter @repo/web typecheck
 pnpm --filter @repo/web lint
 pnpm --filter @repo/web format
 
-# DB 包
 pnpm --filter @repo/db db:generate
 pnpm --filter @repo/db db:migrate
 pnpm --filter @repo/db db:push
 pnpm --filter @repo/db db:studio
 pnpm --filter @repo/db db:enable-pgvector
 pnpm --filter @repo/db typecheck
-pnpm --filter @repo/db lint
-pnpm --filter @repo/db format
 
-# 任一 package
-pnpm --filter @repo/<package-name> typecheck
-pnpm --filter @repo/<package-name> lint
-pnpm --filter @repo/<package-name> format
-
-# 边界检查
 pnpm check:db-shims
 pnpm check:package-exports
 pnpm check:env
-
-# 快捷命令
-pnpm web:dev
-pnpm web:build
-pnpm web:content
-pnpm web:db:generate
 ```
 
-## 项目结构与模块组织
+## 5. App 与 Package Ownership
 
-- 路由和服务器操作位于 `apps/web/src/app`，本地化页面放在 `[locale]`。
-- 可复用和业务 UI 组件当前都位于 `apps/web/src/components`。
-- 共享逻辑、领域服务和 package-owned 能力应放在对应 `packages/*`。
-- Drizzle schema 和真实迁移所有权在 `packages/db/src`。
-- `apps/web/src/db` 是兼容 shim，不是真实 schema 所有权位置。
-- `apps/web/src/ai` 是当前 v0.2/v0.3 web app AI runtime wiring 目录。
-- 事务性邮件 app wiring 位于 `apps/web/src/mail`，可复用模板/组件在 `packages/mail`。
-- 分析脚本注入和 React Provider 仍在 `apps/web/src/analytics`，通用 analytics contracts/helper 在 `packages/analytics`。
-- 静态资源在 `apps/web/public/`，运维脚本在 `apps/web/scripts/`，营销/文档内容在 `apps/web/content/`。
-
-## 阶段性架构约束
-
-- 当前不要提前拆 `apps/admin`、`apps/landing`、`apps/docs`、`apps/worker`、`apps/gateway`、`apps/studio`。
-- `packages/ai` 已在 v0.1 创建；不要把它升级成 runtime、route、UI、DB query 或 provider SDK 初始化层。
-- 当前不要提前创建 `packages/design-system`。
-- 这不是永久禁止，而是阶段性约束。
-- 只有进入明确任务阶段、有 Scope Freeze、有 Architecture/Migration Plan、有用户确认后，才允许创建这些未来 app/package。
-- 未来目录如果需要规则，先在根 `AGENTS.md` 或规划文档中说明；不要为了占位创建目录。
-
-## AI Infrastructure Guardrail
-
-- AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
-- `packages/ai` 已在 v0.1 创建，当前职责仍是 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter-compatible types 和 runtime type definitions。
-- `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、DB query、credits ledger mutation、provider SDK 初始化或 live runtime execution。
-- `apps/web/src/ai` 负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool 选择、Mastra/AI SDK runtime 连接、审计和 app policy。
-- `apps/web/src/components/ai` 负责 web app 当前 AI UI。
-- `apps/web/src/app/api/ai/chat/route.ts` 是首个 AI chat route 的规划命名，对外为 `POST /api/ai/chat`。
-- 不要使用 `/api/chat` 作为首个 AI route。
-- v0.2 usage 初期只做 audit，不接 credits 扣费。
-- credits preflight/reservation/settlement 后续进入 v0.5，并且必须通过 `@repo/credits` 提供的能力完成。
-
-## v0.2 AI Chat Gate
-
-- v0.2 执行入口文档是 `docs/product/AI_CHAT_V0_2_*`。
-- 后续每次只执行一个 `docs/product/AI_CHAT_V0_2_IMPLEMENTATION_PLAN.md` 中定义的 TASK。
-- TASK-002 前必须执行 External Docs Gate：涉及 assistant-ui、Vercel AI SDK、Mastra、provider SDK、streaming response、message shape、tool call、usage metadata 或 persistence 兼容性时，必须查官方最新文档。
-- 不允许凭旧 API、旧示例、记忆或猜测实现 assistant-ui / AI SDK / Mastra / provider SDK 接入。
-- 如果官方文档与当前代码或 v0.2 文档冲突，先暂停并说明冲突点，不要硬写。
-- v0.2 禁止创建 `/api/chat`，禁止 provider secret 进入 client，禁止 usage audit 调用 credits ledger。
-- v0.2 禁止创建 worker/gateway/studio/design-system split，禁止实现 v0.3+ memory/RAG/MCP/credits charging。
-
-## v0.2 Dependency Gate
-
-- TASK-003 只输出 dependency install plan：exact package list、版本范围、安装命令、影响文件和兼容关系。
-- 只有 TASK-003B 可以实际安装 v0.2 AI dependencies。
-- TASK-003B 只能在用户确认 TASK-003 install plan 后执行。
-- TASK-003B 只允许修改 `apps/web/package.json` 和 `pnpm-lock.yaml`。
-- 其他 TASK 不允许顺手修改 `apps/web/package.json`、root `package.json` 或 `pnpm-lock.yaml`。
-
-## v0.2 Schema Gate
-
-- TASK-004 固定输出 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`。
-- TASK-004 不创建 schema，不生成 migration，不运行 DB 命令。
-- TASK-004 不允许把 schema design 写进 dependency research。
-- TASK-005 只有在用户确认 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts`、更新 `packages/db/src/schema.ts` 并生成 migration。
-- AI schema 仍归 `packages/db`，不要把 DB query、schema 或 migration 放进 `packages/ai`。
-
-## v0.3 Mastra Memory / Knowledge Gate
-
-- v0.3 执行入口文档是 `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_*`。
-- v0.3 以现有 `POST /api/ai/chat` 为唯一 chat stream route；不允许创建 `/api/chat`，也不允许替换或绕过 `/api/ai/chat` 主路径。
-- Mastra runtime 只能位于 `apps/web/src/ai/**`；`packages/ai` 仍只放 contracts、types、adapter-compatible types 和 runtime type definitions。
-- v0.3 不允许接 MCP、credits charging、worker/gateway/studio split、完整 agent workflow、完整 knowledge admin 或超出 Scope Freeze 的 v0.4+ 能力。
-- memory/knowledge 默认必须有用户控制开关、用户确认流程或明确产品策略；不得自动静默保存敏感 durable memory。
-- Knowledge source ownership、visibility/access policy、source-to-resource mapping 和 citation/source provenance 不能丢失。
-- AeloKit-owned metadata 只保存产品边界数据、同意/启用状态、归属、可见性、mapping 和 citation rendering metadata；不要扩展成 Mastra memory/RAG internals mirror。
-- 如果 citation/source 采用 response-only metadata，必须记录持久化限制和 provenance 在 stream/UI 中的传递路径。
-
-## v0.3 Env Gate
-
-- v0.3 embedding 配置由 `@repo/env/server` 管理，当前变量包括：`AI_EMBEDDING_PROVIDER`、`AI_EMBEDDING_MODEL`、`AI_EMBEDDING_BASE_URL`、`AI_EMBEDDING_API_KEY`。
-- `AI_EMBEDDING_API_KEY` 未配置时，可按实现策略 fallback 到 `OPENAI_API_KEY`；如果两者都不可用，knowledge ingestion/retrieval 必须标记 blocked，不能假装通过。
-- `DATABASE_URL` 同时影响 Mastra `PostgresStore`、Mastra/PgVector 连接、AI persistence 和 DB/vector 验证；缺失或指向未启用 `vector` extension 的数据库会阻塞 knowledge retrieval。
-- provider secret 和 embedding secret 只能在 server-side runtime 使用，不允许进入 client component、client hook、浏览器 payload 或 `NEXT_PUBLIC_*` 变量。
-- 新增或修改 v0.3 env schema 时必须同步 `env.example` 并运行 `pnpm check:env`；AI Agent 不得修改 `.env` 或真实 secret。
-
-## v0.3 DB / Vector / Script Gate
-
-- `packages/db/scripts/enable-pgvector.ts` 和 `packages/db/scripts/enable-pgvector.sql` 用于启用并验证 PostgreSQL `vector` extension。
-- `pnpm --filter @repo/db db:enable-pgvector` 会修改目标数据库 extension 状态；运行前必须有用户对 DB 操作的明确确认。
-- `pgvector` extension 是 knowledge retrieval / vector storage 的前置条件；未启用时必须把相关 runtime smoke 或 storage/vector 验证标记为 blocked。
-- schema、migration 和真实 DB 所有权仍归 `packages/db`；不要把 schema/migration 写入 `apps/web/src/db` 或 `packages/ai`。
-- `knowledge.schema.ts` 只保存 AeloKit-owned metadata，例如 knowledge source ownership、visibility/access policy、source/document/chunk mapping 和 citation rendering metadata；不要扩展成 Mastra RAG internals mirror。
-- Mastra storage/vector 自己管理的表、schema、index 或 runtime internals 应通过 Mastra 官方能力使用和验证，不要在 AeloKit schema 中重新实现一套完整 RAG engine。
-
-## v0.3 验证要求
-
-v0.3 最终验收必须至少执行：
-
-```bash
-pnpm check:env
-pnpm check:package-exports
-pnpm --filter @repo/ai typecheck
-pnpm --filter @repo/db typecheck
-pnpm --filter @repo/web typecheck
-pnpm --filter @repo/web build
-```
-
-- Runtime Smoke 不能只用代码审查替代；必须覆盖 authenticated `/chat`、普通聊天、memory enable/create/use/delete、knowledge source/retrieval、citation/source UI、`ai_usage` 写入和 credits ledger 无变化。
-- 如果无法完成 authenticated browser smoke，验收报告必须标记 `blocked` 或 `PARTIAL` 并说明原因，不能把 login redirect 截图或代码审查结果标记为 `PASS`。
-- 未运行的命令、未验证的 DB/vector 条件、缺失 embedding key 或未启用 `vector` extension 都必须明确记录，不能伪装成通过。
-
-## Design System Guardrail
-
-- 未来目标是 `packages/design-system`，不是狭义 `packages/ui`。
-- 当前所有组件仍在 `apps/web/src/components`。
-- `packages/design-system` 后期可包含 `ui/`、`blocks/`、`marketing/`、`ai/`、`dashboard/`、`forms/`、`layouts/`、`icons/`、`tokens/`、`styles/`、`hooks/`、`utils/`。
-- 当前不要创建 `packages/design-system`。
-- 不允许把业务数据请求、server actions、auth session、payment/credits 逻辑放入未来 design-system。
-- 组件未来要沉淀到 design-system，必须先消除 app route/action/auth/payment/credits 依赖，并有组件依赖审计和用户确认。
-
-## Shim 边界规则
-
-### DB Shim
-
-- `apps/web/src/db/*` 是兼容 shim；source shim 文件应只做 `@repo/db` re-export。
-- 现存历史 migration 文件不改变所有权；不要新增或生成真实 schema/migration 到 `apps/web/src/db/*`。
-- 真实 schema 所有权在 `packages/db/src/*`。
-- 任何 schema generate 命令不得写入 `apps/web/src/db/*`。
-- `auth:schema:generate` 输出到 `packages/db/src/auth.schema.reference.ts`（参考文件，不覆盖手写 schema）。
-- `db:generate` 读取 `packages/db/src/schema.ts`。
-- 使用 `pnpm check:db-shims` 验证 shim 边界。
-- 使用 `pnpm check:package-exports` 验证 package exports 边界。
-
-### Payment Shim
-
-- `apps/web/src/payment/*` 是兼容 shim 和 app wiring，re-export 或委托给 `@repo/payment`。
-- 真实支付领域逻辑所有权在 `packages/payment/src/*`。
-- `apps/web/src/payment/index.ts` 注入 app 层回调（credits、notification、price-plan 等），然后委托给 `@repo/payment`。
-- checkout actions、webhook route handlers、pricing/billing UI 仍保留在 `apps/web`。
-- `@repo/payment` 不依赖 `@repo/auth`、`@repo/credits`、next-intl、React、Next runtime。
-
-### Credits Shim
-
-- `apps/web/src/credits/*` 是兼容 shim 和 app-local client helper，re-export 或委托给 `@repo/credits`。
-- 真实积分领域逻辑所有权在 `packages/credits/src/*`。
-- credit checkout actions、credits UI 仍保留在 `apps/web`。
-- `@repo/credits` 不依赖 `@repo/payment`、`@repo/auth`、next-intl、React、Next runtime。
-- `@repo/payment` 与 `@repo/credits` 不允许互相依赖。
-
-### Mail Shim
-
-- `apps/web/src/mail/*` 是 app wiring，复用并包装 `@repo/mail`。
-- 真实邮件领域逻辑所有权在 `packages/mail/src/*`。
-- 邮件模板、组件、渲染逻辑在 `packages/mail/src/templates` 和 `packages/mail/src/components`。
-- `apps/web/src/mail/templates/*` 保留 PreviewProps 配置用于 email preview。
-- Server Actions、route handlers、auth callbacks 仍保留在 `apps/web`。
-- `@repo/mail` 不依赖 `@repo/auth`、`@repo/payment`、`@repo/credits`、`@repo/db`、next-intl、Next runtime。
-- `@repo/mail` 使用 generic `Locale` 和 `Messages` 类型，具体类型由 app 层提供。
-
-### Newsletter Shim
-
-- `apps/web/src/newsletter/*` 是兼容 shim，re-export 自 `@repo/newsletter`。
-- 真实邮件订阅领域逻辑所有权在 `packages/newsletter/src/*`。
-- newsletter provider、subscribe/unsubscribe 服务在 `packages/newsletter`。
-- Server Actions、UI、hooks 仍保留在 `apps/web`。
-- `@repo/newsletter` 不依赖 `@repo/mail`、`@repo/auth`、`@repo/payment`、`@repo/credits`、`@repo/db`、next-intl、Next runtime。
-- `@repo/mail` 与 `@repo/newsletter` 不允许互相依赖。
-
-### Notification Shim
-
-- `apps/web/src/notification/*` 是兼容 shim 和 app wiring，re-export 或委托给 `@repo/notification`。
-- 真实系统通知领域逻辑所有权在 `packages/notification/src/*`。
-- notification provider、sendNotification 服务在 `packages/notification`。
-- Server Actions、route handlers 仍保留在 `apps/web`。
-- `@repo/notification` 不依赖 `@repo/mail`、`@repo/newsletter`、`@repo/auth`、`@repo/payment`、`@repo/credits`、`@repo/db`、next-intl、Next runtime。
-- `@repo/notification` 只依赖 `@repo/config` 和 `@repo/env`。
-- `apps/web/src/notification/index.ts` 注入 app 层配置（botName、avatarUrl 等），然后委托给 `@repo/notification`。
-
-### Storage Shim
-
-- `apps/web/src/storage/*` 是兼容 shim 和 app-local browser upload helper，re-export 或委托给 `@repo/storage`。
-- 真实对象存储领域逻辑所有权在 `packages/storage/src/*`。
-- storage provider、uploadFile/deleteFile 服务在 `packages/storage`。
-- `apps/web/src/storage/client.ts` 是浏览器专用上传函数，保留在 `apps/web`。
-- Server Actions、route handlers、upload UI 仍保留在 `apps/web`。
-- `@repo/storage` 不依赖 `@repo/auth`、`@repo/payment`、`@repo/credits`、`@repo/mail`、`@repo/newsletter`、`@repo/notification`、`@repo/db`、next-intl、Next runtime。
-- `@repo/storage` 只依赖 `@repo/config`、`@repo/env` 和 `s3mini`。
-
-### Analytics Shim
-
-- `apps/web/src/analytics/*` 包含兼容 shim、React Provider 和 Script injection。
-- 真实统计分析 contracts/helper 所有权在 `packages/analytics/src/*`。
-- analytics types、provider interface、config helpers、event names 在 `packages/analytics`。
-- React Provider 组件、Script 注入组件仍保留在 `apps/web/src/analytics/*.tsx`。
-- dashboard analytics UI、admin analytics UI 仍保留在 `apps/web`。
-- `@repo/analytics` 不依赖 `@repo/auth`、`@repo/payment`、`@repo/credits`、`@repo/mail`、`@repo/newsletter`、`@repo/notification`、`@repo/storage`、`@repo/db`、next-intl、Next runtime、React。
-- `@repo/analytics` 只依赖 `@repo/config` 和 `@repo/env`。
-- client.ts 只能使用 browser-safe 逻辑和 `NEXT_PUBLIC_*` 环境变量。
-- server.ts 可以使用 server env 和 Node SDK。
-
-## Env 边界规则
-
-- `packages/env/` 是环境变量验证包（`@repo/env`）。
-- 第一版使用简单结构：`server.ts` / `client.ts` / `shared.ts`。
-- 不创建 `core/*` 子目录，不拆 `auth/payment/storage/analytics` 子模块。
-- `@repo/env` 不依赖任何 `@repo/*` 包。
-- client.ts 只能声明 `NEXT_PUBLIC_*` 变量，不能读取 server secret。
-- server.ts 可以声明所有 server-only 变量。
-- 根目录 `env.example` 是唯一完整 env 参考文件。
-- 不使用 `.env.example`，不要创建 `.env.example`。
-- 支持 `SKIP_ENV_VALIDATION=true` 用于 CI/build 环境。
-- `@repo/env` 已接入 web build-time validation（`apps/web/next.config.ts`）。
-- 不允许 client component import `@repo/env/server`。
-- 修改 env schema 后必须同步 `env.example`。
-- CI 可使用 `SKIP_ENV_VALIDATION=true` 跳过验证。
-- CI 会执行 `pnpm check:env` 验证 schema 与 env.example 一致性。
-- 新代码不要直接使用业务 env 的 `process.env`，使用 `@repo/env/server` 或 `@repo/env/client`。
-- `process.env.NODE_ENV` 可以保留。
-- 允许保留的 `process.env`：`NODE_ENV`、`SKIP_ENV_VALIDATION`、平台变量（如 `DOCKER_BUILD`、`DISABLE_IMAGE_OPTIMIZATION`）。
-- 新增环境变量必须同步更新：schema + `env.example` + 运行 `pnpm check:env`。
-- AI provider key 必须走 server env，不允许 client 泄露。
-
-## 依赖归属规则
-
-- 每个 workspace 必须声明自己直接 import 的依赖，包括 `@repo/*` 内部包。
-- root 只放 monorepo 编排、workspace-wide tooling 和 root scripts 直接使用的 CLI。
-- 不要依赖 `apps/web` 的依赖穿透。
+- 路由、页面组合、HTTP boundary、server actions、部署入口和 app-specific wiring 位于 `apps/*`。
+- 当前完整 SaaS 单体应用在 `apps/web`。
+- 可复用领域逻辑、contracts、provider interface、schema exports 和 shared services 应放在对应 `packages/*`。
 - package 不允许 import app。
 - app 之间不得互相 import。
+- 每个 workspace 必须声明自己直接 import 的依赖，包括 `@repo/*` 内部包。
 - package 必须使用明确 exports；不允许 deep import 内部实现。
 - 新增 import 必须同步更新所属 workspace 的 `package.json`。
-- 不确定依赖不要删除，先标记 `needs-manual-review`。
+- root `package.json` 只放 monorepo 编排、workspace-wide tooling 和 root scripts 直接使用的 CLI。
 
-## UI 边界规则
+## 6. 阶段性架构约束
+
+- 当前不要提前拆 `apps/admin`, `apps/landing`, `apps/docs`, `apps/worker`, `apps/gateway`, `apps/studio`。
+- 当前不要提前创建 `packages/design-system`, `packages/api-client`, `packages/logger`, `packages/observability`, `packages/testing`。
+- 不要创建 `common`, `misc`, `core` 这类无边界杂物包。
+- 未来 app/package 必须有 Scope Freeze、ownership、dependency plan、exports/deployment plan、validation commands 和用户确认。
+- 不要为了占位创建未来目录。
+
+## 7. AI Infrastructure Guardrail
+
+- AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
+- AI 文档读取入口是 `docs/INDEX.md`，当前版本输入集由 `docs/product/v0.x/DOCUMENT_INPUTS.md` 控制。
+- `packages/ai` 的职责是 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter-compatible types 和 runtime type definitions。
+- `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、DB query、credits ledger mutation、provider SDK initialization 或 live runtime execution。
+- `apps/web/src/ai` 负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool selection、Mastra/AI SDK runtime 连接、审计和 app policy。
+- `apps/web/src/components/ai` 负责 app-local AI UI。
+- `apps/web/src/app/api/ai/chat/route.ts` 是当前 AI chat stream route，对外为 `POST /api/ai/chat`。
+- 不要创建 `/api/chat` 作为 AI chat route。
+- Usage audit 不等于 credits charging；AI usage 不得直接调用 credits ledger。
+- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前版本 Scope Freeze 明确打开后实现。
+- 不默认启用真实 third-party MCP、local stdio MCP、Assistant Cloud、worker/gateway/studio split 或 destructive migration。
+
+## 8. DB 与 Shim 边界
+
+- Drizzle schema 和真实 migration 所有权在 `packages/db/src`。
+- `packages/db/src/schema.ts` 是 Drizzle schema aggregation entrypoint。
+- `apps/web/src/db/*` 是兼容 shim；source shim 文件应只做 `@repo/db` re-export。
+- 不要新增或生成真实 schema/migration 到 `apps/web/src/db/*`。
+- 任何 schema generate 命令不得写入 `apps/web/src/db/*`。
+- `auth:schema:generate` 输出到 `packages/db/src/auth.schema.reference.ts`，它是参考文件，不覆盖手写 schema。
+- `db:generate` 读取 `packages/db/src/schema.ts`。
+- 运行 migration、db push、db reset、db:enable-pgvector 或任何会修改 DB 状态的命令前，必须有用户明确确认。
+- 使用 `pnpm check:db-shims` 验证 DB shim 边界。
+- 使用 `pnpm check:package-exports` 验证 package exports 边界。
+
+## 9. Domain Shim 边界
+
+- `apps/web/src/payment/*` 是兼容 shim 和 app wiring；真实支付领域逻辑在 `packages/payment/src/*`。
+- `apps/web/src/credits/*` 是兼容 shim 和 app-local client helper；真实积分领域逻辑在 `packages/credits/src/*`。
+- `apps/web/src/mail/*` 是 app wiring；真实邮件领域逻辑在 `packages/mail/src/*`。
+- `apps/web/src/newsletter/*` 是兼容 shim；真实订阅通讯领域逻辑在 `packages/newsletter/src/*`。
+- `apps/web/src/notification/*` 是兼容 shim 和 app wiring；真实系统通知领域逻辑在 `packages/notification/src/*`。
+- `apps/web/src/storage/*` 是兼容 shim 和 app-local browser upload helper；真实对象存储领域逻辑在 `packages/storage/src/*`。
+- `apps/web/src/analytics/*` 包含兼容 shim、React Provider 和 Script injection；真实 analytics contracts/helper 在 `packages/analytics/src/*`。
+- package 不得吸收 app route、server action、auth session、cookies、headers、React provider 注入或 app-specific callback。
+- `@repo/payment` 与 `@repo/credits` 不允许互相依赖。
+- `@repo/mail` 与 `@repo/newsletter` 不允许互相依赖。
+
+## 10. Env 与 Secret 边界
+
+- `packages/env/` 是环境变量验证包（`@repo/env`）。
+- `@repo/env` 不依赖任何 `@repo/*` 包。
+- client env 只能声明 `NEXT_PUBLIC_*` 变量，不能读取 server secret。
+- server env 可以声明 server-only 变量。
+- 根目录 `env.example` 是唯一完整 env 参考文件。
+- 不使用、不要创建 `.env.example`。
+- AI Agent 不得私自修改 `.env` 或真实 secret。
+- 新增环境变量必须同步更新 schema + `env.example`，并运行 `pnpm check:env`。
+- 新代码不要绕过 env schema 直接读取业务 env；使用 `@repo/env/server` 或 `@repo/env/client`。
+- 允许保留的直接 `process.env`：`NODE_ENV`, `SKIP_ENV_VALIDATION`, 平台变量。
+- Provider secret、embedding secret、payment secret、storage secret 只能 server-side 使用，不允许进入 client component、client hook、browser payload 或 `NEXT_PUBLIC_*`。
+- 轮换或暴露凭证/API key 必须由用户明确授权。
+
+## 11. UI 与 Design System 边界
 
 - 当前没有 `packages/ui`，也没有 `packages/design-system`。
-- UI 组件位于 `apps/web/src/components/`。
-- `ui/` 目录包含 shadcn/ui 原语。
-- `magicui/`、`animate-ui/`、`tailark/`、`diceui/` 是第三方库组件，不抽入未来 design-system，除非经过审计和重包装。
-- `blocks/`、`auth/`、`admin/`、`settings/`、`pricing/`、`dashboard/`、`docs/` 是业务或 app-bound 组件，不提前抽入未来 design-system。
-- 未来抽取 design-system 前需完成 UI 边界审计、dependency cleanup、exports plan 和用户确认。
+- 当前 UI 组件位于 `apps/web/src/components/`。
+- `apps/web/src/components/ui` 是 shadcn/ui 原语。
+- `magicui/`, `animate-ui/`, `tailark/`, `diceui/` 是 app 内第三方组件来源或改造件。
+- `blocks/`, `auth/`, `admin/`, `settings/`, `pricing/`, `dashboard/`, `docs/` 是业务或 app-bound 组件，不提前抽入未来 design-system。
+- 未来目标是 `packages/design-system`，不是狭义 `packages/ui`。
+- 组件未来要沉淀到 design-system，必须先消除 app route/action/auth/payment/credits 依赖，并有组件依赖审计和用户确认。
 
-## 代码风格与命名规范
+## 12. 代码风格与命名
 
-- Biome (`biome.json`) 强制执行两空格缩进、单引号、ES5 尾随逗号和必需的分号。
-- 模块文件名使用短横线命名法（`dashboard-sidebar.tsx`）。
-- Hook 使用 `use-` 前缀（`use-session.ts`）。
+- Biome (`biome.json`) 强制两空格缩进、单引号、ES5 尾随逗号和必需分号。
+- 模块文件名使用短横线命名法，例如 `dashboard-sidebar.tsx`。
+- Hook 使用 `use-` 前缀，例如 `use-session.ts`。
 - 工具函数默认使用命名导出。
-- Tailwind 工具类位于 `apps/web/src/styles`；在那里扩展设计令牌，而不是分散使用魔法值。
-- 服务器端专用代码放在标记了 `"use server"` 的文件中，避免将这些模块引入客户端 Hook。
+- Tailwind 工具类扩展放在 `apps/web/src/styles`。
+- server-only 代码必须避免被 client component 或 client hook import。
 
-## 测试与验证
+## 13. 测试与验证
 
 - 只运行与本次改动相关的检查，除非用户明确要求全量测试。
-- 自动化测试尚未完整集成到所有 package 脚本中；文档或轻量改动至少做文件范围和边界检查。
-- 添加测试运行器时，将测试文件与功能放在同一目录下，使用 `.test.ts(x)` 或 `.spec.ts(x)` 后缀，并在 PR 中记录相关命令。
-- 数据、schema、migration 变更必须独立任务确认；本规则文档任务不得生成 migration。
-- v0.3 Mastra Memory / Knowledge 相关验收必须遵守 `v0.3 验证要求`，不能用静态代码审查替代 runtime smoke。
+- 文档或轻量规则改动至少做文件范围检查、forbidden path 检查和 `git diff --stat`。
+- package export/shim/env 相关改动补充运行 `pnpm check:package-exports` 和 `pnpm check:env`。
+- UI/route/runtime 改动优先运行目标 workspace 的 typecheck/lint。
+- schema、migration、真实 DB 命令必须独立任务确认。
+- Runtime smoke 不能只用代码审查替代；无法执行时必须标记 blocked/PARTIAL，不能标记 PASS。
 
-## 提交与合并请求规范
+## 14. 提交与 PR 规范
 
 - 提交信息格式：`<类型>(<范围>): <简短描述>`。
-- 类型：`feat`、`fix`、`refactor`、`test`、`chore`、`docs`。
+- 类型：`feat`, `fix`, `refactor`, `test`, `chore`, `docs`。
 - 每次提交只包含一个逻辑改动。
 - 不在同一次提交中混入格式改动和逻辑改动。
-- PR 描述必须包含：改了什么 / 为什么改 / 如何测试。
+- PR 描述必须包含：改了什么、为什么改、如何测试。
 - 当环境变量变更时必须更新 `env.example` 并说明验证命令。
 
-## 配置与密钥
-
-- 运行命令前将 `env.example` 复制为 `.env`，但 AI Agent 不得私自修改 `.env`。
-- 生产环境凭证存储在部署提供商（Vercel、Cloudflare）处，切勿提交密钥。
-- 为 `opennextjs-cloudflare` 或 `wrangler` 使用有作用域的 API 密钥。
-- 轮换与 provider 关联的密钥必须由用户明确授权。
-- 合并前移除临时调试日志。
-
-## 禁止事项
+## 15. 禁止事项
 
 - 不要创建根 `src/`。
 - 不要把业务文件放回根目录。
-- 不要让 package import `apps/web`。
-- 不要提前拆未来 apps：`apps/admin`、`apps/landing`、`apps/docs`、`apps/worker`、`apps/gateway`、`apps/studio`。
-- 不要提前创建未来 packages：`packages/design-system`、`packages/api-client`、`packages/logger`、`packages/observability`、`packages/testing`。
-- 不要把 `packages/ai` 用作 runtime、route、UI、DB query、schema、migration 或 provider SDK 初始化层。
-- 不要创建 `common`、`misc`、`core` 这类无边界杂物包。
+- 不要让 package import `apps/web` 或 `@/` alias。
+- 不要提前拆 future apps 或 future packages。
+- 不要把 `packages/ai` 用作 runtime、route、UI、DB query、schema、migration 或 provider SDK initialization 层。
 - 不要绕过 env schema 直接读取业务 env。
 - 不要在 `apps/web/src/db` 写真实 schema。
 - 不要让 schema generate 写入 `apps/web/src/db`。
 - 不要把业务组件提前抽到未来 design-system。
 - 不要把 i18n/auth/payment/credits/server action 依赖组件放入未来 design-system。
-- 不要创建 `.env.example`；根目录 `env.example` 是唯一完整 env 参考。
-- 不要写业务代码、API routes、schema 或 migration，除非任务明确要求。
+- 不要创建 `.env.example`。
 - 不要创建 `/api/chat` 作为 AI chat route。
 - 不要让 provider secret 进入 client。
 - 不要让 usage audit 调用 credits ledger。
-- 不要把 v0.3 memory/knowledge 扩展成 MCP、credits charging、worker/gateway/studio 或 v0.4+ RAG/agent workflow scope。
+- 不要默认接入真实 third-party MCP。
+- 不要默认执行 destructive migration。
 - 不要删除现有 SaaS 功能。
 - 不要私自替换技术栈。

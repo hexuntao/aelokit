@@ -9,9 +9,9 @@
 - v0.1: AI contracts foundation / historical
 - v0.2: AI chat foundation / historical
 - v0.3: Mastra memory + knowledge / accepted with notes
-- v0.4: not planned yet, blocked until documentation hygiene is complete
+- v0.4: planning may begin after Documentation Governance Confirmation; implementation is not open yet
 
-当前已补齐文档入口层，但 v0.4 仍不能直接进入实现。v0.4 planning 需要先完成人工确认、Scope Freeze、Acceptance Criteria、Implementation Plan 和 Open Questions。
+当前已补齐文档入口层，并已完成人工确认 Q001-Q007。v0.4 planning 可以按 `docs/product/v0.4/DOCUMENT_INPUTS.md` 开始；v0.4 implementation 仍必须等待独立的 Scope Freeze、Acceptance Criteria 和 Implementation Plan。
 
 ## 3. Authoritative Reading Order
 
@@ -21,14 +21,17 @@
 2. 当前版本 `SCOPE_FREEZE.md`
 3. 当前版本 `ACCEPTANCE_CRITERIA.md`
 4. 当前版本 `IMPLEMENTATION_PLAN.md`
-5. `docs/INDEX.md`
-6. root `AGENTS.md`
-7. nearest `AGENTS.md`
-8. Active architecture docs
-9. Active product docs
-10. Historical docs
-11. Validation reports
-12. Old Codex prompts
+5. 当前版本 `DOCUMENT_INPUTS.md`
+6. `docs/INDEX.md`
+7. root `AGENTS.md`
+8. nearest `AGENTS.md`
+9. `docs/agents/AGENT_RULES_INDEX.md`
+10. tool-specific agent rules
+11. Active architecture docs
+12. Active product docs
+13. Historical docs
+14. Validation reports
+15. Old Codex prompts
 
 如果当前版本文档尚不存在，不得用旧版本 Scope Freeze 或 Prompt 补位。
 
@@ -42,9 +45,12 @@
 - `docs/product/v0.4/DOCUMENT_INPUTS.md`
 - `docs/product/v0.4/V0_3_HANDOFF.md`
 - `docs/product/v0.4/OPEN_QUESTIONS.md`
+- `docs/agents/AGENT_RULES_INDEX.md`
+- `docs/agents/CODEX_RULES.md`
+- `docs/agents/CLAUDE_RULES.md`
 - `README.md`
 - `package.json`
-- `AGENTS.md`，但 v0.2/v0.3 专属 gate 只能作为历史回归边界，不定义 v0.4 scope
+- `AGENTS.md`，作为永久工程规则和 docs entrypoint pointer，不定义 v0.4 scope
 - `apps/AGENTS.md`
 - `apps/web/AGENTS.md`
 - `packages/AGENTS.md`
@@ -93,7 +99,7 @@ v0.3:
 这些文档只能参考，不能单独作为 v0.4 范围依据：
 
 - `README.zh-CN.md`
-- `CLAUDE.md`
+- `CLAUDE.md`，Claude Code short summary only
 - `turbo.json`
 - `pnpm-workspace.yaml`
 - `env.example`
@@ -107,10 +113,7 @@ v0.3:
 
 以下文档疑似过期或需要人工确认后更新状态：
 
-- `AGENTS.md`: 需要拆分永久规则与 v0.2/v0.3 historical gates。
-- `CLAUDE.md`: 需要收敛为 Claude Code 专用摘要。
 - `apps/web/AGENTS.md`: AI Web App 边界仍使用 v0.2 文案，需要更新为 current + historical split。
-- `docs/agents/domain.md`: 需要补充 `docs/INDEX.md` 作为最高文档入口。
 - `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`: 写着待确认，但代码已存在 `packages/db/src/ai.schema.ts`。
 - `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_SCOPE_FREEZE.md`: 写着 Planning only，但 v0.3 已 accepted with notes。
 - `docs/architecture/AELOKIT_MONOREPO_EVOLUTION_PLAN.md`: 部分 current/future 状态已被代码推进。
@@ -122,18 +125,23 @@ v0.3:
 - 当前用户 Prompt 优先于仓库历史 Prompt。
 - `AGENTS.md` 定义工程边界，不定义新产品范围。
 - `CLAUDE.md` 只作为 Claude Code 工作流摘要，不能覆盖 `AGENTS.md` 和当前版本 Scope Freeze。
+- `docs/agents/CODEX_RULES.md` 和 `docs/agents/CLAUDE_RULES.md` 是 tool-specific 读取规则，不定义产品 scope。
 - Validation Report 是验收事实，不是下一版本需求。
 - Codex Prompt 是执行指令，不是长期产品文档。
 - 如果文档冲突，必须写 `OPEN_QUESTIONS.md`，不允许猜。
 
 ## 9. v0.4 Planning Gate
 
-v0.4 计划只能在以下文件完成后开始：
+v0.4 planning 可以在以下治理文件完成并被人工确认后开始：
 
 - `docs/DOCUMENTATION_AUDIT.md`
 - `docs/INDEX.md`
 - `docs/DOCUMENTATION_REORG_PLAN.md`
 - `docs/product/v0.4/DOCUMENT_INPUTS.md`
 - `docs/product/v0.4/V0_3_HANDOFF.md`
+- `docs/product/v0.4/OPEN_QUESTIONS.md`
+- `docs/agents/AGENT_RULES_INDEX.md`
+- `docs/agents/CODEX_RULES.md`
+- `docs/agents/CLAUDE_RULES.md`
 
-此外，v0.4 planning 前必须处理或明确接受 `docs/product/v0.4/OPEN_QUESTIONS.md` 中的人工确认项。
+这些条件当前已完成。v0.4 implementation 仍不得开始，直到 v0.4 `SCOPE_FREEZE.md`, `ACCEPTANCE_CRITERIA.md`, `IMPLEMENTATION_PLAN.md` 由用户确认。

@@ -2,6 +2,8 @@
 
 本文件只输出重组计划。本轮不移动、不删除、不重命名任何现有文档。
 
+第二轮 Documentation Governance Confirmation 决定：暂不移动历史文档，只依赖 `docs/INDEX.md` 和 `docs/product/v0.4/DOCUMENT_INPUTS.md` 控制读取范围；等 v0.4 planning 完成后再单独做 archive 重组。
+
 ## 1. Goals
 
 - 降低 Codex 上下文污染。
@@ -57,11 +59,14 @@ docs/
 - `docs/DOCUMENTATION_AUDIT.md`
 - `docs/DOCUMENTATION_REORG_PLAN.md`
 - `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`
-- `docs/product/AI_AGENT_INFRASTRUCTURE_ROADMAP.md`，但需更新 v0.1-v0.3 状态并明确 v0.4 仍未计划
+- `docs/product/AI_AGENT_INFRASTRUCTURE_ROADMAP.md`，但需更新 v0.1-v0.3 状态并明确 v0.4 仍需单独 Scope Freeze
 - `docs/architecture/AI_RUNTIME_LAYERING.md`
 - `docs/architecture/AI_AGENT_INFRASTRUCTURE_BOUNDARIES.md`
 - `docs/architecture/AELOKIT_PACKAGE_BOUNDARIES.md`
-- `AGENTS.md`，但建议重写为永久规则 + docs entrypoint
+- `AGENTS.md`
+- `docs/agents/AGENT_RULES_INDEX.md`
+- `docs/agents/CODEX_RULES.md`
+- `docs/agents/CLAUDE_RULES.md`
 - `apps/AGENTS.md`
 - `apps/web/AGENTS.md`，但建议移除 v0.2 任务 gate 的当前语气
 - `packages/AGENTS.md`
@@ -112,7 +117,7 @@ architecture archive or reference-only:
 
 ## 5. Files Suggested to Rewrite / Split
 
-- `AGENTS.md` should be split into:
+- `AGENTS.md` has been rewritten into:
   - permanent engineering rules
   - current repo boundaries
   - pointer to `docs/INDEX.md`
@@ -120,7 +125,7 @@ architecture archive or reference-only:
 - v0.2 / v0.3 专属规则建议移动到：
   - `docs/product/archive/v0.2/AGENT_RULES.md`
   - `docs/product/archive/v0.3/AGENT_RULES.md`
-- `CLAUDE.md` should become Claude-specific summary only:
+- `CLAUDE.md` has been rewritten as Claude-specific summary only:
   - declare it is not the highest rule source
   - point to `AGENTS.md`, nearest `AGENTS.md`, and `docs/INDEX.md`
   - avoid duplicating package/shim/env details
@@ -130,8 +135,8 @@ architecture archive or reference-only:
   - archived completed versions
   - prompts
   - validation reports
-- `docs/agents/domain.md` should be updated to mention `docs/INDEX.md` as the documentation entrypoint.
-- Consider adding:
+- `docs/agents/domain.md` has been updated to mention `docs/INDEX.md` and current version `DOCUMENT_INPUTS.md`.
+- Added:
   - `docs/agents/AGENT_RULES_INDEX.md`
   - `docs/agents/CODEX_RULES.md`
   - `docs/agents/CLAUDE_RULES.md`
@@ -151,13 +156,16 @@ If a later task executes document movement:
 
 ## 7. Human Confirmation Required
 
-以下动作必须人工确认后才能执行：
+以下动作仍必须人工确认后才能执行：
 
 - 移动、归档、重命名任何现有文档。
-- 重写根 `AGENTS.md`。
-- 重写 `CLAUDE.md`。
-- 新增 `docs/agents/AGENT_RULES_INDEX.md`, `docs/agents/CODEX_RULES.md`, `docs/agents/CLAUDE_RULES.md`。
 - 将历史版本 gate 从 `AGENTS.md` 提取到 archive 文档。
 - 更新 README 指向新的 docs entrypoint。
 - 将 `docs/product` 按 version/current/archive 目录实际重组。
 - 修改任何 docs 构建、Fumadocs sidebar 或站点内容索引。
+
+以下动作已由 Q002 / Q003 确认并完成：
+
+- 重写根 `AGENTS.md`。
+- 重写 `CLAUDE.md`。
+- 新增 `docs/agents/AGENT_RULES_INDEX.md`, `docs/agents/CODEX_RULES.md`, `docs/agents/CLAUDE_RULES.md`。

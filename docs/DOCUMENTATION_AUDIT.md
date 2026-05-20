@@ -2,7 +2,7 @@
 
 审计日期：2026-05-20  
 范围：AeloKit v0.3 后、v0.4 planning 前的文档治理。  
-结论：`READY_AFTER_HUMAN_CONFIRMATION`，因为文档入口层已补齐，但 AGENTS / CLAUDE 收敛、历史文档归档和 v0.4 scope freeze 尚需人工确认。
+结论：`READY_FOR_V0_4_PLANNING`。第二轮 Documentation Governance Confirmation 已确认 Q001-Q007，并已收敛 AGENTS / CLAUDE / docs/agents 入口。v0.4 implementation 仍必须等待独立 Scope Freeze、Acceptance Criteria 和 Implementation Plan。
 
 ## 1. Audit Scope
 
@@ -19,9 +19,9 @@
 
 ## 2. Current Documentation Problems
 
-- 历史版本规则混入当前规则：根 `AGENTS.md` 仍内联 v0.2 AI Chat Gate、v0.2 Dependency Gate、v0.2 Schema Gate、v0.3 Mastra Gate、v0.3 Env/DB/Validation Gate。这些规则对已完成版本仍有回归价值，但容易被 v0.4 planner 误读为当前 scope。
-- `AGENTS.md` 过长：根 `AGENTS.md` 约 376 行，包含永久工程边界、当前结构、历史阶段 gate、shim 规则、env 规则、测试规则和禁止事项。它已经接近“规则总表”，不再是最小入口。
-- `CLAUDE.md` 与 `AGENTS.md` 重复：`CLAUDE.md` 约 343 行，重复目录结构、AI guardrail、v0.2/v0.3 gate、shim 边界、env 边界和禁止事项。虽然开头声明冲突时以 `AGENTS.md` 为准，但仍会给 Claude Code / Codex 造成双源阅读成本。
+- 历史版本规则混入当前规则：第一轮审计时根 `AGENTS.md` 内联 v0.2/v0.3 gate，容易被 v0.4 planner 误读为当前 scope。第二轮已收敛为 historical regression guardrail。
+- `AGENTS.md` 过长：第一轮审计时根 `AGENTS.md` 约 376 行，混合永久边界和历史 gate。第二轮已重写为永久工程规则 + docs entrypoint pointer。
+- `CLAUDE.md` 与 `AGENTS.md` 重复：第一轮审计时 `CLAUDE.md` 约 343 行，重复大量 package/shim/env/gate 细节。第二轮已重写为 Claude Code 短摘要。
 - 旧 Prompt 容易被误读为当前需求：`AI_CONTRACTS_FOUNDATION_CODEX_PROMPT.md`, `AI_CHAT_V0_2_CODEX_PROMPT.md`, `AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_CODEX_PROMPT.md` 都是一次性执行指令，不应进入 v0.4 planning 的当前需求集合。
 - 验收报告容易被误读为实现计划：`AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_VALIDATION_REPORT.md` 是验收事实与 notes，不是下一版本任务计划。它可以作为 v0.3 handoff 输入，但不能直接变成 v0.4 scope。
 - v0.2 / v0.3 约束会影响 v0.4：这些历史 scope freeze 中的“不进入 v0.4 / 不接 MCP / 不接 credits”是历史阶段防越界规则，不应阻止 v0.4 在新 scope freeze 中重新规划相关能力。
@@ -54,12 +54,15 @@
 
 | path | category | version | current status | why | can be used for v0.4 planning |
 |---|---|---:|---|---|---|
-| `AGENTS.md` | Active Agent Rules | current plus historical gates | NEEDS_REVIEW | 当前最高工程规则，但混入过多 v0.2/v0.3 历史 gate，建议拆分。 | YES |
+| `AGENTS.md` | Active Agent Rules | current | ACTIVE | 当前最高工程规则，已收敛为永久边界 + docs entrypoint pointer，不定义 v0.4 scope。 | YES |
 | `apps/AGENTS.md` | Active Agent Rules | current | ACTIVE | app ownership 和 future app 禁止事项仍有效。 | YES |
 | `apps/web/AGENTS.md` | Active Agent Rules | current plus v0.2 gate | NEEDS_REVIEW | web 边界有效，但 AI Web App 边界仍以 v0.2 文案为主。 | YES |
 | `packages/AGENTS.md` | Active Agent Rules | current | ACTIVE | package ownership、exports 和 package creation rules 仍有效。 | YES |
-| `docs/agents/domain.md` | Active Agent Rules | current | NEEDS_REVIEW | 仍指向 `docs/product/` 作为 product source of truth，但没有说明 historical/current 分类。 | PARTIAL |
-| `CLAUDE.md` | Active Agent Rules | Claude summary | NEEDS_REVIEW | 应收敛成 Claude Code 摘要，不能重复和覆盖 AGENTS/current scope。 | NO |
+| `docs/agents/domain.md` | Active Agent Rules | current | ACTIVE | 已补充 `docs/INDEX.md` 和当前版本 `DOCUMENT_INPUTS.md` 作为读取入口，历史 docs 只能作背景。 | YES |
+| `docs/agents/AGENT_RULES_INDEX.md` | Active Agent Rules | current | ACTIVE | 定义 agent rule 文件体系、职责和 historical gate 语义。 | YES |
+| `docs/agents/CODEX_RULES.md` | Active Agent Rules | current | ACTIVE | 定义 Codex 读取入口、最小输入集、冲突处理和 `/goal` scope 规则。 | YES |
+| `docs/agents/CLAUDE_RULES.md` | Active Agent Rules | current | ACTIVE | 定义 Claude Code 专属读取规则和 `CLAUDE.md` 的非最高优先级。 | YES |
+| `CLAUDE.md` | Active Agent Rules | Claude summary | REFERENCE_ONLY | 已收敛为 Claude Code 短摘要，不覆盖 AGENTS/docs/current scope。 | NO |
 
 ### Historical Version Docs
 
@@ -102,7 +105,7 @@
 | `docs/product/AI_CONTRACTS_FOUNDATION_OPEN_QUESTIONS.md` | Open Questions | v0.1 | HISTORICAL | 旧阶段问题，多数已被实现/后续文档吸收。 | NO |
 | `docs/product/AI_CHAT_V0_2_OPEN_QUESTIONS.md` | Open Questions | v0.2 | HISTORICAL | 旧阶段问题，不能作为当前 blocker。 | NO |
 | `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_OPEN_QUESTIONS.md` | Open Questions | v0.3 | HISTORICAL | validation report 已更新部分状态；剩余 notes 应进入 v0.4 handoff。 | PARTIAL |
-| `docs/product/v0.4/OPEN_QUESTIONS.md` | Open Questions | v0.4 | ACTIVE | 本轮新增，记录 v0.4 planning 前未决问题。 | YES |
+| `docs/product/v0.4/OPEN_QUESTIONS.md` | Open Questions | v0.4 | ACTIVE | 记录 v0.4 planning 前治理问题；Q001-Q007 已有人工作答。 | YES |
 
 ### Deprecated / Suspected Stale Docs
 
@@ -111,7 +114,7 @@
 | `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md` | Deprecated / Suspected Stale Docs | v0.2 | NEEDS_REVIEW | 文件写“待确认”，但 schema 已存在；状态应更新或归档。 | NO |
 | `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_SCOPE_FREEZE.md` | Deprecated / Suspected Stale Docs | v0.3 | NEEDS_REVIEW | 文件写“Planning only”，但 v0.3 已 accepted with notes。 | NO |
 | `docs/architecture/AELOKIT_MONOREPO_EVOLUTION_PLAN.md` | Deprecated / Suspected Stale Docs | roadmap | NEEDS_REVIEW | 文中 `packages/ai` 曾写 Not created yet，但当前已存在；需要状态更新。 | PARTIAL |
-| `CLAUDE.md` | Deprecated / Suspected Stale Docs | Claude summary | NEEDS_REVIEW | 与 AGENTS 大量重复，且部分 package dependency 描述比 AGENTS 少 `@repo/env`。 | NO |
+| `apps/web/AGENTS.md` | Deprecated / Suspected Stale Docs | current plus historical v0.2 text | NEEDS_REVIEW | AI Web App 边界仍使用 v0.2 目录规则语气；长期建议拆成 current boundary + historical note。 | PARTIAL |
 
 ### Reference Only Docs
 
@@ -129,9 +132,9 @@
 
 | conflict id | file A | file B | conflict summary | risk | suggested resolution | human confirmation required |
 |---|---|---|---|---|---|---|
-| C001 | `AGENTS.md` | `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_VALIDATION_REPORT.md` | `AGENTS.md` 仍把 v0.3 gate 写成当前规则，validation report 显示 v0.3 已 accepted with notes。 | v0.4 planner 可能继续按 v0.3 单 TASK gate 执行。 | 根 AGENTS 保留永久回归边界，把 v0.2/v0.3 专属 gate 移到 archive agent rules。 | YES |
-| C002 | `CLAUDE.md` | `AGENTS.md` | 两者重复大量工程规则；CLAUDE 虽声明 AGENTS 优先，但内容足够长，容易成为第二套事实源。 | Codex/Claude 读取上下文过大，且发生轻微漂移时难以判断。 | `CLAUDE.md` 收敛为 Claude Code 摘要，只引用 AGENTS、docs/INDEX 和当前 scope freeze。 | YES |
-| C003 | `CLAUDE.md` | `AGENTS.md` | `CLAUDE.md` 的 notification/storage/analytics dependency 描述较 AGENTS 少 `@repo/env`，存在细节漂移。 | 后续 package 边界判断可能使用较旧依赖边界。 | 以 AGENTS 和 package/architecture active docs 为准，重写 Claude 摘要。 | YES |
+| C001 | `AGENTS.md` | `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_VALIDATION_REPORT.md` | 第一轮时 `AGENTS.md` 仍把 v0.3 gate 写成当前规则，validation report 显示 v0.3 已 accepted with notes。 | v0.4 planner 可能继续按 v0.3 单 TASK gate 执行。 | 已收敛：根 AGENTS 保留永久边界，历史 gate 降级为 regression guardrail。 | NO |
+| C002 | `CLAUDE.md` | `AGENTS.md` | 第一轮时两者重复大量工程规则，容易成为第二套事实源。 | Codex/Claude 读取上下文过大，且发生轻微漂移时难以判断。 | 已收敛：`CLAUDE.md` 为 Claude Code 短摘要，只引用 AGENTS、docs/INDEX 和当前 scope。 | NO |
+| C003 | `CLAUDE.md` | `AGENTS.md` | 第一轮时 `CLAUDE.md` 的 notification/storage/analytics dependency 描述较 AGENTS 少 `@repo/env`。 | 后续 package 边界判断可能使用较旧依赖边界。 | 已收敛：Claude 摘要不再复制这些细节，以 AGENTS 和 active architecture docs 为准。 | NO |
 | C004 | `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md` | `packages/db/src/ai.schema.ts` | schema design 仍写待用户确认，代码里已存在 AI schema。 | Codex 可能重复规划 schema 或误判 TASK-005 未发生。 | 把 v0.2 schema design 归档为 historical，并在 v0.3 handoff/current index 标注当前代码事实。 | YES |
 | C005 | `docs/architecture/AELOKIT_MONOREPO_EVOLUTION_PLAN.md` | current code | 文档里部分段落仍说 AI infra not created yet，但 `packages/ai` 已存在。 | v0.4 planner 可能把已完成包当成未来包。 | 更新该文档状态或归档到 architecture/archive，active index 只摘取仍有效边界。 | YES |
 | C006 | historical Codex prompts | current user prompt | 旧 prompts 明确“不要进入 v0.4/v0.5”，而当前用户要求准备进入 v0.4 planning 前治理文档。 | 旧 prompt 覆盖当前任务，导致拒绝或误停。 | docs/INDEX 明确当前用户 Prompt 优先于仓库历史 Prompt，Codex Prompt 非长期需求。 | NO |
@@ -156,8 +159,22 @@
 1. 保留本轮新增的 `docs/INDEX.md` 作为所有后续 Codex / Claude Code / human 的文档入口。
 2. 把 `docs/product/v0.4/DOCUMENT_INPUTS.md` 作为 v0.4 planning 的最小输入集，禁止默认读取历史 prompts 和旧 implementation plans。
 3. 在人工确认后执行 `docs/DOCUMENTATION_REORG_PLAN.md` 中的归档计划；本轮不移动、不删除。
-4. 将根 `AGENTS.md` 拆分为永久工程规则 + 当前阶段入口引用；v0.2/v0.3 gate 移入 `docs/product/archive/v0.2/AGENT_RULES.md` 和 `docs/product/archive/v0.3/AGENT_RULES.md`。
-5. 将 `CLAUDE.md` 改为 Claude Code 专用短摘要，明确“仅摘要，不覆盖 AGENTS.md、docs/INDEX.md、当前用户 Prompt、当前版本 Scope Freeze”。
-6. 新增 `docs/agents/AGENT_RULES_INDEX.md`，并视需要拆出 `docs/agents/CODEX_RULES.md` 和 `docs/agents/CLAUDE_RULES.md`。
-7. 不建议大规模删除。历史文档应保留决策价值，通过 archive/version 目录和 index 状态收敛语义。
-8. v0.4 计划开始前，先由 human 确认 `docs/product/v0.4/OPEN_QUESTIONS.md` 中的问题，并创建 v0.4 Scope Freeze / Acceptance / Implementation Plan。
+4. 根 `AGENTS.md` 已收敛为永久工程规则 + 当前阶段入口引用；后续如需移动 v0.2/v0.3 gate 到 archive agent rules，应单独任务执行。
+5. `CLAUDE.md` 已改为 Claude Code 专用短摘要，明确“仅摘要，不覆盖 AGENTS.md、docs/INDEX.md、当前用户 Prompt、当前版本 Scope Freeze”。
+6. 已新增 `docs/agents/AGENT_RULES_INDEX.md`, `docs/agents/CODEX_RULES.md`, `docs/agents/CLAUDE_RULES.md`。
+7. 不建议大规模删除。历史文档应保留决策价值，通过 index 状态和后续 archive/version 目录收敛语义。
+8. v0.4 planning 可以开始；v0.4 implementation 前仍必须创建并确认 v0.4 Scope Freeze / Acceptance Criteria / Implementation Plan。
+
+## 7. Documentation Governance Confirmation
+
+第二轮人工决策已写入 `docs/product/v0.4/OPEN_QUESTIONS.md`：
+
+- Q001: 选择 B，暂不移动历史文档。
+- Q002: 选择 C，然后 A，先新增 agent rule docs，再收敛根 `AGENTS.md`。
+- Q003: 选择 A，重写 `CLAUDE.md` 为短摘要。
+- Q004: 选择 C，v0.4 先做 AI Stack Decision Record、Runtime Boundary Hardening 和 v0.3 notes 验收前置，不直接进入真实 MCP implementation。
+- Q005: 选择 B，planning 可开始，implementation acceptance 必须包含 authenticated runtime smoke 和 DB/vector verification；涉及 MCP/tool runtime 时升级为 A。
+- Q006: 选择 B，v0.4 中设计 citation persistence，但不立即 migration。
+- Q007: 选择 A，不接真实 third-party MCP，只做 contracts/design/local mock 或安全边界设计。
+
+因此，文档治理状态为 `READY_FOR_V0_4_PLANNING`。这不代表 v0.4 implementation 已开放。
