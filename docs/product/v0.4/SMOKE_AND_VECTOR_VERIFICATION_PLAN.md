@@ -187,3 +187,41 @@ Stop verification and report BLOCKED if:
 - DB is unavailable.
 - `vector` extension is missing and user has not approved enabling it.
 - any required check would require a destructive operation.
+
+## 10. V0.4-T06 Smoke Environment Readiness Result
+
+日期：2026-05-20
+
+Status: READY_FOR_T07_T08_EXECUTION.
+
+Readiness evidence:
+
+- `.env` exists locally; no secret values were printed.
+- `pnpm check:env` passed: `env.example` matches env schema, `.env.example`
+  is absent, and no `NEXT_PUBLIC_` prefix violation was found.
+- `packages/env/src/server.ts` defines required server env names:
+  `DATABASE_URL`, `BETTER_AUTH_SECRET`, `OPENAI_API_KEY`,
+  `AI_EMBEDDING_PROVIDER`, `AI_EMBEDDING_MODEL`,
+  `AI_EMBEDDING_BASE_URL`, and `AI_EMBEDDING_API_KEY`.
+- `env.example` documents the same runtime smoke / embedding env names.
+- Local env presence check after loading root `.env`:
+  - `DATABASE_URL`: present.
+  - `BETTER_AUTH_SECRET`: present.
+  - `OPENAI_API_KEY`: present.
+  - `AI_EMBEDDING_API_KEY`: missing, but effective embedding key is present via
+    `OPENAI_API_KEY` fallback.
+  - `AI_EMBEDDING_PROVIDER`: missing, defaulted by schema to `openai`.
+  - `AI_EMBEDDING_MODEL`: missing, defaulted by schema to
+    `text-embedding-3-small`.
+  - `NEXT_PUBLIC_BASE_URL`: present.
+- `pnpm`, `node`, and `psql` are available locally.
+- Dev server command remains `pnpm --filter @repo/web dev`.
+
+Execution notes for next tasks:
+
+- T07 may start the web app and attempt authenticated browser smoke.
+- T07 must still mark BLOCKED/PARTIAL if no authenticated session or usable test
+  login path is available.
+- T08 may run read-only DB/vector checks against `DATABASE_URL`.
+- T08 must not enable pgvector, run migrations, seed data, or mutate DB without
+  explicit user confirmation.

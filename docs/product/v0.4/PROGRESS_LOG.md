@@ -102,3 +102,22 @@
   - No schema, migration, dependency, manifest, lockfile, raw full source body, or dedicated citation table change was made.
 - commit: pending; actual SHA will be backfilled in T09 final acceptance.
 - next task decision: continue to V0.4-T06 Smoke Environment Readiness.
+
+## V0.4-T06 Smoke Environment Readiness
+
+- status: PASS
+- changed files:
+  - `docs/product/v0.4/SMOKE_AND_VECTOR_VERIFICATION_PLAN.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands:
+  - `pnpm check:env`
+  - `git diff --check`
+- result:
+  - Required validation commands passed.
+  - Local `.env` is present and required smoke env names are present or covered by schema defaults/fallbacks.
+  - `DATABASE_URL`, `BETTER_AUTH_SECRET`, `OPENAI_API_KEY`, and `NEXT_PUBLIC_BASE_URL` are present without printing secret values.
+  - Effective embedding key is present through `OPENAI_API_KEY`; `AI_EMBEDDING_PROVIDER` and `AI_EMBEDDING_MODEL` rely on schema defaults.
+  - `pnpm`, `node`, and `psql` are available.
+  - Actual authenticated browser session, PostgreSQL connectivity, `vector` extension, and controlled retrieval remain T07/T08 execution evidence, not T06 PASS evidence.
+- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- next task decision: continue to V0.4-T07 Authenticated Runtime Smoke Execution.
