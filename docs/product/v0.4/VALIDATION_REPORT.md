@@ -52,3 +52,77 @@ Conclusion:
 - Usage audit and no credits mutation: PASS.
 - Knowledge citation runtime: PARTIAL/BLOCKED by embedding provider compatibility.
 - Overall T07: PARTIAL.
+
+## T08 DB/Vector Verification
+
+日期：2026-05-21
+
+Status: PARTIAL.
+
+Read-only commands:
+
+- `PGOPTIONS='-c default_transaction_read_only=on' psql "$DATABASE_URL" ...`
+  for PostgreSQL, table, vector extension, count, and index evidence.
+- Shell env presence check for effective embedding config without printing
+  secret values.
+
+Passed evidence:
+
+- PostgreSQL connection succeeded against local database `aelokit`.
+- Read-only guard was active: `default_transaction_read_only=on`.
+- `vector` extension exists: version `0.8.2`.
+- Required tables exist:
+  - `ai_thread`
+  - `ai_message`
+  - `ai_message_part`
+  - `ai_usage`
+  - `ai_memory_draft`
+  - `knowledge_source`
+  - `knowledge_document`
+  - `knowledge_chunk`
+  - `knowledge_source_access`
+  - `credit_transaction`
+- `ai_message_part_type_check` includes `source`, so no schema change is
+  required for persisted citation source parts.
+- Current DB counts:
+  - `ai_thread`: 4.
+  - `ai_message`: 10.
+  - `ai_message_part`: 13.
+  - `ai_usage`: 6.
+  - `ai_memory_draft`: 0.
+  - `knowledge_source`: 1.
+  - `knowledge_document`: 1.
+  - `knowledge_chunk`: 0.
+  - `knowledge_chunk.vector_id not null`: 0.
+- Effective embedding key is present through `AI_EMBEDDING_API_KEY` or
+  `OPENAI_API_KEY`.
+
+Partial / blocked evidence:
+
+- The only knowledge source is `failed` with `chunk_count=0` and
+  `vector_count=0`.
+- There are no ready knowledge sources:
+  `sources=0,chunk_count=0,vector_count=0`.
+- No app-created PgVector storage object was found for
+  `public.aelokit_knowledge_embeddings` or
+  `mastra.aelokit_knowledge_embeddings`.
+- No vector/embedding typed DB columns were found beyond AeloKit metadata fields
+  (`knowledge_chunk.vector_id`, `knowledge_source.vector_count`,
+  `knowledge_source.embedding_model`, `knowledge_source.embedding_dimensions`).
+- Controlled retrieval was not rerun as PASS evidence because there is no
+  indexed source/vector data and T07 already showed the configured embedding
+  endpoint rejects AI SDK embedding requests with
+  `Unsupported parameter: encoding_format`.
+- Creating controlled source/vector data would require a seed or ad hoc DB write,
+  which is forbidden without explicit confirmation.
+
+Conclusion:
+
+- PostgreSQL connection: PASS.
+- `vector` extension: PASS.
+- AI/knowledge tables: PASS.
+- Existing schema support for citation source parts: PASS.
+- PgVector app index/storage: PARTIAL/BLOCKED, not present in this DB snapshot.
+- Controlled retrieval: PARTIAL/BLOCKED by absent indexed vectors and embedding
+  provider compatibility.
+- Overall T08: PARTIAL.

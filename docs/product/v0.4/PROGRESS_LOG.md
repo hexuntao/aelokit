@@ -144,3 +144,26 @@
   - Knowledge-enabled citation smoke is PARTIAL/BLOCKED because the embedding provider returned HTTP 400 with `Unsupported parameter: encoding_format`.
 - commit: pending; actual SHA will be backfilled in T09 final acceptance.
 - next task decision: continue to V0.4-T08 DB/Vector Verification Execution and investigate DB/vector/embedding readiness with read-only checks only.
+
+## V0.4-T08 DB/Vector Verification Execution
+
+- status: PARTIAL
+- changed files:
+  - `docs/product/v0.4/VALIDATION_REPORT.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands / evidence:
+  - `PGOPTIONS='-c default_transaction_read_only=on' psql "$DATABASE_URL" ...`
+  - env presence check for effective embedding key/provider/model/base URL without printing secret values
+  - `git diff --check`
+- result:
+  - PostgreSQL connection passed against local database `aelokit`.
+  - Read-only guard was active with `default_transaction_read_only=on`.
+  - `vector` extension exists at version `0.8.2`.
+  - Required AI, memory, knowledge, and credit tables exist.
+  - `ai_message_part_type_check` allows `source`, confirming no schema change is needed for citation source parts.
+  - Current DB has 1 `knowledge_source` and 1 `knowledge_document`, but the source is `failed` and there are 0 `knowledge_chunk` rows and 0 vector ids.
+  - Expected PgVector storage object `aelokit_knowledge_embeddings` was not present in `public` or `mastra` schema.
+  - Controlled retrieval could not be marked PASS because there is no ready indexed vector source and the embedding endpoint already failed during T07 with `Unsupported parameter: encoding_format`.
+  - No DB writes, seed scripts, pgvector enablement, migrations, schema edits, package changes, or destructive operations were run.
+- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- next task decision: continue to V0.4-T09 Final Acceptance Report with v0.4 overall status expected PARTIAL unless final audit finds stronger blocking evidence.
