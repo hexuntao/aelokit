@@ -131,6 +131,81 @@ Conclusion:
 
 日期：2026-05-21
 
+## T07/T08 Blocker Retry: Embedding Compatibility and Controlled Knowledge Flow
+
+日期：2026-05-21
+
+Status: PARTIAL/BLOCKED.
+
+Code change:
+
+- `apps/web/src/ai/knowledge/embedding.ts` now keeps the AI SDK OpenAI
+  embedding path as the primary path, and falls back to a server-side
+  OpenAI-compatible embeddings request without `encoding_format` only when the
+  provider error body reports the unsupported `encoding_format` parameter.
+- The fallback validates that the response is a real embeddings response with
+  `data[].embedding`; it does not accept non-embedding response shapes as
+  successful embeddings.
+- No `.env`, secret, dependency, `package.json`, lockfile, DB schema, migration,
+  or CI/CD file was changed.
+
+Provider/config evidence:
+
+- `AI_EMBEDDING_BASE_URL` is not set in the local environment.
+- Effective embedding base URL falls back to `OPENAI_BASE_URL`.
+- Effective embedding host is non-official OpenAI:
+  `api-xai.ainaibahub.com`.
+- The AI SDK OpenAI embedding request failed with `AI_APICallError`,
+  status `400`, message `Bad Request`, and sanitized `responseBody` containing
+  `encoding_format`.
+- Direct fallback request without `encoding_format` reached the endpoint, but
+  `/embeddings` and `/v1/embeddings` returned a Responses API-shaped object
+  with keys such as `background`, `completed_at`, `instructions`, `output`, and
+  no `data[].embedding`.
+- Direct official OpenAI embeddings smoke with the same effective key returned
+  HTTP `401 invalid_api_key`; no key value was printed in this report.
+
+Controlled DB write evidence after user confirmation:
+
+- Authenticated Chrome session reached `/knowledge` as `admin` /
+  `admin@gmail.com`.
+- UI embedding configuration check passed.
+- Two controlled manual knowledge sources were submitted through the existing
+  `/knowledge` UI path:
+  - `v0.4 controlled knowledge source 2026-05-21`
+  - `v0.4 controlled knowledge source 2026-05-21 retry`
+- Both controlled sources were written to `knowledge_source`, but both ended
+  with `status=failed`.
+- Latest controlled failure reason:
+  `Embedding provider returned 0 embeddings for 1 input values. Expected
+  OpenAI-compatible embeddings response with data[].embedding.`
+
+Read-only DB/vector evidence after retry:
+
+- PostgreSQL read-only guard: `default_transaction_read_only=on`.
+- `vector` extension exists: version `0.8.2`.
+- App-created embedding storage tables matching `%embedding%` were not found.
+- `ready_sources=0`.
+- `source_chunk_count=0`.
+- `source_vector_count=0`.
+- `controlled_sources=2`.
+- `controlled_failed=2`.
+- `knowledge_chunk` rows: `0`.
+- `knowledge_chunk.vector_id` rows: `0`.
+
+Conclusion:
+
+- The original `encoding_format` compatibility issue was narrowed and partially
+  mitigated in code, but the configured endpoint is still not a usable
+  OpenAI-compatible embeddings endpoint for this environment.
+- Controlled knowledge flow did not complete chunk -> embedding -> vector
+  upsert -> retrieval -> citation.
+- Knowledge-enabled citation smoke cannot be marked PASS.
+- DB/vector controlled retrieval cannot be marked PASS.
+- Overall T07 remains PARTIAL.
+- Overall T08 remains PARTIAL.
+- v0.4 remains PARTIAL.
+
 Static and code validation:
 
 - T01/T03/T04 docs-only diff checks passed.
@@ -146,6 +221,9 @@ Static and code validation:
   PARTIAL/BLOCKED.
 - T08 real PostgreSQL/vector checks passed for DB connection, tables, and
   `vector` extension, but controlled vector retrieval is PARTIAL/BLOCKED.
+- T07/T08 blocker retry confirmed the current effective embedding endpoint is
+  not a usable embeddings API even after removing `encoding_format`; controlled
+  source writes failed before chunk/vector creation.
 
 Overall validation result:
 

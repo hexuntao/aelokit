@@ -190,3 +190,51 @@
   - Overall v0.4 status is PARTIAL because T07/T08 knowledge citation/vector acceptance remains blocked by embedding provider compatibility and absent indexed vector data.
 - commit: T09 commit SHA is the commit containing this entry; it cannot be embedded in the same commit. Confirm with final `git log --oneline`.
 - next task decision: stop after final commit check; do not proceed to v0.5 implementation until the knowledge/vector blocker is resolved or explicitly carried as accepted risk.
+
+## V0.4-T07/T08 Blocker Retry
+
+- status: PARTIAL/BLOCKED
+- changed files:
+  - `apps/web/src/ai/knowledge/embedding.ts`
+  - `docs/product/v0.4/VALIDATION_REPORT.md`
+  - `docs/product/v0.4/FINAL_ACCEPTANCE_REPORT.md`
+  - `docs/product/v0.4/OPEN_QUESTIONS.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands / evidence:
+  - `pnpm --filter @repo/web dev`
+  - authenticated Chrome session at `/knowledge`
+  - controlled source creation through existing `/knowledge` UI after user DB-write confirmation
+  - sanitized embedding env shape check without printing secrets
+  - AI SDK embedding error-shape reproduction without printing secrets
+  - direct embedding endpoint shape checks without printing vector values
+  - `PGOPTIONS='-c default_transaction_read_only=on' psql "$DATABASE_URL" ...`
+  - `pnpm --filter @repo/web typecheck`
+  - `pnpm --filter @repo/web lint`
+- result:
+  - The effective embedding host is `api-xai.ainaibahub.com` because
+    `AI_EMBEDDING_BASE_URL` is unset and the app falls back to `OPENAI_BASE_URL`.
+  - The AI SDK OpenAI embedding request fails with `AI_APICallError` status
+    `400`; sanitized `responseBody` contains `encoding_format`.
+  - `apps/web/src/ai/knowledge/embedding.ts` now falls back to a server-side
+    OpenAI-compatible embeddings request without `encoding_format` only for that
+    compatibility error.
+  - The fallback still cannot complete ingestion in this environment because
+    the endpoint returns a Responses API-shaped payload for `/embeddings` and
+    `/v1/embeddings`, with no `data[].embedding`.
+  - Same effective key against official OpenAI embeddings endpoint returned
+    `invalid_api_key`.
+  - Two controlled knowledge sources were created through the UI and both
+    failed before chunk/vector creation.
+  - Read-only DB checks showed `vector` extension version `0.8.2`,
+    `ready_sources=0`, `source_chunk_count=0`, `source_vector_count=0`,
+    `knowledge_chunk=0`, and no app-created embedding table matching
+    `%embedding%`.
+  - T07 remains PARTIAL because knowledge-enabled citation smoke has no live
+    citation evidence.
+  - T08 remains PARTIAL because controlled retrieval did not complete
+    chunk -> embedding -> vector upsert -> retrieval -> citation.
+  - v0.4 remains PARTIAL; do not proceed to v0.5 implementation that depends on
+    knowledge/vector runtime.
+- next task decision: provide a real embeddings endpoint/key via
+  `AI_EMBEDDING_BASE_URL` / `AI_EMBEDDING_API_KEY`, or provide the current host's
+  true embeddings API contract for a separate adapter task; then rerun T07/T08.

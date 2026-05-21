@@ -9,7 +9,10 @@ The static stack/boundary/citation work passed. Authenticated base chat smoke
 passed. DB connection, required tables, and `vector` extension passed. Full
 v0.4 PASS is not claimed because knowledge citation runtime and controlled
 vector retrieval remain blocked by embedding provider compatibility and absent
-indexed vector data.
+indexed vector data. A follow-up T07/T08 blocker retry on 2026-05-21 confirmed
+that the effective embedding host is a non-official OpenAI-compatible endpoint
+that does not return an embeddings response for `/embeddings` or
+`/v1/embeddings`.
 
 ## 1. Read Set
 
@@ -75,6 +78,7 @@ Implementation/code files changed:
 - `apps/web/src/app/api/ai/chat/route.ts`
 - `apps/web/src/ai/persistence/index.ts`
 - `apps/web/src/ai/knowledge/index.ts`
+- `apps/web/src/ai/knowledge/embedding.ts`
 
 v0.4 documentation/report files changed:
 
@@ -118,6 +122,10 @@ Runtime smoke evidence:
   `text/event-stream`.
 - Response headers included `x-ai-thread-id` and `x-ai-message-id`.
 - Read-only SQL found smoke thread/message/message_part/usage evidence.
+- Follow-up authenticated Chrome session reached `/knowledge` as `admin` /
+  `admin@gmail.com`.
+- Follow-up controlled knowledge source creation was attempted through the
+  existing `/knowledge` UI after user confirmation for DB writes.
 
 DB/vector evidence:
 
@@ -128,6 +136,11 @@ DB/vector evidence:
 - Required AI, memory, knowledge, and credit tables: PASS.
 - `ai_message_part` supports `source`: PASS.
 - Ready vector data / controlled retrieval: PARTIAL/BLOCKED.
+- Follow-up controlled writes created 2 controlled knowledge sources, both
+  `failed`.
+- Follow-up read-only DB evidence showed `ready_sources=0`,
+  `source_chunk_count=0`, `source_vector_count=0`, `knowledge_chunk=0`, and
+  `knowledge_chunk.vector_id=0`.
 
 ## 5. Runtime Smoke Status
 
@@ -147,8 +160,10 @@ Passed:
 Not full PASS:
 
 - Knowledge-enabled citation smoke could not return citations because the
-  embedding endpoint returned HTTP 400 with `Unsupported parameter:
-  encoding_format`.
+  embedding endpoint first returned HTTP 400 with `Unsupported parameter:
+  encoding_format`, and after a compatibility fallback without
+  `encoding_format`, the same effective host still returned a non-embedding
+  Responses API-shaped payload with no `data[].embedding`.
 - Confirmed-only durable memory recall was not separately exercised with
   controlled memory data.
 
@@ -168,15 +183,15 @@ Passed:
 
 Not full PASS:
 
-- DB contains 1 knowledge source and 1 knowledge document, but the source is
-  `failed`.
+- DB contains controlled knowledge sources, but none are `ready`.
 - DB contains 0 knowledge chunks and 0 vector ids.
 - `public.aelokit_knowledge_embeddings` and
   `mastra.aelokit_knowledge_embeddings` were not present.
 - No controlled source completed chunk -> embedding -> vector upsert ->
   retrieval -> citation.
-- Creating controlled data would require DB writes or seed execution, which was
-  not authorized.
+- Controlled DB writes were authorized and attempted through the existing UI,
+  but ingestion failed at embedding response validation before chunk/vector
+  creation.
 
 ## 7. Citation Persistence Status
 
@@ -217,13 +232,16 @@ T03 was skipped because T02 found no mandatory runtime hardening patch.
 ## 9. Known Blockers
 
 - Embedding provider compatibility: the configured endpoint rejected the AI SDK
-  embedding request with `Unsupported parameter: encoding_format`.
+  embedding request with `Unsupported parameter: encoding_format`, and the
+  fallback request without `encoding_format` returned no `data[].embedding`.
+- Effective embedding config falls back from missing `AI_EMBEDDING_BASE_URL` to
+  `OPENAI_BASE_URL`; the effective host is `api-xai.ainaibahub.com`, not
+  official `api.openai.com`.
 - Current DB has no ready indexed knowledge source, no knowledge chunks, and no
   PgVector storage object for `aelokit_knowledge_embeddings`.
 - Controlled retrieval cannot be marked PASS without fixing provider/config and
-  creating or re-indexing controlled knowledge data.
-- Any seed/ad hoc insert/update to create controlled data requires explicit user
-  confirmation.
+  creating or re-indexing controlled knowledge data with a real embeddings
+  endpoint.
 
 The blocker is recorded in `docs/product/v0.4/OPEN_QUESTIONS.md` as Q010.
 
@@ -234,7 +252,8 @@ v0.4 status: PARTIAL.
 Reason: static checks, boundary audit, no-migration citation persistence, base
 authenticated chat smoke, PostgreSQL connection, table checks, and `vector`
 extension checks passed; knowledge citation runtime and controlled vector
-retrieval did not pass.
+retrieval did not pass. The T07/T08 blocker retry proved the current effective
+embedding endpoint is not sufficient for controlled vector retrieval.
 
 ## 11. v0.5 Planning Readiness
 

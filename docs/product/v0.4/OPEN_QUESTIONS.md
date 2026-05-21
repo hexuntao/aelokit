@@ -295,3 +295,56 @@ data；T07 已证明 knowledge-enabled path 被 embedding provider compatibility
 
 ANSWERED_FOR_T09. 未来若要把 v0.4 从 PARTIAL 提升为 PASS，需要单独确认 embedding
 provider/config 修复和 controlled retrieval 重跑方式。
+
+## Q011
+
+### Question
+
+T07/T08 blocker retry 已获准执行 DB 写入 controlled knowledge flow，并已最小修复
+`encoding_format` fallback。但当前 effective embedding host
+`api-xai.ainaibahub.com` 对 `/embeddings` 和 `/v1/embeddings` 返回 Responses
+API-shaped payload，而不是 OpenAI-compatible embeddings payload
+`data[].embedding`。是否继续尝试在当前 host 上适配非 embeddings API？
+
+### Why it matters
+
+v0.4 acceptance 要求 controlled source 完成 chunk -> embedding -> vector upsert
+-> retrieval -> citation。当前 endpoint 即使移除 `encoding_format` 后也没有返回
+embedding vector；继续把 Responses API payload 当成 embedding 会伪造 DB/vector PASS。
+
+### Options
+
+- A. 不继续适配当前 host；要求配置真正可用的 embeddings endpoint/key，例如设置
+  `AI_EMBEDDING_BASE_URL` / `AI_EMBEDDING_API_KEY` 指向兼容
+  `POST /embeddings` 且返回 `data[].embedding` 的 endpoint。
+- B. 新增一个明确的 provider adapter，但必须先确认该 host 的真实 embeddings
+  API 路径、请求体和响应体契约。
+- C. 使用当前 chat/text generation endpoint 的 Responses output 伪造 embedding。
+
+### Final choice
+
+A。当前不继续适配非 embeddings payload，不把 Responses API output 当作 vector
+embedding。
+
+### Rationale
+
+本次 retry 已证明：
+
+- `AI_EMBEDDING_BASE_URL` 未设置，effective embedding base fallback 到
+  `OPENAI_BASE_URL`。
+- effective host 是 `api-xai.ainaibahub.com`，不是官方 `api.openai.com`。
+- AI SDK OpenAI embedding path 的 `encoding_format` 问题可以被捕获并 fallback。
+- fallback 请求不带 `encoding_format`，但 endpoint 仍返回 Responses API-shaped
+  payload，无 `data[].embedding`。
+- 同一个 effective key 直连官方 OpenAI embeddings endpoint 返回
+  `invalid_api_key`。
+- controlled source 写入已执行两次，但均停在 embedding 阶段，DB 中仍无
+  knowledge chunk、vector id 或 app-created embedding storage table。
+
+因此 v0.4 不能从 PARTIAL 改为 PASS。下一步必须换成真实 embeddings endpoint/key，
+或由人工提供该 host 的 embeddings API contract 后再做单独 adapter。
+
+### Requires human confirmation
+
+ANSWERED_FOR_T07_T08_RETRY. 继续推进 PASS 前，需要人工提供可用 embeddings
+endpoint/key 或确认该 host 的真实 embeddings API contract。
