@@ -121,3 +121,26 @@
   - Actual authenticated browser session, PostgreSQL connectivity, `vector` extension, and controlled retrieval remain T07/T08 execution evidence, not T06 PASS evidence.
 - commit: pending; actual SHA will be backfilled in T09 final acceptance.
 - next task decision: continue to V0.4-T07 Authenticated Runtime Smoke Execution.
+
+## V0.4-T07 Authenticated Runtime Smoke Execution
+
+- status: PARTIAL
+- changed files:
+  - `docs/product/v0.4/VALIDATION_REPORT.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands / evidence:
+  - `pnpm --filter @repo/web dev`
+  - Chrome authenticated browser session at `/chat`
+  - UI message send/render smoke
+  - browser-context `POST /api/ai/chat` header and stream check
+  - read-only SQL for smoke thread/message/message_part/usage/credit evidence
+  - `git diff --check`
+- result:
+  - Authenticated base chat smoke passed: UI sent a message and rendered `pong`.
+  - `/api/ai/chat` returned `200`, `text/event-stream`, and present `x-ai-thread-id` / `x-ai-message-id` headers.
+  - DB read evidence found 2 smoke threads, 4 smoke messages, 6 message parts, and 2 successful usage records.
+  - Credit transaction count for the smoke user since smoke start was 0.
+  - Memory/knowledge default toggles showed Off after clearing browser preference.
+  - Knowledge-enabled citation smoke is PARTIAL/BLOCKED because the embedding provider returned HTTP 400 with `Unsupported parameter: encoding_format`.
+- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- next task decision: continue to V0.4-T08 DB/Vector Verification Execution and investigate DB/vector/embedding readiness with read-only checks only.
