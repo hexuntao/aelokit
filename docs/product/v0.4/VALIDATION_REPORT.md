@@ -126,3 +126,33 @@ Conclusion:
 - Controlled retrieval: PARTIAL/BLOCKED by absent indexed vectors and embedding
   provider compatibility.
 - Overall T08: PARTIAL.
+
+## Final Validation Summary
+
+日期：2026-05-21
+
+Static and code validation:
+
+- T01/T03/T04 docs-only diff checks passed.
+- T02 boundary checks passed: `pnpm check:package-exports`,
+  `pnpm check:db-shims`, `pnpm check:env`, `git diff --check`.
+- T05 code validation passed: `pnpm check:env`,
+  `pnpm check:package-exports`, `pnpm check:db-shims`, `pnpm format`,
+  `pnpm lint`, `pnpm --filter @repo/ai typecheck`,
+  `pnpm --filter @repo/db typecheck`,
+  `pnpm --filter @repo/web typecheck`, `git diff --check`.
+- T06 readiness validation passed: `pnpm check:env`, `git diff --check`.
+- T07 authenticated base runtime smoke passed, but knowledge citation runtime is
+  PARTIAL/BLOCKED.
+- T08 real PostgreSQL/vector checks passed for DB connection, tables, and
+  `vector` extension, but controlled vector retrieval is PARTIAL/BLOCKED.
+
+Overall validation result:
+
+- Boundary hardening status: PASS with T03 skipped because T02 found no required
+  patch.
+- Citation persistence status: PASS for no-migration compact source-part
+  persistence; live knowledge citation generation remains blocked by retrieval.
+- Runtime smoke status: PARTIAL.
+- DB/vector verification status: PARTIAL.
+- v0.4 acceptance status: PARTIAL.

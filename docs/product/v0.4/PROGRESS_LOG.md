@@ -1,6 +1,6 @@
 # v0.4 Progress Log
 
-本文件记录 V0.4-T01 到 V0.4-T09 的执行进度。由于 git commit SHA 无法写入同一个 commit 的内容，本文件的 task entry 先记录状态、changed files 和验证结果；真实 commit SHA 在 T09 final acceptance 阶段统一回填。
+本文件记录 V0.4-T01 到 V0.4-T09 的执行进度。T01-T08 的真实 commit SHA 已在 T09 final acceptance 阶段回填。T09 的 commit SHA 无法写入同一个 commit 内容；以最终 `git log --oneline` 为准。
 
 ## V0.4-T01 Stack Decision Review and Freeze
 
@@ -17,7 +17,7 @@
   - Official docs research is dated 2026-05-20, so the 7-day refresh rule did not require a live docs refresh.
   - Current package evidence matches the selected stack: assistant-ui, AI SDK v6, app-local Mastra runtime, `packages/ai` contracts, and `packages/db` schema ownership.
   - No official-doc conflict remained unrecorded.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `f9c1a2d`
 - next task decision: continue to V0.4-T02 Runtime Boundary Audit.
 
 ## V0.4-T02 Runtime Boundary Audit
@@ -40,7 +40,7 @@
   - AI usage audit remains separated from credits ledger.
   - `apps/web/src/db/*.ts` source files remain shim-only.
   - Citation response-only limitation remains confirmed and is assigned to T04/T05, not T03.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `cefec1e`
 - next task decision: mark V0.4-T03 SKIPPED unless validation exposes a new boundary issue, then continue to V0.4-T04.
 
 ## V0.4-T03 Runtime Boundary Hardening Patch
@@ -56,7 +56,7 @@
   - T02 found no blocking runtime boundary drift requiring a code hardening patch.
   - No runtime, UI, package, schema, migration, manifest, lockfile, env, or CI files were changed.
   - Citation replay remains assigned to T04/T05 under the explicit no-migration citation persistence rules.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `895c12e`
 - next task decision: continue to V0.4-T04 Citation Persistence Final Design.
 
 ## V0.4-T04 Citation Persistence Final Design
@@ -73,7 +73,7 @@
   - Recommended path is no-migration source/data part persistence using existing `ai_message_part` support.
   - Future dedicated citation table remains out of v0.4 scope and requires separate schema/migration confirmation.
   - Replay semantics, access relationship, raw content minimization, and migration gate are documented.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `fc4a872`
 - next task decision: continue to V0.4-T05 because the current prompt explicitly approves the no-migration citation persistence patch under strict constraints.
 
 ## V0.4-T05 Optional No-Migration Citation Persistence Patch
@@ -100,7 +100,7 @@
   - Live response metadata/header citation display is preserved.
   - Historical message loading now reconstructs persisted parts and citation metadata from `ai_message_part` without rerunning retrieval.
   - No schema, migration, dependency, manifest, lockfile, raw full source body, or dedicated citation table change was made.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `434040c`
 - next task decision: continue to V0.4-T06 Smoke Environment Readiness.
 
 ## V0.4-T06 Smoke Environment Readiness
@@ -119,7 +119,7 @@
   - Effective embedding key is present through `OPENAI_API_KEY`; `AI_EMBEDDING_PROVIDER` and `AI_EMBEDDING_MODEL` rely on schema defaults.
   - `pnpm`, `node`, and `psql` are available.
   - Actual authenticated browser session, PostgreSQL connectivity, `vector` extension, and controlled retrieval remain T07/T08 execution evidence, not T06 PASS evidence.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `6cc9ac2`
 - next task decision: continue to V0.4-T07 Authenticated Runtime Smoke Execution.
 
 ## V0.4-T07 Authenticated Runtime Smoke Execution
@@ -142,7 +142,7 @@
   - Credit transaction count for the smoke user since smoke start was 0.
   - Memory/knowledge default toggles showed Off after clearing browser preference.
   - Knowledge-enabled citation smoke is PARTIAL/BLOCKED because the embedding provider returned HTTP 400 with `Unsupported parameter: encoding_format`.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `178ea00`
 - next task decision: continue to V0.4-T08 DB/Vector Verification Execution and investigate DB/vector/embedding readiness with read-only checks only.
 
 ## V0.4-T08 DB/Vector Verification Execution
@@ -165,5 +165,28 @@
   - Expected PgVector storage object `aelokit_knowledge_embeddings` was not present in `public` or `mastra` schema.
   - Controlled retrieval could not be marked PASS because there is no ready indexed vector source and the embedding endpoint already failed during T07 with `Unsupported parameter: encoding_format`.
   - No DB writes, seed scripts, pgvector enablement, migrations, schema edits, package changes, or destructive operations were run.
-- commit: pending; actual SHA will be backfilled in T09 final acceptance.
+- commit: `be2adad`
 - next task decision: continue to V0.4-T09 Final Acceptance Report with v0.4 overall status expected PARTIAL unless final audit finds stronger blocking evidence.
+
+## V0.4-T09 Final Acceptance Report
+
+- status: PASS
+- changed files:
+  - `docs/product/v0.4/FINAL_ACCEPTANCE_REPORT.md`
+  - `docs/product/v0.4/VALIDATION_REPORT.md`
+  - `docs/product/v0.4/OPEN_QUESTIONS.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands:
+  - `git diff --check`
+  - `git diff --stat`
+  - `git diff --name-only`
+  - `git status --short`
+  - `git log --oneline -n 12`
+- result:
+  - Final acceptance report produced.
+  - Required reports are present.
+  - T01-T08 commit SHAs were backfilled.
+  - Knowledge/vector blocker is recorded without marking runtime/vector PASS.
+  - Overall v0.4 status is PARTIAL because T07/T08 knowledge citation/vector acceptance remains blocked by embedding provider compatibility and absent indexed vector data.
+- commit: T09 commit SHA is the commit containing this entry; it cannot be embedded in the same commit. Confirm with final `git log --oneline`.
+- next task decision: stop after final commit check; do not proceed to v0.5 implementation until the knowledge/vector blocker is resolved or explicitly carried as accepted risk.
