@@ -9,7 +9,8 @@
     "./types": "./src/types.ts",
     "./service": "./src/service.ts",
     "./ledger": "./src/ledger.ts",
-    "./distribute": "./src/distribute.ts"
+    "./distribute": "./src/distribute.ts",
+    "./ai-billing": "./src/ai-billing.ts"
   },
   "types": "./src/index.ts",
   "scripts": {

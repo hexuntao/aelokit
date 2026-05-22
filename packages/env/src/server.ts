@@ -66,6 +66,9 @@ export const serverEnv = createEnv({
     DEEPSEEK_API_KEY: optionalString,
     OPENROUTER_API_KEY: optionalString,
 
+    // AI Usage / Credits Billing
+    AI_CREDITS_BILLING_ENABLED: optionalBooleanString,
+
     // AI Embedding Provider (for Knowledge/RAG)
     AI_EMBEDDING_PROVIDER: optionalString.default('openai'),
     AI_EMBEDDING_MODEL: optionalString.default('text-embedding-3-small'),

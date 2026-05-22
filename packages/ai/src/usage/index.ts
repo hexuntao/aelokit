@@ -9,7 +9,53 @@ export type AIUsageThreadId = string;
 
 export type AIUsageMessageId = string;
 
+export type AICostEventId = string;
+
+export type AICreditReservationId = string;
+
 export type AIUsageStatus = 'success' | 'error' | 'timeout' | 'rate_limited';
+
+export type AIUsageBillingMode = 'audit_only' | 'credits';
+
+export type AIUsageBillingStatus =
+  | 'audit_only'
+  | 'preflight_passed'
+  | 'preflight_failed'
+  | 'reserved'
+  | 'reservation_failed'
+  | 'settled'
+  | 'settlement_failed'
+  | 'refunded'
+  | 'refund_failed'
+  | 'no_charge'
+  | 'cancelled'
+  | 'timeout'
+  | 'rate_limited';
+
+export type AICreditReservationStatus =
+  | 'preflight_passed'
+  | 'preflight_failed'
+  | 'reserved'
+  | 'reservation_failed'
+  | 'cancelled'
+  | 'timeout'
+  | 'rate_limited';
+
+export type AICreditSettlementStatus =
+  | 'pending'
+  | 'settled'
+  | 'settlement_failed'
+  | 'no_charge'
+  | 'cancelled'
+  | 'timeout'
+  | 'rate_limited';
+
+export type AICreditRefundStatus =
+  | 'not_required'
+  | 'refunded'
+  | 'refund_failed'
+  | 'no_charge'
+  | 'cancelled';
 
 export type AIUsageStatusMapping = {
   readonly contractToDb: {
@@ -55,6 +101,8 @@ export type AICostEstimateSource =
   | 'manual-estimate'
   | 'unknown';
 
+export type AICostEventStatus = 'estimated' | 'final' | 'failed' | 'no_charge';
+
 export interface AIUsageSubjectReference {
   readonly userId: AIUsageUserId;
   readonly threadId?: AIUsageThreadId;
@@ -84,6 +132,31 @@ export interface AICostEstimate {
   readonly isFinalBillingAmount: false;
 }
 
+export interface AICreditBillingReference {
+  readonly mode: AIUsageBillingMode;
+  readonly status: AIUsageBillingStatus;
+  readonly usageId?: AIUsageRecordId;
+  readonly costEventId?: AICostEventId;
+  readonly reservationId?: AICreditReservationId;
+  readonly creditTransactionId?: string;
+}
+
+export interface AICostEvent {
+  readonly id: AICostEventId;
+  readonly usageId: AIUsageRecordId;
+  readonly subject: AIUsageSubjectReference;
+  readonly model: AIUsageModelReference;
+  readonly tokens: AIUsageTokenUsage;
+  readonly estimatedCostUsd?: number;
+  readonly estimatedCredits?: number;
+  readonly currencyCode?: string;
+  readonly source: AICostEstimateSource;
+  readonly status: AICostEventStatus;
+  readonly billing?: AICreditBillingReference;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly createdAt: string;
+}
+
 export interface AIUsageFailure {
   readonly reason: AIUsageFailureReason;
   readonly message?: string;
@@ -105,6 +178,7 @@ export interface AIUsageRecord {
   readonly status: AIUsageStatus;
   readonly failure?: AIUsageFailure;
   readonly timing: AIUsageTiming;
-  // v0.1 records audit facts only; charge/reservation/settlement are v0.5 credits concerns.
-  readonly billingMode: 'audit-only';
+  readonly billingMode: AIUsageBillingMode;
+  readonly billingStatus: AIUsageBillingStatus;
+  readonly billing?: AICreditBillingReference;
 }

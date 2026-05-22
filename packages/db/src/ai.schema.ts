@@ -400,6 +400,9 @@ export const aiUsage = pgTable(
     requestDurationMs: integer('request_duration_ms'),
     rawUsage: jsonb('raw_usage'),
     providerMetadata: jsonb('provider_metadata'),
+    billingMode: text('billing_mode').notNull().default('audit_only'),
+    billingStatus: text('billing_status').notNull().default('audit_only'),
+    billingReference: jsonb('billing_reference').notNull().default(emptyObject),
     requestedAt: timestamp('requested_at').notNull().defaultNow(),
     startedAt: timestamp('started_at'),
     completedAt: timestamp('completed_at'),
@@ -434,6 +437,127 @@ export const aiUsage = pgTable(
     aiUsageCostEstimateSourceCheck: check(
       'ai_usage_cost_estimate_source_check',
       sql`${table.costEstimateSource} is null or ${table.costEstimateSource} in ('model-metadata', 'provider-reported', 'manual-estimate', 'unknown')`
+    ),
+    aiUsageBillingModeCheck: check(
+      'ai_usage_billing_mode_check',
+      sql`${table.billingMode} in ('audit_only', 'credits')`
+    ),
+    aiUsageBillingStatusCheck: check(
+      'ai_usage_billing_status_check',
+      sql`${table.billingStatus} in ('audit_only', 'preflight_passed', 'preflight_failed', 'reserved', 'reservation_failed', 'settled', 'settlement_failed', 'refunded', 'refund_failed', 'no_charge', 'cancelled', 'timeout', 'rate_limited')`
+    ),
+  })
+);
+
+export const aiCostEvent = pgTable(
+  'ai_cost_event',
+  {
+    id: text('id').primaryKey(),
+    usageId: text('usage_id')
+      .notNull()
+      .references(() => aiUsage.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    providerId: text('provider_id')
+      .notNull()
+      .references(() => aiProvider.id, { onDelete: 'restrict' }),
+    modelId: text('model_id')
+      .notNull()
+      .references(() => aiModel.id, { onDelete: 'restrict' }),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    totalTokens: integer('total_tokens'),
+    estimatedCostUsd: numeric('estimated_cost_usd', {
+      precision: 12,
+      scale: 6,
+    }),
+    estimatedCredits: integer('estimated_credits'),
+    currencyCode: text('currency_code'),
+    source: text('source').notNull().default('unknown'),
+    status: text('status').notNull().default('estimated'),
+    metadata: jsonb('metadata').notNull().default(emptyObject),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiCostEventUsageIdIdx: index('ai_cost_event_usage_id_idx').on(
+      table.usageId
+    ),
+    aiCostEventUserCreatedIdx: index('ai_cost_event_user_created_idx').on(
+      table.userId,
+      table.createdAt
+    ),
+    aiCostEventProviderModelCreatedIdx: index(
+      'ai_cost_event_provider_model_created_idx'
+    ).on(table.providerId, table.modelId, table.createdAt),
+    aiCostEventStatusCreatedIdx: index('ai_cost_event_status_created_idx').on(
+      table.status,
+      table.createdAt
+    ),
+    aiCostEventProviderModelFk: foreignKey({
+      name: 'ai_cost_event_provider_model_fk',
+      columns: [table.providerId, table.modelId],
+      foreignColumns: [aiModel.providerId, aiModel.id],
+    }).onDelete('restrict'),
+    aiCostEventSourceCheck: check(
+      'ai_cost_event_source_check',
+      sql`${table.source} in ('model-metadata', 'provider-reported', 'manual-estimate', 'unknown')`
+    ),
+    aiCostEventStatusCheck: check(
+      'ai_cost_event_status_check',
+      sql`${table.status} in ('estimated', 'final', 'failed', 'no_charge')`
+    ),
+  })
+);
+
+export const aiCreditReservation = pgTable(
+  'ai_credit_reservation',
+  {
+    id: text('id').primaryKey(),
+    usageId: text('usage_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    reservationStatus: text('reservation_status').notNull().default('reserved'),
+    settlementStatus: text('settlement_status').notNull().default('pending'),
+    refundStatus: text('refund_status').notNull().default('not_required'),
+    reservedCredits: integer('reserved_credits').notNull().default(0),
+    settledCredits: integer('settled_credits'),
+    refundedCredits: integer('refunded_credits'),
+    failureReason: text('failure_reason'),
+    expiresAt: timestamp('expires_at'),
+    reservedAt: timestamp('reserved_at'),
+    settledAt: timestamp('settled_at'),
+    refundedAt: timestamp('refunded_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiCreditReservationUsageIdIdx: index(
+      'ai_credit_reservation_usage_id_idx'
+    ).on(table.usageId),
+    aiCreditReservationUserCreatedIdx: index(
+      'ai_credit_reservation_user_created_idx'
+    ).on(table.userId, table.createdAt),
+    aiCreditReservationStatusIdx: index('ai_credit_reservation_status_idx').on(
+      table.reservationStatus,
+      table.settlementStatus,
+      table.refundStatus
+    ),
+    aiCreditReservationUsageIdUidx: uniqueIndex(
+      'ai_credit_reservation_usage_id_uidx'
+    ).on(table.usageId),
+    aiCreditReservationReservationStatusCheck: check(
+      'ai_credit_reservation_reservation_status_check',
+      sql`${table.reservationStatus} in ('preflight_passed', 'preflight_failed', 'reserved', 'reservation_failed', 'cancelled', 'timeout', 'rate_limited')`
+    ),
+    aiCreditReservationSettlementStatusCheck: check(
+      'ai_credit_reservation_settlement_status_check',
+      sql`${table.settlementStatus} in ('pending', 'settled', 'settlement_failed', 'no_charge', 'cancelled', 'timeout', 'rate_limited')`
+    ),
+    aiCreditReservationRefundStatusCheck: check(
+      'ai_credit_reservation_refund_status_check',
+      sql`${table.refundStatus} in ('not_required', 'refunded', 'refund_failed', 'no_charge', 'cancelled')`
     ),
   })
 );

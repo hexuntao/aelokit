@@ -9,9 +9,10 @@
 - v0.1: AI contracts foundation / historical
 - v0.2: AI chat foundation / historical
 - v0.3: Mastra memory + knowledge / accepted with notes
-- v0.4: planning may begin after Documentation Governance Confirmation; implementation is not open yet
+- v0.4: AI stack / runtime boundary hardening / historical with accepted notes
+- v0.5: Usage / Credits / Admin Audit / current implementation
 
-当前已补齐文档入口层，并已完成人工确认 Q001-Q007。v0.4 planning 可以按 `docs/product/v0.4/DOCUMENT_INPUTS.md` 开始；v0.4 implementation 仍必须等待独立的 Scope Freeze、Acceptance Criteria 和 Implementation Plan。
+当前 v0.5 文档入口位于 `docs/product/v0.5/`。v0.4 embedding blocker 是已知环境问题，不阻塞 v0.5。
 
 ## 3. Authoritative Reading Order
 
@@ -37,13 +38,17 @@
 
 ## 4. Active Documents
 
-当前仍有效、可作为 v0.4 planning 输入的文档：
+当前仍有效、可作为 v0.5 implementation / validation 输入的文档：
 
 - `docs/INDEX.md`
+- `docs/product/v0.5/SCOPE_FREEZE.md`
+- `docs/product/v0.5/ACCEPTANCE_CRITERIA.md`
+- `docs/product/v0.5/IMPLEMENTATION_PLAN.md`
+- `docs/product/v0.5/CREDITS_STATE_MACHINE.md`
+- `docs/product/v0.5/CODEX_PROMPT.md`
+- `docs/product/v0.5/VALIDATION_REPORT.md`
 - `docs/DOCUMENTATION_AUDIT.md`
 - `docs/DOCUMENTATION_REORG_PLAN.md`
-- `docs/product/v0.4/DOCUMENT_INPUTS.md`
-- `docs/product/v0.4/V0_3_HANDOFF.md`
 - `docs/product/v0.4/OPEN_QUESTIONS.md`
 - `docs/agents/AGENT_RULES_INDEX.md`
 - `docs/agents/CODEX_RULES.md`
@@ -94,6 +99,26 @@ v0.3:
 - `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_CODEX_PROMPT.md`
 - `docs/product/AI_MASTRA_MEMORY_KNOWLEDGE_V0_3_VALIDATION_REPORT.md`
 
+v0.4:
+
+- `docs/product/v0.4/DOCUMENT_INPUTS.md`
+- `docs/product/v0.4/V0_3_HANDOFF.md`
+- `docs/product/v0.4/OPEN_QUESTIONS.md`
+- `docs/product/v0.4/SCOPE_FREEZE.md`
+- `docs/product/v0.4/ACCEPTANCE_CRITERIA.md`
+- `docs/product/v0.4/IMPLEMENTATION_PLAN.md`
+- `docs/product/v0.4/PRODUCT_PRD.md`
+- `docs/product/v0.4/AI_STACK_DECISION_RECORD.md`
+- `docs/product/v0.4/RUNTIME_BOUNDARY_HARDENING_PLAN.md`
+- `docs/product/v0.4/CITATION_PERSISTENCE_DESIGN.md`
+- `docs/product/v0.4/SMOKE_AND_VECTOR_VERIFICATION_PLAN.md`
+- `docs/product/v0.4/OFFICIAL_DOCS_RESEARCH.md`
+- `docs/product/v0.4/PROGRESS_LOG.md`
+- `docs/product/v0.4/VALIDATION_REPORT.md`
+- `docs/product/v0.4/FINAL_ACCEPTANCE_REPORT.md`
+- `docs/product/v0.4/CODEX_GOAL_PROMPT.md`
+- `docs/product/v0.4/ALLOWED_PATHS.md`
+
 ## 6. Reference Only Documents
 
 这些文档只能参考，不能单独作为 v0.4 范围依据：
@@ -130,7 +155,7 @@ v0.3:
 - Codex Prompt 是执行指令，不是长期产品文档。
 - 如果文档冲突，必须写 `OPEN_QUESTIONS.md`，不允许猜。
 
-## 9. v0.4 Planning Gate
+## 9. Historical v0.4 Planning Gate
 
 v0.4 planning 可以在以下治理文件完成并被人工确认后开始：
 
@@ -144,4 +169,20 @@ v0.4 planning 可以在以下治理文件完成并被人工确认后开始：
 - `docs/agents/CODEX_RULES.md`
 - `docs/agents/CLAUDE_RULES.md`
 
-这些条件当前已完成。v0.4 implementation 仍不得开始，直到 v0.4 `SCOPE_FREEZE.md`, `ACCEPTANCE_CRITERIA.md`, `IMPLEMENTATION_PLAN.md` 由用户确认。
+这些条件当前已完成。v0.4 implementation 事实与验收以
+`docs/product/v0.4/SCOPE_FREEZE.md`, `ACCEPTANCE_CRITERIA.md`,
+`IMPLEMENTATION_PLAN.md`, `VALIDATION_REPORT.md` 和
+`FINAL_ACCEPTANCE_REPORT.md` 为准。
+
+## 10. v0.5 Implementation Gate
+
+v0.5 implementation 已由当前用户任务确认，主题为 Usage / Credits / Admin
+Audit。当前依据是：
+
+- `docs/product/v0.5/SCOPE_FREEZE.md`
+- `docs/product/v0.5/ACCEPTANCE_CRITERIA.md`
+- `docs/product/v0.5/IMPLEMENTATION_PLAN.md`
+- `docs/product/v0.5/CREDITS_STATE_MACHINE.md`
+- `docs/product/v0.5/VALIDATION_REPORT.md`
+
+v0.4 embedding blocker 是当前环境问题，不作为 v0.5 failure。

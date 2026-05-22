@@ -474,6 +474,46 @@
           "error": "Failed to unban user"
         },
         "close": "Close"
+      },
+      "usage": {
+        "title": "Usage Audit",
+        "error": "Failed to load usage audit",
+        "permissionDenied": "Permission denied",
+        "empty": "No usage records found",
+        "filters": {
+          "userId": "Filter user ID",
+          "clearUserId": "Clear user ID",
+          "providerId": "Provider",
+          "modelId": "Model",
+          "status": "Status",
+          "allStatuses": "All statuses"
+        },
+        "columns": {
+          "usageId": "Usage ID",
+          "userId": "User ID",
+          "threadId": "Thread ID",
+          "messageId": "Message ID",
+          "provider": "Provider",
+          "model": "Model",
+          "inputTokens": "Input",
+          "outputTokens": "Output",
+          "totalTokens": "Total",
+          "estimatedCost": "Cost",
+          "estimatedCredits": "Credits",
+          "billingMode": "Billing Mode",
+          "billingStatus": "Billing Status",
+          "reservationStatus": "Reservation",
+          "settlementStatus": "Settlement",
+          "refundStatus": "Refund",
+          "failureReason": "Failure",
+          "createdAt": "Created At"
+        },
+        "pagination": {
+          "total": "{total} records",
+          "previous": "Previous",
+          "next": "Next",
+          "page": "Page {page} of {total}"
+        }
       }
     },
     "settings": {

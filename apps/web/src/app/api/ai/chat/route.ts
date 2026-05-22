@@ -7,12 +7,25 @@ import {
   type UIMessage,
 } from 'ai';
 import { frontendTools } from '@assistant-ui/react-ai-sdk';
+import type { AIUsageBillingStatus, AIUsageTokenUsage } from '@repo/ai/usage';
+import {
+  preflightAICredits,
+  refundAICredits,
+  reserveAICredits,
+  settleAICredits,
+} from '@repo/credits/ai-billing';
+import { serverEnv } from '@repo/env/server';
 import { auth } from '@/lib/auth';
-import { createRuntimeContext, validateRuntimeContext } from '@/ai/context';
+import {
+  createRuntimeContext,
+  validateRuntimeContext,
+  type AIRuntimeContext,
+} from '@/ai/context';
 import {
   ensureAIModelCatalog,
   getUserDefaultModelReference,
   resolveModel,
+  type ResolvedModel,
 } from '@/ai/models';
 import {
   createChatRuntimeRequest,
@@ -20,8 +33,14 @@ import {
   getSystemPrompt,
 } from '@/ai/runtime';
 import { RuntimeErrors, isRuntimeError } from '@/ai/errors';
-import { createUsageAuditEntry, recordUsageAudit } from '@/ai/usage';
+import {
+  createUsageAuditEntry,
+  estimateCreditsFromTokenUsage,
+  recordCostEventAudit,
+  recordUsageAudit,
+} from '@/ai/usage';
 import { enforceEntitlement } from '@/ai/entitlements';
+import { getAIUsageBillingMode } from '@/ai/billing-policy';
 import {
   createMessage,
   ensureThread,
@@ -40,6 +59,7 @@ import {
   type RetrievedChunk,
   type SourceCitationMetadata,
 } from '@/ai/knowledge';
+import { nanoid } from 'nanoid';
 
 export const maxDuration = 30;
 
@@ -53,6 +73,8 @@ type ChatRequestBody = {
 };
 
 const CITATION_SOURCE_PART_TYPE = 'source-document';
+const APPROX_CHARS_PER_TOKEN = 4;
+const RESERVED_OUTPUT_TOKENS = 2_000;
 
 function createCitationSourceParts(
   citations: readonly SourceCitationMetadata[],
@@ -100,9 +122,94 @@ function getLastUserMessage(messages: UIMessage[]): UIMessage | undefined {
   return [...messages].reverse().find((message) => message.role === 'user');
 }
 
+function getTextFromMessages(messages: UIMessage[]): string {
+  return messages
+    .flatMap((message) => message.parts)
+    .map((part) =>
+      part.type === 'text' && typeof part.text === 'string' ? part.text : ''
+    )
+    .join(' ');
+}
+
+function estimateInitialAICredits(messages: UIMessage[]): number {
+  const text = getTextFromMessages(messages);
+  const estimatedInputTokens = Math.ceil(text.length / APPROX_CHARS_PER_TOKEN);
+  const totalTokens = estimatedInputTokens + RESERVED_OUTPUT_TOKENS;
+  return Math.max(1, Math.ceil(totalTokens / 1_000));
+}
+
+function extractUsageTokens(totalUsage: unknown): AIUsageTokenUsage {
+  const usage = totalUsage as {
+    promptTokens?: number;
+    inputTokens?: number;
+    completionTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    cachedPromptTokens?: number;
+    cachedInputTokens?: number;
+    reasoningTokens?: number;
+  };
+
+  const inputTokens = usage?.promptTokens ?? usage?.inputTokens ?? 0;
+  const outputTokens = usage?.completionTokens ?? usage?.outputTokens ?? 0;
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: usage?.totalTokens ?? inputTokens + outputTokens,
+    cachedInputTokens: usage?.cachedPromptTokens ?? usage?.cachedInputTokens,
+    reasoningTokens: usage?.reasoningTokens,
+  };
+}
+
+function getErrorStatus(error: unknown): 'error' | 'timeout' | 'rate_limited' {
+  const errorLike = error as {
+    status?: number;
+    statusCode?: number;
+    code?: string;
+    message?: string;
+  };
+  const message = errorLike?.message?.toLowerCase() ?? '';
+  const code = errorLike?.code?.toLowerCase() ?? '';
+  const statusCode = errorLike?.status ?? errorLike?.statusCode;
+
+  if (statusCode === 429 || code.includes('rate') || message.includes('429')) {
+    return 'rate_limited';
+  }
+
+  if (code.includes('timeout') || message.includes('timeout')) {
+    return 'timeout';
+  }
+
+  return 'error';
+}
+
+function getBillingReference(options: {
+  usageId: string;
+  reservationId?: string;
+  reservedCredits?: number;
+  estimatedCredits?: number;
+  settlementError?: string;
+  refundError?: string;
+}): Readonly<Record<string, unknown>> {
+  return {
+    usageId: options.usageId,
+    reservationId: options.reservationId,
+    reservedCredits: options.reservedCredits,
+    estimatedCredits: options.estimatedCredits,
+    settlementError: options.settlementError,
+    refundError: options.refundError,
+  };
+}
+
 export async function POST(req: Request) {
   const startTime = Date.now();
   let pendingAssistantMessageId: string | undefined;
+  let pendingUsageId: string | undefined;
+  let pendingReservationId: string | undefined;
+  let pendingRuntimeContext: AIRuntimeContext | undefined;
+  let pendingResolvedModel: ResolvedModel | undefined;
+  let usageFinalized = false;
 
   try {
     // 1. Get auth session
@@ -248,6 +355,8 @@ export async function POST(req: Request) {
       threadId: persistedThread.id,
       messageId: assistantMessageId,
     };
+    pendingRuntimeContext = runtimeContext;
+    pendingResolvedModel = resolvedModel;
 
     // 6. Create and validate chat request
     const chatRequest = createChatRuntimeRequest(
@@ -261,6 +370,229 @@ export async function POST(req: Request) {
       const error = RuntimeErrors.invalidRequest(chatValidation.reason);
       await updateMessageStatus(assistantMessageId, 'error', new Date());
       return jsonError(error, 400);
+    }
+
+    const usageId = nanoid();
+    pendingUsageId = usageId;
+    const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
+    const billingMode = getAIUsageBillingMode(creditsBillingEnabled);
+    let reservedCredits: number | undefined;
+
+    if (creditsBillingEnabled) {
+      reservedCredits = estimateInitialAICredits(messages);
+      const preflightResult = await preflightAICredits({
+        usageId,
+        userId: context.userId,
+        requiredCredits: reservedCredits,
+      });
+
+      if (!preflightResult.success) {
+        await updateMessageStatus(assistantMessageId, 'error', new Date());
+        await recordUsageAudit({
+          ...createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
+            status: 'error',
+            startedAt: new Date(startTime),
+            completedAt: new Date(),
+            failureReason: preflightResult.error.code,
+            errorMessage: preflightResult.error.message,
+            providerModelId: resolvedModel.providerModelId,
+            requestDurationMs: Date.now() - startTime,
+            billingMode,
+            billingStatus: 'preflight_failed',
+            billingReference: getBillingReference({
+              usageId,
+              reservedCredits,
+              settlementError: preflightResult.error.message,
+            }),
+          }),
+          id: usageId,
+        });
+
+        return jsonError(
+          {
+            code: preflightResult.error.code,
+            message: preflightResult.error.message,
+          },
+          preflightResult.error.code === 'insufficient_credits' ? 402 : 500
+        );
+      }
+
+      const reservationResult = await reserveAICredits({
+        usageId,
+        userId: context.userId,
+        requiredCredits: reservedCredits,
+      });
+
+      if (!reservationResult.success) {
+        await updateMessageStatus(assistantMessageId, 'error', new Date());
+        await recordUsageAudit({
+          ...createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
+            status: 'error',
+            startedAt: new Date(startTime),
+            completedAt: new Date(),
+            failureReason: reservationResult.error.code,
+            errorMessage: reservationResult.error.message,
+            providerModelId: resolvedModel.providerModelId,
+            requestDurationMs: Date.now() - startTime,
+            billingMode,
+            billingStatus: 'reservation_failed',
+            billingReference: getBillingReference({
+              usageId,
+              reservedCredits,
+              settlementError: reservationResult.error.message,
+            }),
+          }),
+          id: usageId,
+        });
+
+        return jsonError(
+          {
+            code: reservationResult.error.code,
+            message: reservationResult.error.message,
+          },
+          reservationResult.error.code === 'insufficient_credits' ? 402 : 500
+        );
+      }
+
+      pendingReservationId = reservationResult.data.id;
+    }
+
+    async function finalizeUsageOnce(options: {
+      readonly status: 'success' | 'error' | 'timeout' | 'rate_limited';
+      readonly finishReason?: string;
+      readonly isAborted?: boolean;
+      readonly totalUsage?: unknown;
+      readonly providerMetadata?: unknown;
+      readonly error?: unknown;
+    }) {
+      if (usageFinalized) {
+        return;
+      }
+      usageFinalized = true;
+
+      const completedAt = new Date();
+      const tokens = extractUsageTokens(options.totalUsage);
+      const estimatedCredits = estimateCreditsFromTokenUsage(tokens);
+      let billingStatus: AIUsageBillingStatus = creditsBillingEnabled
+        ? 'no_charge'
+        : 'audit_only';
+      let settlementError: string | undefined;
+      let refundError: string | undefined;
+
+      if (creditsBillingEnabled && pendingReservationId) {
+        if (options.status === 'success' && !options.isAborted) {
+          const settlementResult = await settleAICredits({
+            reservationId: pendingReservationId,
+            usageId,
+            userId: context.userId,
+            settledCredits: estimatedCredits,
+            description: `AI chat usage settlement for ${usageId}`,
+          });
+
+          if (settlementResult.success) {
+            billingStatus = 'settled';
+          } else {
+            billingStatus = 'settlement_failed';
+            settlementError = settlementResult.error.message;
+            console.error('[AI Credits Settlement Error]', {
+              usageId,
+              reservationId: pendingReservationId,
+              error: settlementResult.error,
+            });
+          }
+        } else {
+          const refundResult = await refundAICredits({
+            reservationId: pendingReservationId,
+            usageId,
+            userId: context.userId,
+            reason:
+              options.status === 'rate_limited'
+                ? 'rate_limited'
+                : options.status === 'timeout'
+                  ? 'timeout'
+                  : options.isAborted
+                    ? 'aborted'
+                    : (options.finishReason ?? 'stream_failed'),
+          });
+
+          if (refundResult.success) {
+            billingStatus =
+              refundResult.data.refundStatus === 'refunded'
+                ? 'refunded'
+                : options.status === 'rate_limited'
+                  ? 'rate_limited'
+                  : options.status === 'timeout'
+                    ? 'timeout'
+                    : 'no_charge';
+          } else {
+            billingStatus = 'refund_failed';
+            refundError = refundResult.error.message;
+            console.error('[AI Credits Refund Error]', {
+              usageId,
+              reservationId: pendingReservationId,
+              error: refundResult.error,
+            });
+          }
+        }
+      }
+
+      const usageResult = await recordUsageAudit({
+        ...createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
+          status: options.status,
+          tokens,
+          startedAt: new Date(startTime),
+          completedAt,
+          failureReason:
+            options.status === 'success'
+              ? undefined
+              : options.error instanceof Error
+                ? options.error.message
+                : (options.finishReason ?? String(options.error ?? 'unknown')),
+          rawUsage: options.totalUsage,
+          providerMetadata: options.providerMetadata,
+          providerModelId: resolvedModel.providerModelId,
+          requestDurationMs: Date.now() - startTime,
+          billingMode,
+          billingStatus,
+          billingReference: getBillingReference({
+            usageId,
+            reservationId: pendingReservationId,
+            reservedCredits,
+            estimatedCredits,
+            settlementError,
+            refundError,
+          }),
+        }),
+        id: usageId,
+      });
+
+      if (usageResult.recorded) {
+        await recordCostEventAudit({
+          usageId,
+          userId: context.userId,
+          providerId: resolvedModel.reference.providerId,
+          modelId: resolvedModel.reference.modelId,
+          tokens,
+          estimatedCredits,
+          currencyCode: 'USD',
+          source: 'provider-reported',
+          status:
+            billingStatus === 'no_charge' ||
+            billingStatus === 'refund_failed' ||
+            billingStatus === 'rate_limited' ||
+            billingStatus === 'timeout'
+              ? 'no_charge'
+              : options.status === 'success'
+                ? 'final'
+                : 'failed',
+          metadata: {
+            billingMode,
+            billingStatus,
+            reservationId: pendingReservationId,
+            finishReason: options.finishReason,
+          },
+        });
+      }
     }
 
     // 6.5. Memory context injection (v0.3 TASK-005)
@@ -377,56 +709,24 @@ export async function POST(req: Request) {
 
         const totalUsage = await result.totalUsage;
         const providerMetadata = await result.providerMetadata;
-        const usageAny = totalUsage as any;
-        await recordUsageAudit(
-          createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
-            status: isAborted
-              ? 'error'
-              : finishReason === 'stop'
-                ? 'success'
-                : 'error',
-            tokens: {
-              inputTokens: usageAny?.promptTokens ?? usageAny?.inputTokens ?? 0,
-              outputTokens:
-                usageAny?.completionTokens ?? usageAny?.outputTokens ?? 0,
-              totalTokens: usageAny?.totalTokens,
-              cachedInputTokens:
-                usageAny?.cachedPromptTokens ?? usageAny?.cachedInputTokens,
-              reasoningTokens: usageAny?.reasoningTokens,
-            },
-            startedAt: new Date(startTime),
-            completedAt: new Date(),
-            failureReason: isAborted
-              ? 'aborted'
-              : finishReason === 'stop'
-                ? undefined
-                : finishReason,
-            rawUsage: totalUsage,
-            providerMetadata,
-            providerModelId: resolvedModel.providerModelId,
-            requestDurationMs: Date.now() - startTime,
-          })
-        );
+        await finalizeUsageOnce({
+          status: isAborted
+            ? 'error'
+            : finishReason === 'stop'
+              ? 'success'
+              : 'error',
+          finishReason,
+          isAborted,
+          totalUsage,
+          providerMetadata,
+        });
       },
       onError: (streamError) => {
         void updateMessageStatus(assistantMessageId, 'error', new Date());
-        void recordUsageAudit(
-          createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
-            status: 'error',
-            startedAt: new Date(startTime),
-            completedAt: new Date(),
-            failureReason:
-              streamError instanceof Error
-                ? streamError.message
-                : String(streamError),
-            errorMessage:
-              streamError instanceof Error
-                ? streamError.message
-                : String(streamError),
-            providerModelId: resolvedModel.providerModelId,
-            requestDurationMs: Date.now() - startTime,
-          })
-        );
+        void finalizeUsageOnce({
+          status: getErrorStatus(streamError),
+          error: streamError,
+        });
         return 'AI response failed while streaming.';
       },
       messageMetadata: ({ part }) => {
@@ -471,6 +771,49 @@ export async function POST(req: Request) {
 
     if (pendingAssistantMessageId) {
       await updateMessageStatus(pendingAssistantMessageId, 'error', new Date());
+    }
+
+    if (
+      pendingUsageId &&
+      pendingReservationId &&
+      pendingRuntimeContext &&
+      pendingResolvedModel &&
+      !usageFinalized
+    ) {
+      const refundResult = await refundAICredits({
+        reservationId: pendingReservationId,
+        usageId: pendingUsageId,
+        userId: pendingRuntimeContext.userId,
+        reason: 'route_error',
+      });
+
+      await recordUsageAudit({
+        ...createUsageAuditEntry(
+          pendingRuntimeContext,
+          pendingResolvedModel.reference,
+          {
+            status: getErrorStatus(error),
+            startedAt: new Date(startTime),
+            completedAt: new Date(),
+            failureReason:
+              error instanceof Error ? error.message : String(error),
+            errorMessage:
+              error instanceof Error ? error.message : String(error),
+            providerModelId: pendingResolvedModel.providerModelId,
+            requestDurationMs: Date.now() - startTime,
+            billingMode: 'credits',
+            billingStatus: refundResult.success ? 'no_charge' : 'refund_failed',
+            billingReference: getBillingReference({
+              usageId: pendingUsageId,
+              reservationId: pendingReservationId,
+              refundError: refundResult.success
+                ? undefined
+                : refundResult.error.message,
+            }),
+          }
+        ),
+        id: pendingUsageId,
+      });
     }
 
     return jsonError(runtimeError, 500);
