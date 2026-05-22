@@ -35,12 +35,12 @@ apps/web/src/app/api/ai      # AI API routes
 - `apps/web/src/app/api/ai/chat/route.ts` 是当前 AI chat stream route，对外为 `POST /api/ai/chat`。
 - 不要使用 `/api/chat` 作为 AI chat route。
 - Usage audit 不等于 credits charging；AI runtime 不得直接改 credits ledger。
-- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前版本 Scope Freeze 明确打开后实现。
+- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前用户 prompt 明确打开 AI billing 集成时实现。
 - 涉及 assistant-ui、Vercel AI SDK、Mastra 或 provider SDK 时，必须先执行 External Docs Gate，查官方最新文档，不允许凭旧 API 或记忆实现。
-- v0.1 / v0.2 / v0.3 gate 只作为 historical regression guardrail，不能定义当前版本 scope。
-- 当前版本 AI scope 只能由 `docs/product/v0.x/SCOPE_FREEZE.md`、`ACCEPTANCE_CRITERIA.md` 和 `IMPLEMENTATION_PLAN.md` 定义。
-- v0.4 默认不接真实 third-party MCP，不启用 local stdio MCP，不接 Assistant Cloud，不做 credits charging，除非当前版本 Scope Freeze 和用户确认明确打开。
-- 没有当前版本 Scope Freeze 和用户确认，不创建 worker/gateway/studio/design-system split。
+- 当前 AI scope 由用户当前 prompt、root `AGENTS.md` 和 PRD 共同约束；三者冲突时先报告冲突并等待确认。
+- 历史 roadmap、旧版本文档、历史任务文档和已删除文档不能作为当前需求依据。
+- 默认不接真实 third-party MCP，不启用 local stdio MCP，不接 Assistant Cloud，不做 credits charging，除非当前用户 prompt 和必要确认明确打开。
+- 没有当前用户 prompt 和明确确认，不创建 worker/gateway/studio/design-system split。
 
 ## UI 组件边界
 

@@ -18,7 +18,7 @@
 - Auth session lookup。
 - Next route handler、server action、UI。
 - AI runtime orchestration。
-- AI usage v0.2 的扣费逻辑。
+- App-level AI billing orchestration。
 
 ## Allowed dependencies
 
@@ -36,15 +36,18 @@
 
 ## Exports rule
 
-- 公开 exports：`.`、`./types`、`./service`、`./ledger`、`./distribute`。
+- 公开 exports：`.`、`./types`、`./service`、`./ledger`、`./distribute`、`./ai-billing`。
 - 不允许 deep import `src/*`。
-- 未来 reservation/settlement 如新增，应以明确 subpath 或现有 service/ledger 边界暴露。
+- 新增公开 subpath 前必须有明确 export plan 和用户确认。
 
 ## Implementation rule
 
-- AI usage v0.2 只审计，不扣费。
-- AI credits 扣费进入 v0.5 后必须通过 credits 包提供的 ledger/reservation/settlement 能力。
-- 不允许 AI runtime 直接改 ledger 表。
+- 当前 credits scope 由用户当前 prompt、root `AGENTS.md`、`packages/AGENTS.md` 和 PRD 共同约束；
+  历史 roadmap、旧版本文档、历史任务文档和已删除文档不能作为当前需求依据。
+- AI usage audit 不等于 credits charging；只有当前用户 prompt 明确打开 AI billing 集成时才接入扣费。
+- AI credits preflight/reservation/settlement/refund 必须通过 credits 包提供的 `./ai-billing`
+  和 ledger/reservation/settlement 能力。
+- 不允许 AI runtime 直接改 ledger 表或绕过 credits package。
 - Payment 与 credits 不允许互相依赖；支付成功后的 credits 处理通过 app-level callback 编排。
 
 ## Testing / validation command
@@ -59,4 +62,4 @@ pnpm --filter @repo/credits lint
 - 在 AI route 中直接写 `credit_transaction`。
 - 让 credits 包 import payment provider。
 - 把 credits UI 或 checkout action 放进 package。
-- 在 v0.2 usage audit 阶段提前做扣费。
+- 把 usage audit 当成已经授权的 credits charging。

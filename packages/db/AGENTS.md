@@ -9,10 +9,11 @@
 - `packages/db/src/schema.ts` schema 聚合入口。
 - `packages/db/src/auth.schema.ts`。
 - `packages/db/src/app.schema.ts`。
+- `packages/db/src/ai.schema.ts`。
+- `packages/db/src/knowledge.schema.ts`。
 - `packages/db/src/migrations/**`。
 - `getDb()` connection helper。
 - DB table infer types。
-- 未来 AI schema：`packages/db/src/ai.schema.ts`，但只能在 v0.2 TASK-005 且用户确认 schema design 和 migration 策略后创建。
 
 ## Does not own
 
@@ -38,10 +39,11 @@
 
 ## Exports rule
 
-- 公开 exports：`.`、`./schema`、`./auth-schema`、`./app-schema`、`./types`。
+- 公开 exports：`.`、`./schema`、`./auth-schema`、`./app-schema`、`./ai-schema`、
+  `./knowledge-schema`、`./types`。
 - 新 schema 必须通过 `packages/db/src/schema.ts` re-export，让 drizzle-kit 可发现。
 - 不允许消费者 deep import `@repo/db/src/*`。
-- AI schema 如创建，应通过 `schema.ts` 聚合，并增加明确 export plan。
+- 新增公开 schema subpath 前必须有明确 export plan 和用户确认。
 
 ## Implementation rule
 
@@ -52,10 +54,12 @@
 - `auth:schema:generate` 输出到 `packages/db/src/auth.schema.reference.ts`，它是参考文件，不覆盖手写 schema。
 - 新 schema、migration、db push/migrate 必须用户确认。
 - DB 包只定义 schema/connection/types，不放 app route、provider SDK、UI、server actions。
-- v0.2 TASK-004 固定输出 `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`，不创建 schema/migration，不运行 DB 命令。
-- v0.2 TASK-005 只有在用户确认 TASK-004 schema design 和 migration 策略后，才允许创建 `packages/db/src/ai.schema.ts`、更新 `packages/db/src/schema.ts` 并生成 migration。
-- v0.2 AI schema 只能覆盖 confirmed minimal chat persistence，不创建 v0.3+ memory/RAG/MCP tables 或 credits charging/settlement tables。
-- usage audit schema 只做 audit，不得驱动 credits ledger mutation。
+- 当前 DB scope 由用户当前 prompt、root `AGENTS.md`、`packages/AGENTS.md` 和 PRD 共同约束；
+  历史 roadmap、旧版本文档、历史任务文档和已删除文档不能作为当前需求依据。
+- AI、knowledge 或 credits billing schema 变更必须由当前用户 prompt 明确打开，并在执行
+  `db:generate`、migration、db push/migrate 前取得用户确认。
+- usage audit schema 不等于 credits ledger mutation；credits charging 必须通过 `@repo/credits`
+  的领域能力接入。
 
 ## Testing / validation command
 

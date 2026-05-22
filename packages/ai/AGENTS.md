@@ -1,8 +1,8 @@
 # `@repo/ai` Package 规则
 
-本文件适用于 `packages/ai/**`。本 package 是 AeloKit v0.1 AI
-contracts foundation，不是 AI runtime、UI、DB schema 或 provider SDK
-接线层。
+本文件适用于 `packages/ai/**`。本 package 是 AeloKit AI contracts /
+runtime-types / adapter-compatible types 包，不是 AI runtime、UI、DB
+schema 或 provider SDK 接线层。
 
 ## Package 定位
 
@@ -66,7 +66,7 @@ permission、error、adapter-compatible 和 runtime type definitions。
 - `@repo/payment` runtime。
 - `@repo/credits` ledger/service mutation。
 - `@repo/storage` runtime upload/download。
-- `ai`、`@mastra/core`、`zod`，除非具体 TASK 暂停并获得用户确认。
+- `ai`、`@mastra/core`、`zod`，除非当前用户 prompt 明确打开依赖范围，并且 manifest/lockfile 变更已获得确认。
 
 ## Exports rule
 
@@ -82,25 +82,19 @@ permission、error、adapter-compatible 和 runtime type definitions。
 
 ## Implementation rule
 
-- v0.1 只实现 contracts、types、errors、permissions、usage/cost types 和
-  lightweight adapter-compatible type surface。
-- 不创建 route、UI、schema、migration、runtime wiring 或 provider SDK
+- 当前 package scope 由用户当前 prompt、root `AGENTS.md`、`packages/AGENTS.md`
+  和 PRD 共同约束；历史 roadmap、旧版本文档、历史任务文档和已删除文档不能作为当前需求依据。
+- 只实现 contracts、types、errors、permissions、usage/cost types、memory/knowledge/MCP contracts、
+  runtime type definitions 和 lightweight adapter-compatible type surface。
+- 不创建 route、UI、schema、migration、runtime wiring、persistence service 或 provider SDK
   initialization。
 - Adapter-compatible types 只能表达结构兼容边界，不持有真实 runtime instance。
-- Usage/cost contracts 只表达 audit 和 cost metadata，不触发 credits mutation。
+- Usage/cost contracts 只表达 audit、billing status 和 cost metadata，不触发 credits mutation。
 - Tool 和 MCP contracts 必须保持 permissioned boundary，不实现 side effects。
-- v0.2 AI chat 执行入口是 `docs/product/AI_CHAT_V0_2_*`；本 package 仍只作为
-  contracts/types/adapters/runtime-types 依赖被 app runtime 使用。
-- v0.2 不允许把 assistant-ui、Vercel AI SDK live runtime、Mastra runtime、
-  provider SDK initialization、route、UI、DB query 或 persistence service 放进
-  `packages/ai`。
-- v0.2 Dependency Gate：TASK-003 只输出安装计划，只有 TASK-003B 可实际安装依赖；
-  不要在其他 TASK 中顺手修改 `packages/ai/package.json`、`apps/web/package.json`
-  或 `pnpm-lock.yaml`。
-- v0.2 Schema Gate：TASK-004 只输出
-  `docs/product/AI_CHAT_V0_2_SCHEMA_DESIGN.md`；TASK-005 经用户确认后由
-  `packages/db` 创建 schema/migration，不能在 `packages/ai` 创建 schema 或 DB
-  query。
+- Dependency、manifest、lockfile 或 exports 变更必须由当前用户 prompt 明确打开，并按 root
+  `AGENTS.md` 的安装/manifest 边界处理。
+- DB schema、migration 和 DB query 所有权不在 `packages/ai`；真实 schema/migration 属于
+  `packages/db`，app persistence/runtime wiring 属于 app layer。
 
 ## Validation
 
