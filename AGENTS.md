@@ -1,57 +1,59 @@
 # 仓库规范
 
-本文件是 AeloKit 全仓 AI coding agent 的永久工程规则。子目录可以用自己的
+本文件是 AeloKit 全仓 AI coding agent 的永久工程规则入口。子目录可以用自己的
 `AGENTS.md` 进一步收紧规则，但不得放宽这里的安全、scope、package、DB、env
 和 secret 边界。
 
-最后更新：2026-05-20
+最后更新：2026-05-22
 
-## 1. 文档入口与 Scope 规则
+## 1. 文档入口与产品依据
 
-- 后续 Codex / Claude Code / human 读取文档时，先从 `docs/INDEX.md` 开始。
-- Agent rule 文件体系见 `docs/agents/AGENT_RULES_INDEX.md`。
-- Codex 专属规则见 `docs/agents/CODEX_RULES.md`。
-- Claude Code 专属规则见 `docs/agents/CLAUDE_RULES.md` 和 `CLAUDE.md`。
-- 本文件定义工程边界，不定义 v0.4 或任何未来版本的产品 scope。
-- 当前版本 scope 只能由 `docs/product/v0.x/SCOPE_FREEZE.md` 定义。
-- 当前版本 acceptance 只能由 `docs/product/v0.x/ACCEPTANCE_CRITERIA.md` 定义。
-- 当前版本 implementation tasks 只能由 `docs/product/v0.x/IMPLEMENTATION_PLAN.md` 定义。
-- 当前版本最小输入集由 `docs/product/v0.x/DOCUMENT_INPUTS.md` 定义。
-- 旧 Prompt、旧 Implementation Plan、旧 Scope Freeze、旧 task list 和旧 Validation Report 不能作为当前需求。
-- v0.1 / v0.2 / v0.3 gate 只作为 historical regression guardrail；它们不能定义 v0.4 scope。
+- AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
+- 当前任务 scope 由用户当前 prompt 明确指定。
+- 如果用户 prompt 与 PRD 冲突，先报告冲突，不要猜测执行。
+- 历史 roadmap、旧版本文档、旧 task list、旧 validation report 不能作为当前需求依据。
+- 本仓库不再依赖已删除的旧文档索引作为文档入口。
+- 本文件定义工程边界，不定义某个历史版本或未来版本的产品 scope。
 
-## 2. AGENTS.md 优先级
+## 2. 当前文档保留策略
+
+- 长期保留：`AGENTS.md`、`CLAUDE.md`、`README.md`、`docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
+- 不要重新创建旧 docs 体系。
+- 新增文档必须有明确用户要求。
+- 临时开发计划优先写在 Codex 任务输出中，不默认落地成长期文档。
+
+## 3. AGENTS.md 优先级
 
 - 根目录 `AGENTS.md` 定义全仓通用永久规则。
 - 子目录 `AGENTS.md` 定义该目录下更具体的规则。
 - 当规则冲突时，以离目标文件最近的 `AGENTS.md` 为准。
 - 子目录规则不得违反根目录的安全、scope、package、DB、env 和 secret 边界。
 - 修改文件前，必须先读取目标路径上所有相关 `AGENTS.md`。
-- 如果文档冲突，写入或报告当前版本 `OPEN_QUESTIONS.md`，不要猜。
+- 如果用户 prompt、PRD 和工程规则之间存在冲突，报告冲突并等待确认，不要猜。
 
-## 3. Monorepo 当前结构
+## 4. Monorepo 当前结构
 
 本项目使用 pnpm workspace + Turborepo 管理。
 
 - `apps/web/`: 当前完整 SaaS 单体应用。
 - `apps/`: 应用层目录；当前只有 `apps/web` 是实际应用。
+- `packages/ai/`: AI contracts/types/adapters/runtime-types 包（`@repo/ai`）。
+- `packages/analytics/`: 统计分析领域包（`@repo/analytics`）。
+- `packages/auth/`: 认证核心层（`@repo/auth`）。
 - `packages/config/`: 核心 SaaS 静态配置和配置类型（`@repo/config`）。
-- `packages/shared/`: 纯工具函数、常量、类型和少量通用 hook/context（`@repo/shared`）。
+- `packages/credits/`: 积分领域包（`@repo/credits`）。
+- `packages/db/`: Drizzle 数据库层（`@repo/db`）。
 - `packages/env/`: 环境变量验证（`@repo/env`）。
 - `packages/i18n/`: 国际化路由和消息工具（`@repo/i18n`）。
-- `packages/db/`: Drizzle 数据库层（`@repo/db`）。
-- `packages/auth/`: 认证核心层（`@repo/auth`）。
-- `packages/payment/`: 支付领域包（`@repo/payment`）。
-- `packages/credits/`: 积分领域包（`@repo/credits`）。
 - `packages/mail/`: 事务邮件领域包（`@repo/mail`）。
 - `packages/newsletter/`: 邮件订阅领域包（`@repo/newsletter`）。
 - `packages/notification/`: 系统通知领域包（`@repo/notification`）。
+- `packages/payment/`: 支付领域包（`@repo/payment`）。
+- `packages/shared/`: 纯工具函数、常量、类型和少量通用 hook/context（`@repo/shared`）。
 - `packages/storage/`: 对象存储领域包（`@repo/storage`）。
-- `packages/analytics/`: 统计分析领域包（`@repo/analytics`）。
-- `packages/ai/`: AI contracts/types/adapters/runtime-types 包（`@repo/ai`）。
 - 根目录: workspace 编排、turbo、CI、工程文档、AI coding rules；不要放业务源码。
 
-## 4. 常用命令
+## 5. 常用命令
 
 ```bash
 pnpm install
@@ -80,7 +82,7 @@ pnpm check:package-exports
 pnpm check:env
 ```
 
-## 5. App 与 Package Ownership
+## 6. App 与 Package Ownership
 
 - 路由、页面组合、HTTP boundary、server actions、部署入口和 app-specific wiring 位于 `apps/*`。
 - 当前完整 SaaS 单体应用在 `apps/web`。
@@ -92,18 +94,18 @@ pnpm check:env
 - 新增 import 必须同步更新所属 workspace 的 `package.json`。
 - root `package.json` 只放 monorepo 编排、workspace-wide tooling 和 root scripts 直接使用的 CLI。
 
-## 6. 阶段性架构约束
+## 7. 阶段性架构约束
 
 - 当前不要提前拆 `apps/admin`, `apps/landing`, `apps/docs`, `apps/worker`, `apps/gateway`, `apps/studio`。
-- 当前不要提前创建 `packages/design-system`, `packages/api-client`, `packages/logger`, `packages/observability`, `packages/testing`。
+- 当前不要提前创建 `packages/design-system`, `packages/ui`, `packages/api-client`, `packages/logger`, `packages/observability`, `packages/testing`, `packages/worker`, `packages/gateway`。
 - 不要创建 `common`, `misc`, `core` 这类无边界杂物包。
-- 未来 app/package 必须有 Scope Freeze、ownership、dependency plan、exports/deployment plan、validation commands 和用户确认。
+- 未来 app/package 必须有明确用户确认的 scope、ownership、dependency plan、exports/deployment plan 和 validation commands。
 - 不要为了占位创建未来目录。
+- 后续开发应由当前 PRD + 用户任务确认，不再由旧 roadmap 自动决定。
 
-## 7. AI Infrastructure Guardrail
+## 8. AI Infrastructure Guardrail
 
 - AeloKit 的产品北极星是 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`。
-- AI 文档读取入口是 `docs/INDEX.md`，当前版本输入集由 `docs/product/v0.x/DOCUMENT_INPUTS.md` 控制。
 - `packages/ai` 的职责是 AI contracts、provider/model/agent/tool/skill/memory/knowledge/MCP/usage/permission/types、lightweight AI SDK/Mastra adapter-compatible types 和 runtime type definitions。
 - `packages/ai` 不负责 React UI、assistant-ui components、Next route handlers、cookies、server actions、app session、DB schema、DB query、credits ledger mutation、provider SDK initialization 或 live runtime execution。
 - `apps/web/src/ai` 负责 web app runtime wiring：provider 初始化、session/context 注入、model/agent/tool selection、Mastra/AI SDK runtime 连接、审计和 app policy。
@@ -111,10 +113,10 @@ pnpm check:env
 - `apps/web/src/app/api/ai/chat/route.ts` 是当前 AI chat stream route，对外为 `POST /api/ai/chat`。
 - 不要创建 `/api/chat` 作为 AI chat route。
 - Usage audit 不等于 credits charging；AI usage 不得直接调用 credits ledger。
-- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前版本 Scope Freeze 明确打开后实现。
+- Credits preflight/reservation/settlement 必须通过 `@repo/credits`，且只能在当前任务明确打开后实现。
 - 不默认启用真实 third-party MCP、local stdio MCP、Assistant Cloud、worker/gateway/studio split 或 destructive migration。
 
-## 8. DB 与 Shim 边界
+## 9. DB 与 Shim 边界
 
 - Drizzle schema 和真实 migration 所有权在 `packages/db/src`。
 - `packages/db/src/schema.ts` 是 Drizzle schema aggregation entrypoint。
@@ -127,7 +129,7 @@ pnpm check:env
 - 使用 `pnpm check:db-shims` 验证 DB shim 边界。
 - 使用 `pnpm check:package-exports` 验证 package exports 边界。
 
-## 9. Domain Shim 边界
+## 10. Domain Shim 边界
 
 - `apps/web/src/payment/*` 是兼容 shim 和 app wiring；真实支付领域逻辑在 `packages/payment/src/*`。
 - `apps/web/src/credits/*` 是兼容 shim 和 app-local client helper；真实积分领域逻辑在 `packages/credits/src/*`。
@@ -140,7 +142,7 @@ pnpm check:env
 - `@repo/payment` 与 `@repo/credits` 不允许互相依赖。
 - `@repo/mail` 与 `@repo/newsletter` 不允许互相依赖。
 
-## 10. Env 与 Secret 边界
+## 11. Env 与 Secret 边界
 
 - `packages/env/` 是环境变量验证包（`@repo/env`）。
 - `@repo/env` 不依赖任何 `@repo/*` 包。
@@ -155,7 +157,7 @@ pnpm check:env
 - Provider secret、embedding secret、payment secret、storage secret 只能 server-side 使用，不允许进入 client component、client hook、browser payload 或 `NEXT_PUBLIC_*`。
 - 轮换或暴露凭证/API key 必须由用户明确授权。
 
-## 11. UI 与 Design System 边界
+## 12. UI 与 Design System 边界
 
 - 当前没有 `packages/ui`，也没有 `packages/design-system`。
 - 当前 UI 组件位于 `apps/web/src/components/`。
@@ -165,7 +167,7 @@ pnpm check:env
 - 未来目标是 `packages/design-system`，不是狭义 `packages/ui`。
 - 组件未来要沉淀到 design-system，必须先消除 app route/action/auth/payment/credits 依赖，并有组件依赖审计和用户确认。
 
-## 12. 代码风格与命名
+## 13. 代码风格与命名
 
 - Biome (`biome.json`) 强制两空格缩进、单引号、ES5 尾随逗号和必需分号。
 - 模块文件名使用短横线命名法，例如 `dashboard-sidebar.tsx`。
@@ -174,7 +176,7 @@ pnpm check:env
 - Tailwind 工具类扩展放在 `apps/web/src/styles`。
 - server-only 代码必须避免被 client component 或 client hook import。
 
-## 13. 测试与验证
+## 14. 测试与验证
 
 - 只运行与本次改动相关的检查，除非用户明确要求全量测试。
 - 文档或轻量规则改动至少做文件范围检查、forbidden path 检查和 `git diff --stat`。
@@ -183,7 +185,7 @@ pnpm check:env
 - schema、migration、真实 DB 命令必须独立任务确认。
 - Runtime smoke 不能只用代码审查替代；无法执行时必须标记 blocked/PARTIAL，不能标记 PASS。
 
-## 14. 提交与 PR 规范
+## 15. 提交与 PR 规范
 
 - 提交信息格式：`<类型>(<范围>): <简短描述>`。
 - 类型：`feat`, `fix`, `refactor`, `test`, `chore`, `docs`。
@@ -192,7 +194,7 @@ pnpm check:env
 - PR 描述必须包含：改了什么、为什么改、如何测试。
 - 当环境变量变更时必须更新 `env.example` 并说明验证命令。
 
-## 15. 禁止事项
+## 16. 禁止事项
 
 - 不要创建根 `src/`。
 - 不要把业务文件放回根目录。

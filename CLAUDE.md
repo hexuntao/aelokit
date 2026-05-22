@@ -1,57 +1,40 @@
-# Claude Code 规则摘要
+# Claude Code Rules for AeloKit
 
-本文件是 Claude Code 的短摘要入口，不是 AeloKit 的最高规则源。
+本文件是 Claude Code 的短入口。完整工程规则以 root `AGENTS.md` 为准。
 
-最后更新：2026-05-20
+## 读取顺序
 
-## 1. 读取顺序
+1. 当前用户 prompt
+2. root `AGENTS.md`
+3. 目标路径附近的 `AGENTS.md`，如果存在
+4. `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`
+5. 相关源码和 package.json
 
-Claude Code 执行任务前必须读取：
+## 最高优先级
 
-1. 当前用户 prompt。
-2. root `AGENTS.md`。
-3. 目标路径上的 nearest `AGENTS.md`。
-4. `docs/INDEX.md`。
-5. 当前版本 `DOCUMENT_INPUTS.md`，如果任务属于某个版本规划或实现。
-6. 当前版本 Scope Freeze / Acceptance Criteria / Implementation Plan，如果已经存在。
+- 当前用户 prompt 定义本次任务 scope。
+- PRD 定义产品北极星。
+- AGENTS.md 定义工程边界。
+- 已删除的旧 docs、旧 roadmap、旧版本文档不能作为当前需求。
 
-Claude Code 专属细则见 `docs/agents/CLAUDE_RULES.md`。
+## 禁止事项
 
-## 2. 冲突规则
+- 不要恢复旧 docs 体系。
+- 不要引用不存在的旧文档索引。
+- 不要引用已删除的 agent rules 文档树。
+- 不要提前拆 `apps/admin`、`apps/landing`、`apps/docs`、`apps/worker`、`apps/gateway`、`apps/studio`。
+- 不要提前创建 `packages/design-system`、`packages/ui`、`packages/gateway`、`packages/worker` 等未来包。
+- 不要绕过 env schema。
+- 不要让 provider secret 进入 client。
+- 不要让 package import app。
+- 不要修改 DB schema/migration，除非用户明确要求。
 
-- 当前用户 prompt 优先于仓库历史 Prompt。
-- 当前版本 Scope Freeze 优先于历史版本文档。
-- `AGENTS.md` 和 nearest `AGENTS.md` 优先于本文件。
-- `docs/INDEX.md` 优先于本文件。
-- 本文件不能覆盖当前版本 `DOCUMENT_INPUTS.md`。
-- 如果文档冲突，写入或报告当前版本 `OPEN_QUESTIONS.md`，不要猜。
-
-## 3. Scope 边界
-
-- 本文件不定义 v0.4 或任何未来版本 scope。
-- 当前版本 scope 只能由 `docs/product/v0.x/SCOPE_FREEZE.md` 定义。
-- 旧 Prompt、旧 Implementation Plan、旧 Scope Freeze、旧 task list 和旧 Validation Report 不能作为当前需求。
-- 历史版本 gate 只能作为 regression guardrail，不能定义当前 scope。
-
-## 4. 永久工程边界摘要
-
-- `apps/web` 是当前完整 SaaS 单体应用。
-- `packages/*` 是跨 app 共享领域包；package 不允许 import app。
-- `packages/db/src` 拥有真实 Drizzle schema 和 migration。
-- `apps/web/src/db/*` 只是兼容 shim。
-- `packages/ai` 只放 AI contracts/types/adapters/runtime-types，不放 runtime、route、UI、DB query、schema、migration 或 provider SDK initialization。
-- `apps/web/src/ai` 负责 web app AI runtime wiring。
-- 当前 AI chat route 是 `POST /api/ai/chat`；不要创建 `/api/chat`。
-- `@repo/env` 管理 env schema；provider secret 和 embedding secret 必须 server-only。
-- Usage audit 不等于 credits charging；AI usage 不得直接调用 credits ledger。
-- 不要提前创建 future apps/packages，例如 worker、gateway、studio、design-system。
-
-## 5. 常用轻量验证
+## 常用验证
 
 ```bash
 pnpm check:env
 pnpm check:package-exports
 pnpm check:db-shims
+pnpm --filter @repo/web typecheck
+pnpm --filter @repo/web lint
 ```
-
-根据改动范围，再运行目标 workspace 的 typecheck、lint、content 或 build。

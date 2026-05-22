@@ -2,45 +2,82 @@
 
 # AeloKit
 
-AeloKit 是一个 OpenAI 风格的开源全栈工具包，用于构建可自托管、生产就绪的 AI 聊天和 Agent 工作空间。
+AeloKit 是一个 AI-native SaaS engineering foundation，用于构建生产就绪的 AI 工作空间、Agent-enabled SaaS 产品和可自托管 AI 平台。
 
-从样板代码到生产环境——快速交付你的 AI 工作空间。
+它不是普通 chatbot starter。AeloKit 将生产级 SaaS 底座与 AI 工作空间的第一层能力结合在一起：认证、计费、积分、内容、存储、应用界面、AI contracts、流式聊天、持久化、记忆、知识库、检索 metadata 和 usage audit foundation。
 
-## 价值主张
+## AeloKit 是什么？
 
-- **已连接好的产品基础。** 认证、仪表盘结构、计费、积分、邮件、存储、通知、数据分析、文档、配置、环境验证和部署规范都已组织为生产级基础。
-- **Agent 就绪的代码和 UI 组织。** 应用程序为可替换的模型访问、可组合的工具/函数调用、清晰的对话状态，以及未来的评估、可观测性、成本控制和权限边界而设计。
-- **平静的工作空间体验。** 默认界面注重留白、层级、可读的消息、引用、附件、会话管理和响应式布局，让用户专注于内容和操作。
+AeloKit 是一个 pnpm + Turborepo workspace，以 `apps/web` 中的 Next.js App Router 应用为中心，并通过 `packages/*` 提供可复用领域包。
 
-## 适用人群
+当前产品方向由 `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md` 定义：构建一个 AI-native SaaS engineering foundation，支持生产级 AI 工作空间、Agent-enabled 产品和未来可自托管平台层。
 
-- 构建商业 AI 聊天或 Agent 工作空间的创始人。
-- 想要可自托管的 SaaS 基础，但不想从零组装每个产品原语的开发者。
-- 为客户交付可复用 AI 工作空间的代理商和顾问。
-- 使用真实认证、计费、存储和运维界面原型化 Agent 工作流的内部平台团队。
+## 为什么选择 AeloKit？
 
-## 功能概览
+- 从真实 SaaS 底座开始，而不是从零连接 auth、dashboard、billing、credits、email、storage、analytics、docs、env validation 和 deployment conventions。
+- 让 AI UI、runtime wiring、contracts、persistence、DB schema、provider secrets 和 credits ownership 留在清晰模块中。
+- 先跑通 AI workspace 闭环：流式响应、对话状态持久化、citation/tool status foundation 和 usage audit，再扩展更重的 Agent platform 能力。
 
-- Next.js Web 应用，包含本地化营销页面、认证页面、仪表盘、设置、定价、文档、博客、更新日志、路线图和法律页面。
-- Better Auth 集成，支持凭证登录和社交登录。
-- Drizzle + PostgreSQL 数据库包，带有应用层兼容 shim。
-- 支付、订阅、终身计划、积分包和交易原语。
-- 事务邮件、邮件订阅、通知、存储和数据分析包。
-- 类型化的网站配置和共享环境验证。
-- Fumadocs 驱动的文档和 MDX 内容管道。
-- 基于现有应用组件系统构建的响应式 UI。
+## 当前能力
+
+- `apps/web` 中的 Next.js App Router web app。
+- `apps/web` 内置 SaaS marketing、docs、dashboard、settings、admin、pricing、auth、payment、knowledge 和 chat surfaces。
+- Better Auth 集成。
+- `@repo/db` 中的 Drizzle + PostgreSQL 数据库包。
+- `@repo/payment` 中的 Stripe / Creem-ready payment package。
+- `@repo/credits` 中的 credits package 和 ledger primitives。
+- 通过 `@repo/env` 做 env validation。
+- Fumadocs content pipeline。
+- Storage、mail、newsletter、notification、analytics、i18n、config 和 shared utility packages。
+- `apps/web/src/components` 中的 app-local UI components，包括 shadcn/ui-style primitives。
+
+## AI 平台能力
+
+### 已实现基础
+
+- `@repo/ai` AI contracts package，覆盖 providers、models、agents、tools、skills、memory、knowledge、MCP、usage、permissions、errors、AI SDK adapters、Mastra adapters 和 runtime types。
+- `apps/web/src/components/ai` 中基于 assistant-ui 的 chat workspace components。
+- Vercel AI SDK streaming route：`POST /api/ai/chat`。
+- web app AI runtime layer 中的 OpenAI provider wiring。
+- 数据库层中的 AI thread、message、message part、tool call 和 usage audit persistence。
+- Tool call persistence foundation。
+- Mastra memory integration。
+- Manual knowledge source ingestion。
+- Embedding、vector retrieval 和 citation metadata foundation。
+- AI usage audit、cost event 和 credits billing foundation。
+- Admin usage audit surface。
+- 通过 env validation 保持 AI provider 和 embedding secrets server-side。
+
+### 进行中 / 未来方向
+
+以下是 PRD 中的产品方向，不代表当前代码库已经完整支持：
+
+- Full agent runtime。
+- Full MCP platform。
+- Public gateway。
+- 用于 background AI jobs、embedding、indexing、summaries、retries 和 long-running runs 的 worker。
+- 用于 agent、skill、workflow、prompt、tool 和 eval 配置的 studio。
+- 用于 logs、traces、evals、cost dashboards、model performance 和 workflow inspection 的 observability platform。
+- Full BYOK。
+- Multi-tenant enterprise org/workspace support。
+- Full eval system。
+- 当 app-local AI presentation components 稳定且 dependency-clean 后，再沉淀 shared design system package。
 
 ## 技术栈
 
 - Turborepo + pnpm workspace
 - Next.js App Router + React + TypeScript
-- Tailwind CSS + shadcn/ui 风格原语
+- Tailwind CSS + shadcn/ui-style primitives
 - PostgreSQL + Drizzle ORM
 - Better Auth
-- Stripe / Creem 就绪的支付包
-- Resend 就绪的邮件和订阅流程
-- S3 兼容的对象存储
-- Biome 用于代码检查和格式化
+- Vercel AI SDK
+- assistant-ui
+- Mastra
+- Stripe / Creem-ready payment package
+- Resend-ready mail and newsletter flows
+- S3-compatible object storage
+- Fumadocs MDX content
+- Biome for linting and formatting
 
 ## 快速开始
 
@@ -50,15 +87,15 @@ cp env.example .env
 pnpm dev
 ```
 
-从 Next.js 打印的本地 URL 打开 Web 应用。
+从 Next.js 打印的本地 URL 打开 web app。
 
 ## 环境变量
 
-`env.example` 是本仓库唯一完整的环境参考文件。将其复制为 `.env` 用于本地开发，并为你启用的提供商填写真实值。
+`env.example` 是本仓库唯一完整的环境变量参考文件。复制为 `.env` 用于本地开发，并为你启用的 providers 填写真实值。
 
-不要提交密钥。应用代码应通过 `@repo/env/server` 或 `@repo/env/client` 读取业务环境变量，而非临时性的 `process.env` 访问。
+不要提交 secrets。应用代码应通过 `@repo/env/server` 或 `@repo/env/client` 读取业务环境变量，不要临时直接访问 `process.env`。
 
-有用的验证命令：
+常用验证命令：
 
 ```bash
 pnpm check:env
@@ -73,61 +110,100 @@ pnpm build
 pnpm lint
 pnpm typecheck
 
-# Web 应用
+# Web app
 pnpm --filter @repo/web dev
 pnpm --filter @repo/web build
 pnpm --filter @repo/web content
 pnpm --filter @repo/web lint
 pnpm --filter @repo/web typecheck
 
-# 数据库包
+# Database package
 pnpm --filter @repo/db db:generate
 pnpm --filter @repo/db db:migrate
 pnpm --filter @repo/db db:studio
 ```
 
-在目标环境和凭证明确之前，不要对共享数据库运行数据库迁移。
+在目标环境和凭证明确之前，不要对共享数据库运行 database migrations。
 
 ## Workspace 结构
 
 ```text
 apps/
-  web/              # 完整的 SaaS 应用
+  web/
+
 packages/
-  config/           # 共享的 SaaS 配置和类型
-  env/              # 共享的环境验证
-  i18n/             # 国际化路由和消息
-  db/               # Drizzle 数据库层
-  auth/             # 认证核心
-  payment/          # 支付领域包
-  credits/          # 积分领域包
-  mail/             # 事务邮件包
-  newsletter/       # 邮件订阅包
-  notification/     # 通知包
-  storage/          # 对象存储包
-  analytics/        # 数据分析包
-  shared/           # 共享的纯工具函数、常量和类型
+  ai/
+  analytics/
+  auth/
+  config/
+  credits/
+  db/
+  env/
+  i18n/
+  mail/
+  newsletter/
+  notification/
+  payment/
+  shared/
+  storage/
 ```
 
-当前 UI 位于 `apps/web/src/components/`。目前没有 `packages/ui`，后期增加。
+当前 UI 位于 `apps/web/src/components/`。目前没有 `packages/ui` 或 `packages/design-system`。
+
+## 重要边界
+
+- `apps/web` 是当前完整 SaaS app。不要在用户确认任务打开 scope 前拆分 future apps。
+- `packages/*` 拥有可复用领域逻辑，不得 import app code。
+- Drizzle schema 和真实 migrations 归 `packages/db/src` 所有。
+- `apps/web/src/db/*` 是 compatibility shim 区域。
+- `@repo/ai` 拥有 contracts、types、adapters 和 runtime type definitions；不拥有 route handlers、React UI、DB queries、schema、migrations、provider SDK initialization 或 live runtime execution。
+- `apps/web/src/ai` 拥有 web app AI runtime wiring。
+- AI chat route 是 `POST /api/ai/chat`；不要创建 generic `/api/chat` route。
+- Provider 和 embedding secrets 必须保持 server-side。
+- AI usage audit 与 credits ledger mutation 分离。
+
+## 验证命令
+
+```bash
+pnpm check:env
+pnpm check:package-exports
+pnpm check:db-shims
+pnpm --filter @repo/web typecheck
+pnpm --filter @repo/web lint
+pnpm --filter @repo/db typecheck
+pnpm --filter @repo/ai typecheck
+```
+
+除非任务明确要求完整验证，否则只运行与本次改动相关的检查。
 
 ## 部署
 
-推荐的托管部署目标是 Vercel，以 `apps/web` 为根目录。
+推荐的托管部署目标是 Vercel，以 `apps/web` 为 root directory。
 
 - Root Directory: `apps/web`
 - Install Command: `pnpm install --frozen-lockfile`
 - Build Command: `pnpm build`
 - Output: Next.js default
 
-Docker 构建从 monorepo 根目录运行：
+Docker builds 从 monorepo root 运行：
 
 ```bash
 docker build -t aelokit .
 ```
 
-在生产部署提供商中设置生产密钥，不要放在仓库中。
+在部署提供商中设置生产 secrets，不要放在仓库里。
 
-## 许可证和商业使用
+## 文档
 
-本仓库目前使用 MIT 许可证。在分发商业产品或托管衍生作品之前，请查阅 [LICENSE](LICENSE)，如果你的分发模式发生变化，请用你的最终产品许可条款替换本节。
+产品北极星位于：
+
+- `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`
+
+工程规则位于：
+
+- `AGENTS.md`
+- `CLAUDE.md`
+
+## License
+
+本仓库目前使用 MIT License。在分发商业产品或托管衍生作品前，请阅读 [LICENSE](LICENSE)，如果分发模式发生变化，请用最终产品许可条款替换本节。
