@@ -10,9 +10,10 @@
 - v0.2: AI chat foundation / historical
 - v0.3: Mastra memory + knowledge / accepted with notes
 - v0.4: AI stack / runtime boundary hardening / historical with accepted notes
-- v0.5: Usage / Credits / Admin Audit / current implementation
+- v0.5: Usage / Credits / Admin Audit / previous implementation
+- v0.6: Worker / Gateway / Studio Split Evaluation / current planning
 
-当前 v0.5 文档入口位于 `docs/product/v0.5/`。v0.4 embedding blocker 是已知环境问题，不阻塞 v0.5。
+当前 v0.6 文档入口位于 `docs/product/v0.6/`。v0.6 只做 app split evaluation，不创建新 app，不移动现有 `apps/web` 路由。
 
 ## 3. Authoritative Reading Order
 
@@ -38,9 +39,17 @@
 
 ## 4. Active Documents
 
-当前仍有效、可作为 v0.5 implementation / validation 输入的文档：
+当前仍有效、可作为 v0.6 planning 和 v0.5 validation context 输入的文档：
 
 - `docs/INDEX.md`
+- `docs/product/v0.6/SCOPE_FREEZE.md`
+- `docs/product/v0.6/SPLIT_EVALUATION.md`
+- `docs/product/v0.6/APP_DECISION_MATRIX.md`
+- `docs/product/v0.6/ROUTE_OWNERSHIP_MAP.md`
+- `docs/product/v0.6/DEPENDENCY_PLAN.md`
+- `docs/product/v0.6/IMPLEMENTATION_PLAN.md`
+- `docs/product/v0.6/ACCEPTANCE_CRITERIA.md`
+- `docs/product/v0.6/CODEX_PROMPT.md`
 - `docs/product/v0.5/SCOPE_FREEZE.md`
 - `docs/product/v0.5/ACCEPTANCE_CRITERIA.md`
 - `docs/product/v0.5/IMPLEMENTATION_PLAN.md`
@@ -186,3 +195,20 @@ Audit。当前依据是：
 - `docs/product/v0.5/VALIDATION_REPORT.md`
 
 v0.4 embedding blocker 是当前环境问题，不作为 v0.5 failure。
+
+## 11. v0.6 Planning Gate
+
+v0.6 当前只做 Worker / Gateway / Studio Split Evaluation。当前依据是：
+
+- `docs/product/v0.6/SCOPE_FREEZE.md`
+- `docs/product/v0.6/SPLIT_EVALUATION.md`
+- `docs/product/v0.6/APP_DECISION_MATRIX.md`
+- `docs/product/v0.6/ROUTE_OWNERSHIP_MAP.md`
+- `docs/product/v0.6/DEPENDENCY_PLAN.md`
+- `docs/product/v0.6/IMPLEMENTATION_PLAN.md`
+- `docs/product/v0.6/ACCEPTANCE_CRITERIA.md`
+- `docs/product/v0.6/CODEX_PROMPT.md`
+
+v0.6 默认不创建 `apps/worker`, `apps/gateway`, `apps/admin`,
+`apps/studio`, `apps/landing`, `apps/docs`, 或 `apps/observability`。
+任何 future app creation 都需要用户二次确认。
