@@ -5,7 +5,7 @@ import {
   AssistantChatTransport,
   useChatRuntime,
 } from '@assistant-ui/react-ai-sdk';
-import type { UIMessage } from 'ai';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
   useCallback,
@@ -15,9 +15,17 @@ import {
   useRef,
   useState,
 } from 'react';
+import {
+  getUserChatThreadStateAction,
+  getUserChatThreadsAction,
+} from '@/actions/chat-threads';
 import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
-import type { CitationMetadata } from './CitationList';
+import type {
+  ChatThreadSummary,
+  ChatUIMessage,
+  CitationMetadata,
+} from './types';
 
 const API_URL = '/api/ai/chat';
 
@@ -29,23 +37,16 @@ const AVAILABLE_MODELS = [
   { id: 'gpt-4o', name: 'GPT-4o' },
 ];
 
-type ChatMessageMetadata = {
-  readonly threadId?: string;
-  readonly messageId?: string;
-  readonly providerId?: string;
-  readonly modelId?: string;
-  readonly totalTokens?: number;
-  readonly inputTokens?: number;
-  readonly outputTokens?: number;
-  readonly citations?: readonly CitationMetadata[];
-  readonly knowledgeEnabled?: boolean;
-};
-
-type AeloKitUIMessage = UIMessage<ChatMessageMetadata>;
-
 interface ChatError extends Error {
   code?: string;
   metadata?: Record<string, unknown>;
+}
+
+interface ChatProviderProps {
+  readonly children: React.ReactNode;
+  readonly initialThreads?: readonly ChatThreadSummary[];
+  readonly initialThreadId?: string;
+  readonly initialMessages?: readonly ChatUIMessage[];
 }
 
 interface ChatContextType {
@@ -62,12 +63,51 @@ interface ChatContextType {
   knowledgeEnabled: boolean;
   setKnowledgeEnabled: (enabled: boolean) => void;
   lastKnowledgeActive: boolean;
+  threads: readonly ChatThreadSummary[];
+  isThreadListLoading: boolean;
+  isThreadLoading: boolean;
+  startNewThread: () => void;
+  openThread: (threadId: string) => Promise<void>;
+  refreshThreads: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
 const MEMORY_ENABLED_KEY = 'aelokit-memory-enabled';
 const KNOWLEDGE_ENABLED_KEY = 'aelokit-knowledge-enabled';
+
+function getThreadInsights(messages: readonly ChatUIMessage[]): {
+  readonly citations: readonly CitationMetadata[];
+  readonly knowledgeActive: boolean;
+} {
+  const lastAssistantMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === 'assistant');
+
+  const citations = Array.isArray(lastAssistantMessage?.metadata?.citations)
+    ? lastAssistantMessage.metadata.citations
+    : [];
+
+  return {
+    citations,
+    knowledgeActive: lastAssistantMessage?.metadata?.knowledgeEnabled === true,
+  };
+}
+
+function upsertThreadSummary(
+  threads: readonly ChatThreadSummary[],
+  thread: ChatThreadSummary
+): readonly ChatThreadSummary[] {
+  const nextThreads = [
+    thread,
+    ...threads.filter((candidate) => candidate.id !== thread.id),
+  ];
+
+  return nextThreads.sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  );
+}
 
 export function useChatContext() {
   const context = useContext(ChatContext);
@@ -77,14 +117,21 @@ export function useChatContext() {
   return context;
 }
 
-export function ChatProvider({ children }: { children: React.ReactNode }) {
+export function ChatProvider({
+  children,
+  initialThreads = [],
+  initialThreadId,
+  initialMessages = [],
+}: ChatProviderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [error, setError] = useState<Error | null>(null);
   const [errorType, setErrorType] = useState<ChatErrorType>('unknown');
   const [errorMetadata, setErrorMetadata] = useState<Record<string, unknown>>(
     {}
   );
   const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
-  const [threadId, setThreadId] = useState<string | undefined>();
+  const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
   const [memoryEnabled, setMemoryEnabledState] = useState<boolean>(false);
   const [lastCitations, setLastCitations] = useState<
     readonly CitationMetadata[]
@@ -92,10 +139,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [knowledgeEnabled, setKnowledgeEnabled] = useState<boolean>(false);
   const [lastKnowledgeActive, setLastKnowledgeActive] =
     useState<boolean>(false);
-  const threadIdRef = useRef<string | undefined>(undefined);
+  const [threads, setThreads] =
+    useState<readonly ChatThreadSummary[]>(initialThreads);
+  const [isThreadListLoading, setIsThreadListLoading] = useState(false);
+  const [isThreadLoading, setIsThreadLoading] = useState(false);
+  const threadIdRef = useRef<string | undefined>(initialThreadId);
   const selectedModelIdRef = useRef(selectedModelId);
   const memoryEnabledRef = useRef(memoryEnabled);
   const knowledgeEnabledRef = useRef(knowledgeEnabled);
+  const hydratedInitialThreadRef = useRef(false);
+
+  const syncThreadUrl = useCallback(
+    (nextThreadId?: string) => {
+      const params = new URLSearchParams(window.location.search);
+
+      if (nextThreadId) {
+        params.set('thread', nextThreadId);
+      } else {
+        params.delete('thread');
+      }
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router]
+  );
 
   useEffect(() => {
     try {
@@ -147,7 +217,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const transport = useMemo(
     () =>
-      new AssistantChatTransport<AeloKitUIMessage>({
+      new AssistantChatTransport<ChatUIMessage>({
         api: API_URL,
         prepareSendMessagesRequest: ({ messages, body }) => ({
           body: {
@@ -163,12 +233,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const runtime = useChatRuntime<AeloKitUIMessage>({
+  const refreshThreads = useCallback(async () => {
+    setIsThreadListLoading(true);
+
+    try {
+      const result = await getUserChatThreadsAction();
+
+      if (result.data?.success) {
+        setThreads(result.data.data);
+        return;
+      }
+
+      const message =
+        result.data?.error?.message ?? 'Failed to load chat threads.';
+      setError(new Error(message));
+      setErrorType('unknown');
+      setErrorMetadata({});
+    } catch (refreshError) {
+      const message =
+        refreshError instanceof Error
+          ? refreshError.message
+          : 'Failed to load chat threads.';
+      setError(new Error(message));
+      setErrorType('unknown');
+      setErrorMetadata({});
+    } finally {
+      setIsThreadListLoading(false);
+    }
+  }, []);
+
+  const runtime = useChatRuntime<ChatUIMessage>({
     transport,
     onFinish: ({ message }) => {
       const responseThreadId = message.metadata?.threadId;
       if (responseThreadId) {
         setThreadId(responseThreadId);
+        threadIdRef.current = responseThreadId;
+        syncThreadUrl(responseThreadId);
+        void refreshThreads();
       }
 
       const citations = message.metadata?.citations;
@@ -189,6 +291,87 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  const startNewThread = useCallback(() => {
+    clearError();
+    setThreadId(undefined);
+    threadIdRef.current = undefined;
+    runtime.thread.reset();
+    void runtime.thread.composer.reset();
+    setLastCitations([]);
+    setLastKnowledgeActive(false);
+    syncThreadUrl(undefined);
+  }, [clearError, runtime, syncThreadUrl]);
+
+  const openThread = useCallback(
+    async (nextThreadId: string) => {
+      if (!nextThreadId || nextThreadId === threadIdRef.current) {
+        return;
+      }
+
+      setIsThreadLoading(true);
+      clearError();
+
+      try {
+        const result = await getUserChatThreadStateAction({
+          threadId: nextThreadId,
+        });
+
+        if (!result.data?.success) {
+          throw new Error(
+            result.data?.error?.message ?? 'Failed to load chat thread.'
+          );
+        }
+
+        const threadState = result.data.data;
+        setThreadId(threadState.thread.id);
+        threadIdRef.current = threadState.thread.id;
+        setThreads((currentThreads) =>
+          upsertThreadSummary(currentThreads, threadState.thread)
+        );
+        runtime.thread.reset();
+        void runtime.thread.composer.reset();
+        runtime.thread.importExternalState(threadState.messages);
+
+        const insights = getThreadInsights(threadState.messages);
+        setLastCitations(insights.citations);
+        setLastKnowledgeActive(insights.knowledgeActive);
+        syncThreadUrl(threadState.thread.id);
+      } catch (loadError) {
+        const message =
+          loadError instanceof Error
+            ? loadError.message
+            : 'Failed to load chat thread.';
+        setError(new Error(message));
+        setErrorType('unknown');
+        setErrorMetadata({});
+      } finally {
+        setIsThreadLoading(false);
+      }
+    },
+    [clearError, runtime, syncThreadUrl]
+  );
+
+  useEffect(() => {
+    if (hydratedInitialThreadRef.current) {
+      return;
+    }
+
+    hydratedInitialThreadRef.current = true;
+
+    if (initialThreadId) {
+      runtime.thread.reset();
+      void runtime.thread.composer.reset();
+      runtime.thread.importExternalState(initialMessages);
+      const insights = getThreadInsights(initialMessages);
+      setLastCitations(insights.citations);
+      setLastKnowledgeActive(insights.knowledgeActive);
+      return;
+    }
+
+    runtime.thread.reset();
+    void runtime.thread.composer.reset();
+  }, [initialMessages, initialThreadId, runtime]);
+
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <ChatContext.Provider
@@ -206,6 +389,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           knowledgeEnabled,
           setKnowledgeEnabled: setKnowledgeEnabledPreference,
           lastKnowledgeActive,
+          threads,
+          isThreadListLoading,
+          isThreadLoading,
+          startNewThread,
+          openThread,
+          refreshThreads,
         }}
       >
         {children}

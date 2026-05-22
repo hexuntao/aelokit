@@ -2,16 +2,7 @@
 
 import { FileText, ExternalLink, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-export interface CitationMetadata {
-  readonly sourceId: string;
-  readonly title: string;
-  readonly documentId: string;
-  readonly chunkId: string;
-  readonly provenance: string;
-  readonly score: number;
-  readonly provider: string;
-}
+import type { CitationMetadata } from './types';
 
 interface CitationItemProps {
   citation: CitationMetadata;
