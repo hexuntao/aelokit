@@ -69,8 +69,6 @@ export const serverEnv = createEnv({
     // AI Embedding Provider (for Knowledge/RAG)
     AI_EMBEDDING_PROVIDER: optionalString.default('openai'),
     AI_EMBEDDING_MODEL: optionalString.default('text-embedding-3-small'),
-    AI_EMBEDDING_BASE_URL: optionalUrl,
-    AI_EMBEDDING_API_KEY: optionalString,
 
     // Web Content Analyzer (Firecrawl)
     FIRECRAWL_API_KEY: optionalString,

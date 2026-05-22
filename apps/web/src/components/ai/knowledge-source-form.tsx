@@ -108,7 +108,6 @@ export function KnowledgeSourceForm() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Embedding provider is not configured. Please set{' '}
-              <code className="text-xs">AI_EMBEDDING_API_KEY</code> or{' '}
               <code className="text-xs">OPENAI_API_KEY</code> environment
               variable.
             </AlertDescription>

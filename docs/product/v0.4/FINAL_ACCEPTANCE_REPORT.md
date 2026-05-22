@@ -234,9 +234,9 @@ T03 was skipped because T02 found no mandatory runtime hardening patch.
 - Embedding provider compatibility: the configured endpoint rejected the AI SDK
   embedding request with `Unsupported parameter: encoding_format`, and the
   fallback request without `encoding_format` returned no `data[].embedding`.
-- Effective embedding config falls back from missing `AI_EMBEDDING_BASE_URL` to
-  `OPENAI_BASE_URL`; the effective host is `api-xai.ainaibahub.com`, not
-  official `api.openai.com`.
+- Effective embedding config uses `OPENAI_BASE_URL`; the effective host at the
+  time of the blocker retry was `api-xai.ainaibahub.com`, not official
+  `api.openai.com`.
 - Current DB has no ready indexed knowledge source, no knowledge chunks, and no
   PgVector storage object for `aelokit_knowledge_embeddings`.
 - Controlled retrieval cannot be marked PASS without fixing provider/config and
@@ -263,3 +263,26 @@ explicitly.
 Not safe to proceed to v0.5 implementation that depends on knowledge/vector
 runtime until embedding provider compatibility is fixed and authenticated
 knowledge citation + controlled retrieval smoke is rerun successfully.
+
+## 12. Embedding Config Unification Follow-up
+
+日期：2026-05-22
+
+Status: PARTIAL/BLOCKED.
+
+The T07/T08 blocker follow-up now assumes the current `OPENAI_API_KEY` and
+`OPENAI_BASE_URL` support embeddings. AeloKit no longer maintains a separate
+embedding key/base URL pair for Knowledge/RAG. `AI_EMBEDDING_MODEL` remains the
+only embedding-specific env selector.
+
+Static checks passed after the config unification, and an authenticated Chrome
+session reached `/knowledge` as `admin` / `admin@gmail.com`. The controlled
+source was created through the existing app runtime, but ingestion still failed
+before chunk/vector creation because the current endpoint returned a
+non-embeddings payload with no `data[].embedding`.
+
+Updated final status: PARTIAL.
+
+Reason: config fork removal is complete, but controlled retrieval still did not
+complete chunk -> embedding -> vector upsert -> retrieval -> citation. v0.4
+cannot move to PASS without real citation/retrieval evidence.

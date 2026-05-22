@@ -211,8 +211,8 @@
   - `pnpm --filter @repo/web typecheck`
   - `pnpm --filter @repo/web lint`
 - result:
-  - The effective embedding host is `api-xai.ainaibahub.com` because
-    `AI_EMBEDDING_BASE_URL` is unset and the app falls back to `OPENAI_BASE_URL`.
+  - The effective embedding host is `api-xai.ainaibahub.com` through
+    `OPENAI_BASE_URL`.
   - The AI SDK OpenAI embedding request fails with `AI_APICallError` status
     `400`; sanitized `responseBody` contains `encoding_format`.
   - `apps/web/src/ai/knowledge/embedding.ts` now falls back to a server-side
@@ -235,6 +235,61 @@
     chunk -> embedding -> vector upsert -> retrieval -> citation.
   - v0.4 remains PARTIAL; do not proceed to v0.5 implementation that depends on
     knowledge/vector runtime.
-- next task decision: provide a real embeddings endpoint/key via
-  `AI_EMBEDDING_BASE_URL` / `AI_EMBEDDING_API_KEY`, or provide the current host's
-  true embeddings API contract for a separate adapter task; then rerun T07/T08.
+- next task decision: make `OPENAI_API_KEY` / `OPENAI_BASE_URL` point to a real
+  OpenAI-compatible embeddings endpoint, or provide the current host's true
+  embeddings API contract for a separate adapter task; then rerun T07/T08.
+
+## V0.4-T07/T08 Embedding Config Unification
+
+- status: PARTIAL/BLOCKED
+- changed files:
+  - `packages/env/src/server.ts`
+  - `apps/web/src/ai/knowledge/config.ts`
+  - `apps/web/src/actions/knowledge.ts`
+  - `apps/web/src/ai/knowledge/embedding.ts`
+  - `apps/web/src/ai/knowledge/ingestion.ts`
+  - `apps/web/src/ai/knowledge/retrieval.ts`
+  - `apps/web/src/components/ai/knowledge-source-form.tsx`
+  - `env.example`
+  - `docs/product/v0.4/SMOKE_AND_VECTOR_VERIFICATION_PLAN.md`
+  - `docs/product/v0.4/VALIDATION_REPORT.md`
+  - `docs/product/v0.4/FINAL_ACCEPTANCE_REPORT.md`
+  - `docs/product/v0.4/OPEN_QUESTIONS.md`
+  - `docs/product/v0.4/PROGRESS_LOG.md`
+- validation commands:
+  - `pnpm check:env`
+  - `pnpm check:package-exports`
+  - `pnpm check:db-shims`
+  - `pnpm --filter @repo/web typecheck`
+  - `pnpm --filter @repo/ai typecheck`
+  - `pnpm --filter @repo/db typecheck`
+  - `pnpm lint`
+  - `git diff --check`
+  - authenticated Chrome session at `/knowledge`
+  - controlled source ingestion through existing app runtime
+  - read-only DB/vector checks after retry
+- result:
+  - Separate embedding key/base URL env names were removed from the env schema
+    and example.
+  - Knowledge/RAG embedding runtime now uses `OPENAI_API_KEY` and
+    `OPENAI_BASE_URL` directly.
+  - `AI_EMBEDDING_MODEL` remains the model selector.
+  - Runtime/user-facing error messages now direct operators to
+    `OPENAI_API_KEY`.
+  - Required static validation commands passed.
+  - Dev server started with `pnpm --filter @repo/web dev`.
+  - Authenticated Chrome session reached `/knowledge` as `admin` /
+    `admin@gmail.com`.
+  - Controlled source `cLeXMBE4Qzhu1rVG74786` and document
+    `EBlAkanhZ3tUwyZsLWl2g` were created through the existing app runtime.
+  - Controlled ingestion still failed before chunk/vector creation:
+    `Embedding provider returned 0 embeddings for 1 input values. Expected
+    OpenAI-compatible embeddings response with data[].embedding.`
+  - Read-only DB checks showed `vector` extension version `0.8.2`,
+    controlled `sources=1`, `documents=1`, `chunks=0`, `vectorIds=0`,
+    `ready_sources=0`, and no embedding storage table matching `%embedding%`.
+  - T07 remains PARTIAL because authenticated knowledge citation smoke has no
+    live citation evidence.
+  - T08 remains PARTIAL because controlled retrieval did not complete
+    chunk -> embedding -> vector upsert -> retrieval -> citation.
+  - v0.4 remains PARTIAL.

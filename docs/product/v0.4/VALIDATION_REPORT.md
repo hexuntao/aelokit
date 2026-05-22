@@ -94,8 +94,7 @@ Passed evidence:
   - `knowledge_document`: 1.
   - `knowledge_chunk`: 0.
   - `knowledge_chunk.vector_id not null`: 0.
-- Effective embedding key is present through `AI_EMBEDDING_API_KEY` or
-  `OPENAI_API_KEY`.
+- Effective embedding key is present through `OPENAI_API_KEY`.
 
 Partial / blocked evidence:
 
@@ -151,8 +150,7 @@ Code change:
 
 Provider/config evidence:
 
-- `AI_EMBEDDING_BASE_URL` is not set in the local environment.
-- Effective embedding base URL falls back to `OPENAI_BASE_URL`.
+- Effective embedding base URL uses `OPENAI_BASE_URL`.
 - Effective embedding host is non-official OpenAI:
   `api-xai.ainaibahub.com`.
 - The AI SDK OpenAI embedding request failed with `AI_APICallError`,
@@ -202,6 +200,84 @@ Conclusion:
   upsert -> retrieval -> citation.
 - Knowledge-enabled citation smoke cannot be marked PASS.
 - DB/vector controlled retrieval cannot be marked PASS.
+- Overall T07 remains PARTIAL.
+- Overall T08 remains PARTIAL.
+- v0.4 remains PARTIAL.
+
+## T07/T08 Config Unification Retry
+
+日期：2026-05-22
+
+Status: PARTIAL/BLOCKED.
+
+Code/config change:
+
+- `packages/env/src/server.ts` removed the separate embedding key/base URL env
+  names.
+- `apps/web/src/ai/knowledge/config.ts` now resolves embeddings directly from
+  `OPENAI_API_KEY` and `OPENAI_BASE_URL`.
+- `AI_EMBEDDING_MODEL` remains the embedding model selector.
+- No `.env`, secret, dependency, `package.json`, lockfile, DB schema, migration,
+  or CI/CD file was changed.
+
+Updated assumption:
+
+- The current `OPENAI_API_KEY` / `OPENAI_BASE_URL` pair is expected to support
+  OpenAI-compatible `/v1/embeddings`.
+
+Static validation:
+
+- `pnpm check:env`: PASS.
+- `pnpm check:package-exports`: PASS.
+- `pnpm check:db-shims`: PASS.
+- `pnpm --filter @repo/web typecheck`: PASS.
+- `pnpm --filter @repo/ai typecheck`: PASS.
+- `pnpm --filter @repo/db typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `git diff --check`: PASS.
+
+Authenticated/browser evidence:
+
+- Dev server started with `pnpm --filter @repo/web dev`.
+- Chrome authenticated session reached `/knowledge`.
+- Authenticated user visible in UI: `admin` / `admin@gmail.com`.
+- Knowledge form unlocked after configuration check, confirming the app runtime
+  sees embedding config as present.
+
+Controlled ingestion evidence:
+
+- Controlled source title:
+  `v0.4 embedding unified smoke 2026-05-22`.
+- Controlled source id: `cLeXMBE4Qzhu1rVG74786`.
+- Controlled document id: `EBlAkanhZ3tUwyZsLWl2g`.
+- Result: `status=failed`, `chunkCount=0`, `vectorCount=0`.
+- Sanitized failure:
+  `Embedding provider returned 0 embeddings for 1 input values. Expected
+  OpenAI-compatible embeddings response with data[].embedding. Response keys:
+  background, completed_at, created_at, error, frequency_penalty, id,
+  incomplete_details, instructions.`
+
+Read-only DB/vector evidence after retry:
+
+- `vector` extension exists: version `0.8.2`.
+- Controlled source rows: `1`.
+- Controlled document rows: `1`.
+- Controlled chunk rows: `0`.
+- Controlled vector ids: `0`.
+- Ready sources: `0`.
+- Ready source chunk count: `0`.
+- Ready source vector count: `0`.
+- App-created embedding tables matching `%embedding%`: `0`.
+
+Conclusion:
+
+- Config fork removal is complete.
+- The current `OPENAI_API_KEY` / `OPENAI_BASE_URL` path is still not returning
+  an OpenAI-compatible embeddings payload in this environment.
+- Controlled retrieval did not complete chunk -> embedding -> vector upsert ->
+  retrieval -> citation.
+- Authenticated knowledge citation smoke cannot be marked PASS because ingestion
+  failed before retrievable vectors and citations existed.
 - Overall T07 remains PARTIAL.
 - Overall T08 remains PARTIAL.
 - v0.4 remains PARTIAL.

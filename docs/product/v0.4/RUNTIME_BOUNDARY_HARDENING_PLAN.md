@@ -62,7 +62,7 @@ Required state:
 Checks:
 
 ```bash
-rg -n "OPENAI_API_KEY|AI_EMBEDDING_API_KEY|AI_GATEWAY_API_KEY|process.env" apps/web/src/components apps/web/src/app -g '*.tsx' -g '*.ts'
+rg -n "OPENAI_API_KEY|AI_GATEWAY_API_KEY|process.env" apps/web/src/components apps/web/src/app -g '*.tsx' -g '*.ts'
 rg -n "NEXT_PUBLIC_.*KEY|NEXT_PUBLIC_.*SECRET" packages/env/src env.example
 ```
 

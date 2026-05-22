@@ -19,7 +19,7 @@ Runtime smoke 需要：
 - 可用 AI provider key，例如 `OPENAI_API_KEY` 或 configured provider。
 - `DATABASE_URL` 指向可用 PostgreSQL。
 - PostgreSQL 已启用 `vector` extension。
-- Knowledge retrieval 需要 `AI_EMBEDDING_API_KEY` 或 `OPENAI_API_KEY`。
+- Knowledge retrieval uses `OPENAI_API_KEY` and `OPENAI_BASE_URL`; the relay endpoint must support OpenAI-compatible `/v1/embeddings`.
 - 测试环境允许创建 controlled test thread/message/knowledge source。
 
 不得在报告中打印 secret 值。
@@ -201,15 +201,13 @@ Readiness evidence:
   is absent, and no `NEXT_PUBLIC_` prefix violation was found.
 - `packages/env/src/server.ts` defines required server env names:
   `DATABASE_URL`, `BETTER_AUTH_SECRET`, `OPENAI_API_KEY`,
-  `AI_EMBEDDING_PROVIDER`, `AI_EMBEDDING_MODEL`,
-  `AI_EMBEDDING_BASE_URL`, and `AI_EMBEDDING_API_KEY`.
+  `OPENAI_BASE_URL`, `AI_EMBEDDING_PROVIDER`, and
+  `AI_EMBEDDING_MODEL`.
 - `env.example` documents the same runtime smoke / embedding env names.
 - Local env presence check after loading root `.env`:
   - `DATABASE_URL`: present.
   - `BETTER_AUTH_SECRET`: present.
   - `OPENAI_API_KEY`: present.
-  - `AI_EMBEDDING_API_KEY`: missing, but effective embedding key is present via
-    `OPENAI_API_KEY` fallback.
   - `AI_EMBEDDING_PROVIDER`: missing, defaulted by schema to `openai`.
   - `AI_EMBEDDING_MODEL`: missing, defaulted by schema to
     `text-embedding-3-small`.
@@ -225,3 +223,16 @@ Execution notes for next tasks:
 - T08 may run read-only DB/vector checks against `DATABASE_URL`.
 - T08 must not enable pgvector, run migrations, seed data, or mutate DB without
   explicit user confirmation.
+
+## 11. V0.4-T07/T08 Embedding Config Unification
+
+日期：2026-05-22
+
+Updated assumption:
+
+- Knowledge/RAG embeddings no longer use separate embedding key/base URL env
+  names.
+- Effective embedding key is `OPENAI_API_KEY`.
+- Effective embedding base URL is `OPENAI_BASE_URL`.
+- `AI_EMBEDDING_MODEL` remains the only embedding-specific selector.
+- The configured relay must support OpenAI-compatible `/v1/embeddings`.

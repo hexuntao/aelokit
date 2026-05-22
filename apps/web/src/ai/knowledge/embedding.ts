@@ -67,7 +67,7 @@ async function generateEmbeddingsWithoutEncodingFormat(
   if (!config.embeddingApiKey) {
     throw new Error(
       'Embedding provider is not configured. ' +
-        'Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.'
+        'Set OPENAI_API_KEY environment variable.'
     );
   }
 
@@ -119,7 +119,7 @@ export function createEmbeddingModel() {
   if (!config.embeddingApiKey) {
     throw new Error(
       'Embedding provider is not configured. ' +
-        'Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.'
+        'Set OPENAI_API_KEY environment variable.'
     );
   }
 

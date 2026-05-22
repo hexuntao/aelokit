@@ -314,9 +314,8 @@ embedding vector；继续把 Responses API payload 当成 embedding 会伪造 DB
 
 ### Options
 
-- A. 不继续适配当前 host；要求配置真正可用的 embeddings endpoint/key，例如设置
-  `AI_EMBEDDING_BASE_URL` / `AI_EMBEDDING_API_KEY` 指向兼容
-  `POST /embeddings` 且返回 `data[].embedding` 的 endpoint。
+- A. 不继续适配当前 host；要求当前 `OPENAI_BASE_URL` / `OPENAI_API_KEY`
+  指向兼容 `POST /v1/embeddings` 且返回 `data[].embedding` 的 endpoint。
 - B. 新增一个明确的 provider adapter，但必须先确认该 host 的真实 embeddings
   API 路径、请求体和响应体契约。
 - C. 使用当前 chat/text generation endpoint 的 Responses output 伪造 embedding。
@@ -330,8 +329,7 @@ embedding。
 
 本次 retry 已证明：
 
-- `AI_EMBEDDING_BASE_URL` 未设置，effective embedding base fallback 到
-  `OPENAI_BASE_URL`。
+- Effective embedding base 使用 `OPENAI_BASE_URL`。
 - effective host 是 `api-xai.ainaibahub.com`，不是官方 `api.openai.com`。
 - AI SDK OpenAI embedding path 的 `encoding_format` 问题可以被捕获并 fallback。
 - fallback 请求不带 `encoding_format`，但 endpoint 仍返回 Responses API-shaped
@@ -341,10 +339,83 @@ embedding。
 - controlled source 写入已执行两次，但均停在 embedding 阶段，DB 中仍无
   knowledge chunk、vector id 或 app-created embedding storage table。
 
-因此 v0.4 不能从 PARTIAL 改为 PASS。下一步必须换成真实 embeddings endpoint/key，
+因此 v0.4 当时不能从 PARTIAL 改为 PASS。下一步必须确保当前
+`OPENAI_API_KEY` / `OPENAI_BASE_URL` 支持 OpenAI-compatible `/v1/embeddings`，
 或由人工提供该 host 的 embeddings API contract 后再做单独 adapter。
 
 ### Requires human confirmation
 
-ANSWERED_FOR_T07_T08_RETRY. 继续推进 PASS 前，需要人工提供可用 embeddings
-endpoint/key 或确认该 host 的真实 embeddings API contract。
+ANSWERED_FOR_T07_T08_RETRY. 继续推进 PASS 前，需要当前 `OPENAI_API_KEY` /
+`OPENAI_BASE_URL` 确认可用，或确认该 host 的真实 embeddings API contract。
+
+## Q012
+
+### Question
+
+T07/T08 blocker 是否继续维护独立的 embedding key/base URL 配置？
+
+### Why it matters
+
+继续保留独立 embedding key/base URL 会让 Knowledge/RAG 配置与 chat provider
+配置分叉，增加 relay 环境下的误配置风险。当前人工确认是
+`OPENAI_API_KEY` 所属中转站支持 embeddings。
+
+### Options
+
+- A. 删除独立 embedding key/base URL 配置，Knowledge/RAG embeddings 统一使用
+  `OPENAI_API_KEY` 和 `OPENAI_BASE_URL`，只保留 `AI_EMBEDDING_MODEL`。
+- B. 保留独立配置，以便 future provider split。
+
+### Final choice
+
+A。v0.4 统一 embedding 配置，不再要求或读取独立 embedding key/base URL。
+
+### Rationale
+
+v0.4 不扩大为多 provider embedding abstraction。当前目标是修复 T07/T08 blocker
+并避免配置分叉；`AI_EMBEDDING_MODEL` 足以表达本轮需要的 embedding model
+选择。
+
+### Requires human confirmation
+
+ANSWERED.
+
+## Q013
+
+### Question
+
+After unifying Knowledge/RAG embeddings onto `OPENAI_API_KEY` and
+`OPENAI_BASE_URL`, did the T07/T08 retry pass?
+
+### Why it matters
+
+The config fork has been removed, but v0.4 PASS still requires controlled
+retrieval evidence. Static validation alone cannot replace chunk -> embedding
+-> vector upsert -> retrieval -> citation.
+
+### Evidence
+
+- Authenticated Chrome session reached `/knowledge` as `admin` /
+  `admin@gmail.com`.
+- Controlled source `cLeXMBE4Qzhu1rVG74786` was created.
+- Controlled source status is `failed`.
+- Controlled `chunkCount=0` and `vectorCount=0`.
+- Failure says the provider returned 0 embeddings and no `data[].embedding`.
+- Read-only DB checks found `vector` extension version `0.8.2`, but no ready
+  sources, no controlled chunks, no controlled vector ids, and no embedding
+  storage table matching `%embedding%`.
+
+### Final choice
+
+Do not mark v0.4 PASS.
+
+### Rationale
+
+The current `OPENAI_API_KEY` / `OPENAI_BASE_URL` pair is present and wired, but
+the endpoint response is still not an OpenAI-compatible embeddings response in
+this environment. Marking PASS would violate v0.4 acceptance.
+
+### Requires human confirmation
+
+ANSWERED_BY_VALIDATION. To move v0.4 to PASS, provide or fix an endpoint that
+returns `data[].embedding` for `/v1/embeddings`, then rerun T07/T08.

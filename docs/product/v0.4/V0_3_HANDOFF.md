@@ -17,7 +17,7 @@
 - `apps/web/src/ai/mastra/**` 和 `apps/web/src/ai/knowledge/**` 包含 live Mastra/Postgres/PgVector/embedding runtime wiring。
 - `packages/ai` 仅暴露 contracts/adapters/runtime-types 等 exports，没有 route、React UI、DB query 或 live provider/Mastra runtime。
 - `packages/db/src/ai.schema.ts` 和 `packages/db/src/knowledge.schema.ts` 是真实 schema 所有权位置。
-- `@repo/env/server` 管理 `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AI_EMBEDDING_PROVIDER`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_BASE_URL`, `AI_EMBEDDING_API_KEY`。
+- `@repo/env/server` 管理 `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AI_EMBEDDING_PROVIDER`, `AI_EMBEDDING_MODEL`；Knowledge/RAG embedding 统一复用 `OPENAI_API_KEY` 和 `OPENAI_BASE_URL`。
 - AI runtime/package 中未发现 `@repo/credits` import。
 
 ### confirmed by static checks
@@ -44,7 +44,7 @@
 - 完整 authenticated browser runtime smoke 未执行。
 - Knowledge ingestion/retrieval 真实验证需要 `DATABASE_URL` 指向可用 PostgreSQL。
 - PgVector 真实验证需要 PostgreSQL `vector` extension 已启用。
-- Knowledge embedding 真实验证需要 `AI_EMBEDDING_API_KEY` 或 `OPENAI_API_KEY`。
+- Knowledge embedding 真实验证需要 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 指向支持 OpenAI-compatible `/v1/embeddings` 的 endpoint。
 - 未获授权运行会修改 DB 状态的 `db:enable-pgvector` 或 seed/migration 类命令。
 
 ### not implemented by design
