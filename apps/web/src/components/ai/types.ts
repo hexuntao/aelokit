@@ -24,12 +24,24 @@ export interface ChatMessageMetadata {
 
 export type ChatUIMessage = UIMessage<ChatMessageMetadata>;
 
+export interface ChatModelOption {
+  readonly providerId: string;
+  readonly modelId: string;
+  readonly providerLabel: string;
+  readonly modelLabel: string;
+  readonly label: string;
+}
+
 export interface ChatThreadSummary {
   readonly id: string;
   readonly title?: string;
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly providerId?: string;
+  readonly providerName?: string;
+  readonly modelId?: string;
+  readonly modelName?: string;
 }
 
 export interface ChatThreadState {

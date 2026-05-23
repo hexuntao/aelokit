@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useThread } from '@assistant-ui/react';
 import { Plus, RefreshCw, MessageSquareText } from 'lucide-react';
+import { formatThreadModelLabel } from '@/ai/models/catalog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useChatContext } from './ChatProvider';
@@ -74,6 +75,7 @@ export function ChatThreadSidebar() {
           <div className="flex flex-col gap-1">
             {orderedThreads.map((thread) => {
               const isActive = thread.id === threadId;
+              const modelLabel = formatThreadModelLabel(thread);
 
               return (
                 <button
@@ -94,6 +96,11 @@ export function ChatThreadSidebar() {
                   <span className="text-xs text-muted-foreground">
                     {formatThreadTimestamp(thread.updatedAt)}
                   </span>
+                  {modelLabel && (
+                    <span className="text-xs text-muted-foreground">
+                      {modelLabel}
+                    </span>
+                  )}
                 </button>
               );
             })}

@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { LanguageModel } from 'ai';
 import { and, eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 import { getDb } from '@/db';
 import { aiModel, aiProvider, aiUserModelSetting } from '@repo/db/ai-schema';
 import type {
@@ -11,7 +12,14 @@ import type {
   AIModelSelectionSource,
 } from '@repo/ai/models';
 import type { AIProviderId } from '@repo/ai/providers';
+import type { ChatModelOption } from '@/components/ai/types';
 import { createModel, isProviderAvailable } from '../providers';
+import {
+  DEFAULT_MODEL_ID,
+  DEFAULT_PROVIDER_ID,
+  getAppLocalModelCatalog,
+} from './catalog';
+import { resolveSelectedModelId, selectModelReference } from './selection';
 
 export interface ResolvedModel {
   readonly model: LanguageModel;
@@ -34,59 +42,6 @@ export interface ModelResolutionError {
 export type ModelResolutionResult =
   | { readonly success: true; readonly data: ResolvedModel }
   | { readonly success: false; readonly error: ModelResolutionError };
-
-const DEFAULT_OPENAI_MODELS: ReadonlyArray<{
-  readonly id: AIModelId;
-  readonly providerModelId: string;
-  readonly isDefault: boolean;
-  readonly displayName: string;
-  readonly capabilities: ReadonlyArray<string>;
-  readonly contextWindowTokens: number;
-}> = [
-  {
-    id: 'gpt-5.5',
-    providerModelId: 'gpt-5.5',
-    displayName: 'GPT-5.5',
-    isDefault: true,
-    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
-    contextWindowTokens: 1_050_000,
-  },
-  {
-    id: 'gpt-4.1-mini',
-    providerModelId: 'gpt-4.1-mini',
-    displayName: 'GPT-4.1 Mini',
-    isDefault: false,
-    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
-    contextWindowTokens: 1_047_576,
-  },
-  {
-    id: 'gpt-4.1',
-    providerModelId: 'gpt-4.1',
-    displayName: 'GPT-4.1',
-    isDefault: false,
-    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
-    contextWindowTokens: 1_047_576,
-  },
-  {
-    id: 'gpt-4o-mini',
-    providerModelId: 'gpt-4o-mini',
-    displayName: 'GPT-4o Mini',
-    isDefault: false,
-    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
-    contextWindowTokens: 128_000,
-  },
-  {
-    id: 'gpt-4o',
-    providerModelId: 'gpt-4o',
-    displayName: 'GPT-4o',
-    isDefault: false,
-    capabilities: ['chat', 'streaming', 'tool-calling', 'json-mode'],
-    contextWindowTokens: 128_000,
-  },
-];
-
-const DEFAULT_PROVIDER_ID = 'openai';
-const DEFAULT_MODEL_ID = 'gpt-5.5';
 
 export async function ensureAIModelCatalog(): Promise<void> {
   const db = await getDb();
@@ -118,7 +73,7 @@ export async function ensureAIModelCatalog(): Promise<void> {
       },
     });
 
-  for (const [index, model] of DEFAULT_OPENAI_MODELS.entries()) {
+  for (const [index, model] of getAppLocalModelCatalog().entries()) {
     await db
       .insert(aiModel)
       .values({
@@ -128,7 +83,7 @@ export async function ensureAIModelCatalog(): Promise<void> {
         displayName: model.displayName,
         capabilities: model.capabilities,
         contextWindowTokens: model.contextWindowTokens,
-        status: 'enabled',
+        status: model.status,
         isDefault: false,
         sortOrder: index,
         createdAt: updatedAt,
@@ -142,7 +97,7 @@ export async function ensureAIModelCatalog(): Promise<void> {
           displayName: model.displayName,
           capabilities: model.capabilities,
           contextWindowTokens: model.contextWindowTokens,
-          status: 'enabled',
+          status: model.status,
           sortOrder: index,
           updatedAt,
         },
@@ -198,6 +153,8 @@ async function findModelConfig(
 async function getDefaultModelForProvider(
   providerId: AIProviderId
 ): Promise<AIModelReference | null> {
+  await ensureAIModelCatalog();
+
   const db = await getDb();
   const [model] = await db
     .select({ id: aiModel.id })
@@ -219,7 +176,9 @@ async function getDefaultModelForProvider(
     return null;
   }
 
-  const fallbackModel = DEFAULT_OPENAI_MODELS.find((m) => m.isDefault);
+  const fallbackModel = getAppLocalModelCatalog().find(
+    (model) => model.isDefault
+  );
   if (!fallbackModel) {
     return null;
   }
@@ -264,23 +223,40 @@ export async function resolveModel(
 ): Promise<ModelResolutionResult> {
   await ensureAIModelCatalog();
 
-  if (threadModel) {
-    return tryResolveModel(threadModel, 'thread');
+  const systemDefaultModel = await getSystemDefaultModel();
+  const preferredModel = selectModelReference({
+    selectedModel: threadModel,
+    userDefaultModel,
+    systemDefaultModel,
+  });
+
+  if (!preferredModel) {
+    return {
+      success: false,
+      error: {
+        code: 'no-default-model',
+        message:
+          'No available model found. Check provider configuration and model availability.',
+      },
+    };
   }
 
-  if (userDefaultModel) {
+  if (preferredModel.source === 'thread') {
+    return tryResolveModel(preferredModel.reference, preferredModel.source);
+  }
+
+  if (preferredModel.source === 'user-default') {
     const userDefaultResult = await tryResolveModel(
-      userDefaultModel,
-      'user-default'
+      preferredModel.reference,
+      preferredModel.source
     );
     if (userDefaultResult.success) {
       return userDefaultResult;
     }
   }
 
-  const systemDefault = await getSystemDefaultModel();
-  if (systemDefault) {
-    const result = await tryResolveModel(systemDefault, 'system-default');
+  if (systemDefaultModel) {
+    const result = await tryResolveModel(systemDefaultModel, 'system-default');
     if (result.success) {
       return result;
     }
@@ -374,6 +350,137 @@ export function createModelSelectionReference(
   return {
     ...reference,
     source,
+  };
+}
+
+export async function listSelectableModelOptions(): Promise<
+  readonly ChatModelOption[]
+> {
+  await ensureAIModelCatalog();
+
+  const db = await getDb();
+  const rows = await db
+    .select({
+      providerId: aiProvider.id,
+      providerLabel: aiProvider.displayName,
+      modelId: aiModel.id,
+      modelLabel: aiModel.displayName,
+    })
+    .from(aiModel)
+    .innerJoin(aiProvider, eq(aiProvider.id, aiModel.providerId))
+    .where(and(eq(aiProvider.status, 'enabled'), eq(aiModel.status, 'enabled')))
+    .orderBy(aiProvider.sortOrder, aiModel.sortOrder);
+
+  return rows.map((row) => ({
+    providerId: row.providerId,
+    modelId: row.modelId,
+    providerLabel: row.providerLabel,
+    modelLabel: row.modelLabel,
+    label: row.modelLabel,
+  }));
+}
+
+export async function getChatModelPreferenceState(userId: string): Promise<{
+  readonly availableModels: readonly ChatModelOption[];
+  readonly userDefaultModelId?: string;
+  readonly systemDefaultModelId: string;
+  readonly initialSelectedModelId?: string;
+}> {
+  await ensureAIModelCatalog();
+
+  const [availableModels, rawUserDefaultModel, systemDefaultModel] =
+    await Promise.all([
+      listSelectableModelOptions(),
+      getUserDefaultModelReference(userId),
+      getDefaultModelForProvider(DEFAULT_PROVIDER_ID),
+    ]);
+
+  const selectableModelIds = availableModels.map((model) => model.modelId);
+  const userDefaultModelId =
+    rawUserDefaultModel &&
+    availableModels.some(
+      (model) =>
+        model.providerId === rawUserDefaultModel.providerId &&
+        model.modelId === rawUserDefaultModel.modelId
+    )
+      ? rawUserDefaultModel.modelId
+      : undefined;
+
+  const systemDefaultModelId =
+    resolveSelectedModelId({
+      requestedModelId: systemDefaultModel?.modelId ?? DEFAULT_MODEL_ID,
+      selectableModelIds,
+      systemDefaultModelId: DEFAULT_MODEL_ID,
+    }) ?? DEFAULT_MODEL_ID;
+
+  return {
+    availableModels,
+    userDefaultModelId,
+    systemDefaultModelId,
+    initialSelectedModelId: resolveSelectedModelId({
+      userDefaultModelId,
+      systemDefaultModelId,
+      selectableModelIds,
+    }),
+  };
+}
+
+export async function saveUserDefaultModelSelection(
+  userId: string,
+  modelId: string
+): Promise<
+  | {
+      readonly success: true;
+      readonly data: {
+        readonly userDefaultModelId: string;
+        readonly selectedModel: ChatModelOption;
+      };
+    }
+  | {
+      readonly success: false;
+      readonly error: Error;
+    }
+> {
+  const availableModels = await listSelectableModelOptions();
+  const selectedModel = availableModels.find(
+    (model) => model.modelId === modelId
+  );
+
+  if (!selectedModel) {
+    return {
+      success: false,
+      error: new Error('The selected model is not available.'),
+    };
+  }
+
+  const db = await getDb();
+  const updatedAt = new Date();
+
+  await db
+    .insert(aiUserModelSetting)
+    .values({
+      id: `ums-${nanoid()}`,
+      userId,
+      providerId: selectedModel.providerId,
+      modelId: selectedModel.modelId,
+      createdAt: updatedAt,
+      updatedAt,
+    })
+    .onConflictDoUpdate({
+      target: aiUserModelSetting.userId,
+      set: {
+        providerId: selectedModel.providerId,
+        modelId: selectedModel.modelId,
+        updatedAt,
+      },
+    });
+
+  return {
+    success: true,
+    data: {
+      userDefaultModelId: selectedModel.modelId,
+      selectedModel,
+    },
   };
 }
 

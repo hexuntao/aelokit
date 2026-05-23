@@ -6,6 +6,8 @@ import {
   aiMessage,
   aiMessagePart,
   aiToolCall,
+  aiModel,
+  aiProvider,
 } from '@repo/db/ai-schema';
 import { nanoid } from 'nanoid';
 import { eq, and, desc, inArray, sql } from 'drizzle-orm';
@@ -55,6 +57,10 @@ export interface ThreadData {
   readonly status: ThreadStatus;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly providerId?: string;
+  readonly providerName?: string;
+  readonly modelId?: string;
+  readonly modelName?: string;
 }
 
 export interface MessageData {
@@ -170,6 +176,32 @@ function normalizePersistedPart(part: {
   return content;
 }
 
+function toThreadData(thread: {
+  readonly id: string;
+  readonly userId: string;
+  readonly title: string | null;
+  readonly status: string;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly providerId: string | null;
+  readonly providerName: string | null;
+  readonly modelId: string | null;
+  readonly modelName: string | null;
+}): ThreadData {
+  return {
+    id: thread.id,
+    userId: thread.userId,
+    title: thread.title ?? undefined,
+    status: thread.status as ThreadStatus,
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+    providerId: thread.providerId ?? undefined,
+    providerName: thread.providerName ?? undefined,
+    modelId: thread.modelId ?? undefined,
+    modelName: thread.modelName ?? undefined,
+  };
+}
+
 export async function ensureThread(options: {
   readonly threadId?: string;
   readonly userId: string;
@@ -191,6 +223,18 @@ export async function ensureThread(options: {
         success: false,
         error: new Error('Thread not found.'),
       };
+    }
+
+    if (
+      options.providerId &&
+      options.modelId &&
+      (existingThread.data.providerId !== options.providerId ||
+        existingThread.data.modelId !== options.modelId)
+    ) {
+      return updateThread(options.threadId, options.userId, {
+        providerId: options.providerId,
+        modelId: options.modelId,
+      });
     }
 
     return {
@@ -242,6 +286,8 @@ export async function createThread(
         status: thread.status as ThreadStatus,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
+        providerId: thread.providerId ?? undefined,
+        modelId: thread.modelId ?? undefined,
       },
     };
   } catch (error) {
@@ -259,8 +305,27 @@ export async function getThread(
   try {
     const db = await getDb();
     const threads = await db
-      .select()
+      .select({
+        id: aiThread.id,
+        userId: aiThread.userId,
+        title: aiThread.title,
+        status: aiThread.status,
+        createdAt: aiThread.createdAt,
+        updatedAt: aiThread.updatedAt,
+        providerId: aiThread.providerId,
+        providerName: aiProvider.displayName,
+        modelId: aiThread.modelId,
+        modelName: aiModel.displayName,
+      })
       .from(aiThread)
+      .leftJoin(aiProvider, eq(aiProvider.id, aiThread.providerId))
+      .leftJoin(
+        aiModel,
+        and(
+          eq(aiModel.id, aiThread.modelId),
+          eq(aiModel.providerId, aiThread.providerId)
+        )
+      )
       .where(and(eq(aiThread.id, threadId), eq(aiThread.userId, userId)));
 
     if (threads.length === 0) {
@@ -271,14 +336,7 @@ export async function getThread(
 
     return {
       success: true,
-      data: {
-        id: thread.id,
-        userId: thread.userId,
-        title: thread.title ?? undefined,
-        status: thread.status as ThreadStatus,
-        createdAt: thread.createdAt,
-        updatedAt: thread.updatedAt,
-      },
+      data: toThreadData(thread),
     };
   } catch (error) {
     return {
@@ -296,8 +354,27 @@ export async function listThreads(
     const db = await getDb();
 
     const query = db
-      .select()
+      .select({
+        id: aiThread.id,
+        userId: aiThread.userId,
+        title: aiThread.title,
+        status: aiThread.status,
+        createdAt: aiThread.createdAt,
+        updatedAt: aiThread.updatedAt,
+        providerId: aiThread.providerId,
+        providerName: aiProvider.displayName,
+        modelId: aiThread.modelId,
+        modelName: aiModel.displayName,
+      })
       .from(aiThread)
+      .leftJoin(aiProvider, eq(aiProvider.id, aiThread.providerId))
+      .leftJoin(
+        aiModel,
+        and(
+          eq(aiModel.id, aiThread.modelId),
+          eq(aiModel.providerId, aiThread.providerId)
+        )
+      )
       .where(
         and(
           eq(aiThread.userId, userId),
@@ -312,14 +389,7 @@ export async function listThreads(
 
     return {
       success: true,
-      data: threads.map((thread) => ({
-        id: thread.id,
-        userId: thread.userId,
-        title: thread.title ?? undefined,
-        status: thread.status as ThreadStatus,
-        createdAt: thread.createdAt,
-        updatedAt: thread.updatedAt,
-      })),
+      data: threads.map(toThreadData),
     };
   } catch (error) {
     return {
@@ -336,6 +406,8 @@ export async function updateThread(
     readonly title?: string;
     readonly status?: ThreadStatus;
     readonly metadata?: Record<string, unknown>;
+    readonly providerId?: string;
+    readonly modelId?: string;
   }>
 ): Promise<PersistenceResult<ThreadData>> {
   try {
@@ -348,6 +420,10 @@ export async function updateThread(
         ...(updates.metadata !== undefined
           ? { metadata: updates.metadata }
           : {}),
+        ...(updates.providerId !== undefined
+          ? { providerId: updates.providerId }
+          : {}),
+        ...(updates.modelId !== undefined ? { modelId: updates.modelId } : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(aiThread.id, threadId), eq(aiThread.userId, userId)))
@@ -362,6 +438,8 @@ export async function updateThread(
         status: thread.status as ThreadStatus,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
+        providerId: thread.providerId ?? undefined,
+        modelId: thread.modelId ?? undefined,
       },
     };
   } catch (error) {

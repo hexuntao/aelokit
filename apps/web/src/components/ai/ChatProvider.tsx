@@ -15,28 +15,23 @@ import {
   useRef,
   useState,
 } from 'react';
+import { saveUserDefaultModelAction } from '@/actions/chat-models';
 import {
   getUserChatThreadStateAction,
   getUserChatThreadsAction,
 } from '@/actions/chat-threads';
+import { resolveSelectedModelId } from '@/ai/models/selection';
 import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
 import { getThreadInsights } from './thread-insights';
 import type {
+  ChatModelOption,
   ChatThreadSummary,
   ChatUIMessage,
   CitationMetadata,
 } from './types';
 
 const API_URL = '/api/ai/chat';
-
-const AVAILABLE_MODELS = [
-  { id: 'gpt-5.5', name: 'GPT-5.5' },
-  { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
-  { id: 'gpt-4.1', name: 'GPT-4.1' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-  { id: 'gpt-4o', name: 'GPT-4o' },
-];
 
 interface ChatError extends Error {
   code?: string;
@@ -48,14 +43,25 @@ interface ChatProviderProps {
   readonly initialThreads?: readonly ChatThreadSummary[];
   readonly initialThreadId?: string;
   readonly initialMessages?: readonly ChatUIMessage[];
+  readonly initialModelOptions?: readonly ChatModelOption[];
+  readonly initialUserDefaultModelId?: string;
+  readonly initialSystemDefaultModelId?: string;
+  readonly initialSelectedModelId?: string;
 }
 
 interface ChatContextType {
   error: Error | null;
   errorType: ChatErrorType;
   errorMetadata: Record<string, unknown>;
+  availableModels: readonly ChatModelOption[];
   selectedModelId: string;
   setSelectedModelId: (modelId: string) => void;
+  userDefaultModelId?: string;
+  isSavingUserDefaultModel: boolean;
+  saveUserDefaultModel: () => Promise<
+    | { readonly success: true }
+    | { readonly success: false; readonly error: string }
+  >;
   clearError: () => void;
   threadId?: string;
   memoryEnabled: boolean;
@@ -105,6 +111,10 @@ export function ChatProvider({
   initialThreads = [],
   initialThreadId,
   initialMessages = [],
+  initialModelOptions = [],
+  initialUserDefaultModelId,
+  initialSystemDefaultModelId = 'gpt-5.5',
+  initialSelectedModelId,
 }: ChatProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -113,7 +123,21 @@ export function ChatProvider({
   const [errorMetadata, setErrorMetadata] = useState<Record<string, unknown>>(
     {}
   );
-  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-5.5');
+  const [availableModels] =
+    useState<readonly ChatModelOption[]>(initialModelOptions);
+  const [userDefaultModelId, setUserDefaultModelId] = useState<
+    string | undefined
+  >(initialUserDefaultModelId);
+  const [isSavingUserDefaultModel, setIsSavingUserDefaultModel] =
+    useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string>(
+    resolveSelectedModelId({
+      requestedModelId: initialSelectedModelId,
+      userDefaultModelId: initialUserDefaultModelId,
+      systemDefaultModelId: initialSystemDefaultModelId,
+      selectableModelIds: initialModelOptions.map((model) => model.modelId),
+    }) ?? initialSystemDefaultModelId
+  );
   const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
   const [memoryEnabled, setMemoryEnabledState] = useState<boolean>(false);
   const [lastCitations, setLastCitations] = useState<
@@ -198,6 +222,17 @@ export function ChatProvider({
     setErrorMetadata({});
   }, []);
 
+  const getPreferredModelId = useCallback(
+    (requestedModelId?: string) =>
+      resolveSelectedModelId({
+        requestedModelId,
+        userDefaultModelId,
+        systemDefaultModelId: initialSystemDefaultModelId,
+        selectableModelIds: availableModels.map((model) => model.modelId),
+      }) ?? initialSystemDefaultModelId,
+    [availableModels, initialSystemDefaultModelId, userDefaultModelId]
+  );
+
   const transport = useMemo(
     () =>
       new AssistantChatTransport<ChatUIMessage>({
@@ -278,12 +313,13 @@ export function ChatProvider({
     clearError();
     setThreadId(undefined);
     threadIdRef.current = undefined;
+    setSelectedModelId(getPreferredModelId());
     runtime.thread.reset();
     void runtime.thread.composer.reset();
     setLastCitations([]);
     setLastKnowledgeActive(false);
     syncThreadUrl(undefined);
-  }, [clearError, runtime, syncThreadUrl]);
+  }, [clearError, getPreferredModelId, runtime, syncThreadUrl]);
 
   const openThread = useCallback(
     async (nextThreadId: string) => {
@@ -314,6 +350,7 @@ export function ChatProvider({
         runtime.thread.reset();
         void runtime.thread.composer.reset();
         runtime.thread.importExternalState(threadState.messages);
+        setSelectedModelId(getPreferredModelId(threadState.thread.modelId));
 
         const insights = getThreadInsights(threadState.messages);
         setLastCitations(insights.citations);
@@ -331,7 +368,7 @@ export function ChatProvider({
         setIsThreadLoading(false);
       }
     },
-    [clearError, runtime, syncThreadUrl]
+    [clearError, getPreferredModelId, runtime, syncThreadUrl]
   );
 
   useEffect(() => {
@@ -348,12 +385,54 @@ export function ChatProvider({
       const insights = getThreadInsights(initialMessages);
       setLastCitations(insights.citations);
       setLastKnowledgeActive(insights.knowledgeActive);
+      const initialThread = initialThreads.find(
+        (thread) => thread.id === initialThreadId
+      );
+      setSelectedModelId(getPreferredModelId(initialThread?.modelId));
       return;
     }
 
+    setSelectedModelId(getPreferredModelId(initialSelectedModelId));
     runtime.thread.reset();
     void runtime.thread.composer.reset();
-  }, [initialMessages, initialThreadId, runtime]);
+  }, [
+    getPreferredModelId,
+    initialMessages,
+    initialSelectedModelId,
+    initialThreadId,
+    initialThreads,
+    runtime,
+  ]);
+
+  const saveUserDefaultModel = useCallback(async () => {
+    setIsSavingUserDefaultModel(true);
+
+    try {
+      const result = await saveUserDefaultModelAction({
+        modelId: selectedModelIdRef.current,
+      });
+
+      if (!result.data?.success) {
+        return {
+          success: false as const,
+          error: result.data?.error?.message ?? 'Failed to save default model.',
+        };
+      }
+
+      setUserDefaultModelId(result.data.data.userDefaultModelId);
+      return { success: true as const };
+    } catch (saveError) {
+      return {
+        success: false as const,
+        error:
+          saveError instanceof Error
+            ? saveError.message
+            : 'Failed to save default model.',
+      };
+    } finally {
+      setIsSavingUserDefaultModel(false);
+    }
+  }, []);
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -362,8 +441,12 @@ export function ChatProvider({
           error,
           errorType,
           errorMetadata,
+          availableModels,
           selectedModelId,
           setSelectedModelId,
+          userDefaultModelId,
+          isSavingUserDefaultModel,
+          saveUserDefaultModel,
           clearError,
           threadId,
           memoryEnabled,
@@ -385,5 +468,3 @@ export function ChatProvider({
     </AssistantRuntimeProvider>
   );
 }
-
-export { AVAILABLE_MODELS };

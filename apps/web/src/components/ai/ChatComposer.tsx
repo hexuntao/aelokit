@@ -1,12 +1,13 @@
 'use client';
 
+import { toast } from 'sonner';
 import {
   useComposer,
   useComposerRuntime,
   useThread,
   useThreadRuntime,
 } from '@assistant-ui/react';
-import { useChatContext, AVAILABLE_MODELS } from './ChatProvider';
+import { useChatContext } from './ChatProvider';
 import { Send, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,12 +20,26 @@ import {
 } from '@/components/ui/select';
 
 export function ChatComposer() {
-  const { selectedModelId, setSelectedModelId, clearError } = useChatContext();
+  const {
+    availableModels,
+    selectedModelId,
+    setSelectedModelId,
+    userDefaultModelId,
+    isSavingUserDefaultModel,
+    saveUserDefaultModel,
+    clearError,
+  } = useChatContext();
   const composerRuntime = useComposerRuntime();
   const threadRuntime = useThreadRuntime();
   const input = useComposer((composer) => composer.text);
   const canSend = useComposer((composer) => composer.canSend);
   const isLoading = useThread((thread) => thread.isRunning);
+  const selectedModel = availableModels.find(
+    (model) => model.modelId === selectedModelId
+  );
+  const userDefaultModel = availableModels.find(
+    (model) => model.modelId === userDefaultModelId
+  );
 
   const handleSubmit = (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -33,6 +48,17 @@ export function ChatComposer() {
     }
     clearError();
     composerRuntime.send();
+  };
+
+  const handleSaveDefaultModel = async () => {
+    const result = await saveUserDefaultModel();
+
+    if (!result.success) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success('Default model saved.');
   };
 
   return (
@@ -52,13 +78,41 @@ export function ChatComposer() {
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_MODELS.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.name}
+                {availableModels.map((model) => (
+                  <SelectItem key={model.modelId} value={model.modelId}>
+                    {model.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSaveDefaultModel()}
+              disabled={
+                isLoading ||
+                isSavingUserDefaultModel ||
+                !selectedModelId ||
+                selectedModelId === userDefaultModelId
+              }
+            >
+              {selectedModelId === userDefaultModelId
+                ? 'Default Model'
+                : isSavingUserDefaultModel
+                  ? 'Saving...'
+                  : 'Save as Default'}
+            </Button>
+            {userDefaultModel && (
+              <span className="text-xs text-muted-foreground">
+                Default: {userDefaultModel.label}
+              </span>
+            )}
+            {!userDefaultModel && selectedModel && (
+              <span className="text-xs text-muted-foreground">
+                Current: {selectedModel.label}
+              </span>
+            )}
           </div>
           <div className="relative">
             <Textarea

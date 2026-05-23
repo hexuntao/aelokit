@@ -32,6 +32,10 @@ function toThreadSummary(thread: {
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly providerId?: string;
+  readonly providerName?: string;
+  readonly modelId?: string;
+  readonly modelName?: string;
 }): ChatThreadSummary {
   return {
     id: thread.id,
@@ -39,6 +43,10 @@ function toThreadSummary(thread: {
     status: thread.status,
     createdAt: thread.createdAt.toISOString(),
     updatedAt: thread.updatedAt.toISOString(),
+    providerId: thread.providerId,
+    providerName: thread.providerName,
+    modelId: thread.modelId,
+    modelName: thread.modelName,
   };
 }
 

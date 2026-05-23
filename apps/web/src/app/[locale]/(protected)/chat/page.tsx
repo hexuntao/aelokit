@@ -1,5 +1,10 @@
+import { getChatModelPreferenceState } from '@/ai/models';
 import { getMessages, getThread, listThreads } from '@/ai/persistence';
-import type { ChatThreadSummary, ChatUIMessage } from '@/components/ai';
+import type {
+  ChatModelOption,
+  ChatThreadSummary,
+  ChatUIMessage,
+} from '@/components/ai';
 import { ChatInterface } from '@/components/ai';
 import { getSession } from '@/lib/server';
 
@@ -13,6 +18,10 @@ function serializeThread(thread: {
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly providerId?: string;
+  readonly providerName?: string;
+  readonly modelId?: string;
+  readonly modelName?: string;
 }): ChatThreadSummary {
   return {
     id: thread.id,
@@ -20,6 +29,10 @@ function serializeThread(thread: {
     status: thread.status,
     createdAt: thread.createdAt.toISOString(),
     updatedAt: thread.updatedAt.toISOString(),
+    providerId: thread.providerId,
+    providerName: thread.providerName,
+    modelId: thread.modelId,
+    modelName: thread.modelName,
   };
 }
 
@@ -39,8 +52,18 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   let initialThreads: readonly ChatThreadSummary[] = [];
   let initialThreadId: string | undefined;
   let initialMessages: readonly ChatUIMessage[] = [];
+  let initialModelOptions: readonly ChatModelOption[] = [];
+  let initialUserDefaultModelId: string | undefined;
+  let initialSystemDefaultModelId = 'gpt-5.5';
+  let initialSelectedModelId: string | undefined;
 
   if (session?.user?.id) {
+    const modelPreferences = await getChatModelPreferenceState(session.user.id);
+    initialModelOptions = modelPreferences.availableModels;
+    initialUserDefaultModelId = modelPreferences.userDefaultModelId;
+    initialSystemDefaultModelId = modelPreferences.systemDefaultModelId;
+    initialSelectedModelId = modelPreferences.initialSelectedModelId;
+
     const threadsResult = await listThreads(session.user.id, {
       status: 'active',
     });
@@ -58,6 +81,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         if (messagesResult.success) {
           initialThreadId = requestedThreadId;
           initialMessages = messagesResult.data as readonly ChatUIMessage[];
+          initialSelectedModelId =
+            threadResult.data.modelId ?? initialSelectedModelId;
         }
       }
     }
@@ -71,6 +96,10 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             initialThreads={initialThreads}
             initialThreadId={initialThreadId}
             initialMessages={initialMessages}
+            initialModelOptions={initialModelOptions}
+            initialUserDefaultModelId={initialUserDefaultModelId}
+            initialSystemDefaultModelId={initialSystemDefaultModelId}
+            initialSelectedModelId={initialSelectedModelId}
           />
         </div>
       </div>

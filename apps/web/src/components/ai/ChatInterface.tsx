@@ -10,7 +10,11 @@ import { MemorySidebar, MemoryToggleButton } from './MemorySidebar';
 import { CitationList, CitationSummary } from './CitationList';
 import { Button } from '@/components/ui/button';
 import { BookOpen } from 'lucide-react';
-import type { ChatThreadSummary, ChatUIMessage } from './types';
+import type {
+  ChatModelOption,
+  ChatThreadSummary,
+  ChatUIMessage,
+} from './types';
 
 function KnowledgeToggleButton() {
   const { knowledgeEnabled, setKnowledgeEnabled } = useChatContext();
@@ -83,18 +87,30 @@ interface ChatInterfaceProps {
   readonly initialThreads?: readonly ChatThreadSummary[];
   readonly initialThreadId?: string;
   readonly initialMessages?: readonly ChatUIMessage[];
+  readonly initialModelOptions?: readonly ChatModelOption[];
+  readonly initialUserDefaultModelId?: string;
+  readonly initialSystemDefaultModelId?: string;
+  readonly initialSelectedModelId?: string;
 }
 
 export function ChatInterface({
   initialThreads,
   initialThreadId,
   initialMessages,
+  initialModelOptions,
+  initialUserDefaultModelId,
+  initialSystemDefaultModelId,
+  initialSelectedModelId,
 }: ChatInterfaceProps) {
   return (
     <ChatProvider
       initialThreads={initialThreads}
       initialThreadId={initialThreadId}
       initialMessages={initialMessages}
+      initialModelOptions={initialModelOptions}
+      initialUserDefaultModelId={initialUserDefaultModelId}
+      initialSystemDefaultModelId={initialSystemDefaultModelId}
+      initialSelectedModelId={initialSelectedModelId}
     >
       <div className="flex h-[calc(100vh-8rem)] min-h-[36rem] overflow-hidden rounded-lg border bg-background md:h-[calc(100vh-6rem)]">
         <ChatContent />
