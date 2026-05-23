@@ -3,7 +3,7 @@
 ## 1. 架构概览
 - 支付层通过 `apps/web/src/payment/index.ts` 暴露统一的 `createCheckout`、`createCreditCheckout`、`createCustomerPortal` 与 `handleWebhookEvent` 接口，内部根据 `websiteConfig.payment.provider` 实例化 `StripeProvider` 或 `CreemProvider`。
 - 所有支付网关都实现 `apps/web/src/payment/types.ts` 中的 `PaymentProvider` 接口，统一了创建结算、客户门户以及处理 webhook 的行为。
-- 数据落库集中在 `payment` 表（`apps/web/src/db/schema.ts:46` 起），字段包含 `type`、`scene`、`status`、`invoice_id`、`session_id`、`subscription_id` 等，用于区分订阅 / 一次性 / 积分支付并做幂等控制（`invoice_id` 上有唯一索引）。
+- 数据落库集中在 `payment` 表（定义于 `packages/db/src/app.schema.ts`），字段包含 `type`、`scene`、`status`、`invoice_id`、`session_id`、`subscription_id` 等，用于区分订阅 / 一次性 / 积分支付并做幂等控制（`invoice_id` 上有唯一索引）。
 - 积分余额与流水由 `user_credit`、`credit_transaction` 表维护，增减逻辑封装在 `apps/web/src/credits/credits.ts`。
 
 ## 2. 订阅支付时序

@@ -62,11 +62,11 @@ icon: Database
   <Step>
     ### 初始化数据库
 
-    AeloKit 使用 Drizzle ORM 与数据库交互。运行以下命令初始化数据库：
+    AeloKit 使用 Drizzle ORM 与数据库交互。当前权威的 Drizzle schema 与迁移文件位于 `packages/db`，请使用以下命令初始化数据库：
 
     ```bash
-    pnpm db:generate # 生成 Drizzle 迁移文件
-    pnpm db:migrate # 迁移数据库
+    pnpm --filter @repo/db db:generate # 在 packages/db/src/migrations 中生成迁移文件
+    pnpm --filter @repo/db db:migrate # 执行 packages/db 中的数据库迁移
     ```
   </Step>
 </Steps>

@@ -609,9 +609,13 @@ export async function getMessages(
           (citation): citation is PersistedCitationMetadata =>
             citation !== undefined
         );
+      const persistedMetadata = asRecord(msg.metadata);
+      const knowledgeEnabled =
+        persistedMetadata.knowledgeEnabled === true || citations.length > 0;
       const metadata = {
-        ...asRecord(msg.metadata),
+        ...persistedMetadata,
         ...(citations.length > 0 ? { citations } : {}),
+        ...(knowledgeEnabled ? { knowledgeEnabled: true } : {}),
       };
 
       return {

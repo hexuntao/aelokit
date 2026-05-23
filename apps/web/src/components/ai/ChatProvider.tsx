@@ -21,6 +21,7 @@ import {
 } from '@/actions/chat-threads';
 import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
+import { getThreadInsights } from './thread-insights';
 import type {
   ChatThreadSummary,
   ChatUIMessage,
@@ -75,24 +76,6 @@ const ChatContext = createContext<ChatContextType | null>(null);
 
 const MEMORY_ENABLED_KEY = 'aelokit-memory-enabled';
 const KNOWLEDGE_ENABLED_KEY = 'aelokit-knowledge-enabled';
-
-function getThreadInsights(messages: readonly ChatUIMessage[]): {
-  readonly citations: readonly CitationMetadata[];
-  readonly knowledgeActive: boolean;
-} {
-  const lastAssistantMessage = [...messages]
-    .reverse()
-    .find((message) => message.role === 'assistant');
-
-  const citations = Array.isArray(lastAssistantMessage?.metadata?.citations)
-    ? lastAssistantMessage.metadata.citations
-    : [];
-
-  return {
-    citations,
-    knowledgeActive: lastAssistantMessage?.metadata?.knowledgeEnabled === true,
-  };
-}
 
 function upsertThreadSummary(
   threads: readonly ChatThreadSummary[],

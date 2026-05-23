@@ -62,11 +62,11 @@ The project uses PostgreSQL as the database system and Drizzle ORM for database 
   <Step>
     ### Initialize Database
 
-    AeloKit uses Drizzle ORM to interact with the database. Run the following commands to initialize the database:
+    AeloKit uses Drizzle ORM to interact with the database. The canonical Drizzle schema and migrations live in `packages/db`, so initialize the database with:
 
     ```bash
-    pnpm db:generate # Generate Drizzle migration files
-    pnpm db:migrate # Migrate the database
+    pnpm --filter @repo/db db:generate # Generate Drizzle migration files in packages/db/src/migrations
+    pnpm --filter @repo/db db:migrate # Run database migrations from packages/db
     ```
   </Step>
 </Steps>

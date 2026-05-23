@@ -10,7 +10,7 @@
 - Credits ledger mutation。
 - Credit transaction types。
 - Credits distribution。
-- 未来 AI credits preflight/reservation/settlement 的领域能力。
+- `./ai-billing` 暴露的 AI credits preflight/reservation/settlement/refund gated foundation。
 
 ## Does not own
 
@@ -45,8 +45,7 @@
 - 当前 credits scope 由用户当前 prompt、root `AGENTS.md`、`packages/AGENTS.md` 和 PRD 共同约束；
   历史 roadmap、旧版本文档、历史任务文档和已删除文档不能作为当前需求依据。
 - AI usage audit 不等于 credits charging；只有当前用户 prompt 明确打开 AI billing 集成时才接入扣费。
-- AI credits preflight/reservation/settlement/refund 必须通过 credits 包提供的 `./ai-billing`
-  和 ledger/reservation/settlement 能力。
+- AI billing 只允许通过 credits 包提供的 `./ai-billing` gated foundation 接入；当前阶段由它承载 preflight/reservation/settlement/refund 领域能力，只有当前用户 prompt 明确打开 AI billing 集成时才允许进入 app-level 编排。
 - 不允许 AI runtime 直接改 ledger 表或绕过 credits package。
 - Payment 与 credits 不允许互相依赖；支付成功后的 credits 处理通过 app-level callback 编排。
 
