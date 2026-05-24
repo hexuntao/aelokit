@@ -19,7 +19,11 @@ import {
   checkEmbeddingProviderStatusAction,
 } from '@/actions/knowledge';
 
-export function KnowledgeSourceForm() {
+interface KnowledgeSourceFormProps {
+  readonly onCreated?: () => void;
+}
+
+export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +64,7 @@ export function KnowledgeSourceForm() {
         });
         setTitle('');
         setText('');
+        onCreated?.();
       } else {
         setResult({
           success: false,

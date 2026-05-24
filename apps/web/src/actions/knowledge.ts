@@ -1,10 +1,17 @@
 'use server';
 
 import {
+  archiveKnowledgeSource,
+  deleteKnowledgeSource,
   ingestManualKnowledgeSource,
   isEmbeddingProviderConfigured,
+  listUserKnowledgeSources,
 } from '@/ai/knowledge';
-import type { AIKnowledgeIngestionResult } from '@repo/ai/knowledge';
+import type {
+  AIKnowledgeIngestionResult,
+  AIKnowledgeSourceId,
+} from '@repo/ai/knowledge';
+import type { KnowledgeSourceRecord } from '@/ai/knowledge';
 import type { SessionUser } from '@/lib/auth-types';
 import { userActionClient } from '@/lib/safe-action';
 import { z } from 'zod';
@@ -15,9 +22,19 @@ export type CreateKnowledgeSourceResult = {
   error?: string;
 };
 
+export type ManageKnowledgeSourceResult = {
+  success: boolean;
+  source?: KnowledgeSourceRecord;
+  deleted?: boolean;
+  error?: string;
+};
+
 const createKnowledgeSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   text: z.string().min(1, 'Text content is required'),
+});
+const sourceIdSchema = z.object({
+  sourceId: z.string().min(1),
 });
 
 export const createManualKnowledgeSourceAction = userActionClient
@@ -70,3 +87,82 @@ export const checkEmbeddingProviderStatusAction = userActionClient.action(
     };
   }
 );
+
+export const getUserKnowledgeSourcesAction = userActionClient.action(
+  async ({ ctx }): Promise<{ success: boolean; sources?: KnowledgeSourceRecord[]; error?: string }> => {
+    const user = (ctx as { user: SessionUser }).user;
+
+    try {
+      const sources = await listUserKnowledgeSources(user.id);
+      return {
+        success: true,
+        sources,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+);
+
+export const archiveKnowledgeSourceAction = userActionClient
+  .inputSchema(sourceIdSchema)
+  .action(async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
+    const user = (ctx as { user: SessionUser }).user;
+
+    try {
+      const source = await archiveKnowledgeSource(
+        parsedInput.sourceId as AIKnowledgeSourceId,
+        user.id
+      );
+
+      if (!source) {
+        return {
+          success: false,
+          error: 'Knowledge source not found.',
+        };
+      }
+
+      return {
+        success: true,
+        source,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
+
+export const deleteKnowledgeSourceAction = userActionClient
+  .inputSchema(sourceIdSchema)
+  .action(async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
+    const user = (ctx as { user: SessionUser }).user;
+
+    try {
+      const deleted = await deleteKnowledgeSource(
+        parsedInput.sourceId as AIKnowledgeSourceId,
+        user.id
+      );
+
+      if (!deleted) {
+        return {
+          success: false,
+          error: 'Knowledge source not found.',
+        };
+      }
+
+      return {
+        success: true,
+        deleted: true,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });

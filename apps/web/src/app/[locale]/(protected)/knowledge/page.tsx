@@ -1,12 +1,18 @@
-import { KnowledgeSourceForm } from '@/components/ai/knowledge-source-form';
+import { listUserKnowledgeSources } from '@/ai/knowledge';
+import { KnowledgeSourceManager } from '@/components/ai/knowledge-source-manager';
+import { getSession } from '@/lib/server';
 import { useTranslations } from 'next-intl';
 
 export const metadata = {
   title: 'Knowledge - AeloKit',
 };
 
-export default function KnowledgePage() {
+export default async function KnowledgePage() {
   const t = useTranslations('Dashboard');
+  const session = await getSession();
+  const initialSources = session?.user?.id
+    ? await listUserKnowledgeSources(session.user.id)
+    : [];
 
   return (
     <div className="flex flex-1 flex-col">
@@ -21,7 +27,7 @@ export default function KnowledgePage() {
             </p>
           </div>
           <div className="px-4 lg:px-6">
-            <KnowledgeSourceForm />
+            <KnowledgeSourceManager initialSources={initialSources} />
           </div>
         </div>
       </div>

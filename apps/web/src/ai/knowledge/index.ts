@@ -29,6 +29,8 @@ export {
   getKnowledgeDocument,
   listUserKnowledgeSources,
   getSourceOwnership,
+  archiveKnowledgeSource,
+  deleteKnowledgeSource,
   PARTIAL_UNTIL_WIRED as INGESTION_PARTIAL_UNTIL_WIRED,
 } from './ingestion';
 export type {

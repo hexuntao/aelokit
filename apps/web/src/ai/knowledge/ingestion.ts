@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { nanoid } from 'nanoid';
-import { eq, desc } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { getDb } from '@repo/db';
 import {
   knowledgeChunk,
@@ -326,6 +326,40 @@ export async function getSourceOwnership(
     createdAt: source.createdAt,
     updatedAt: source.updatedAt,
   };
+}
+
+export async function archiveKnowledgeSource(
+  sourceId: AIKnowledgeSourceId,
+  userId: string
+): Promise<KnowledgeSourceRecord | undefined> {
+  const db = await getDb();
+  const [updated] = await db
+    .update(knowledgeSource)
+    .set({
+      status: 'archived',
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(knowledgeSource.id, sourceId), eq(knowledgeSource.userId, userId))
+    )
+    .returning();
+
+  return updated ? toKnowledgeSourceRecord(updated) : undefined;
+}
+
+export async function deleteKnowledgeSource(
+  sourceId: AIKnowledgeSourceId,
+  userId: string
+): Promise<boolean> {
+  const db = await getDb();
+  const deleted = await db
+    .delete(knowledgeSource)
+    .where(
+      and(eq(knowledgeSource.id, sourceId), eq(knowledgeSource.userId, userId))
+    )
+    .returning({ id: knowledgeSource.id });
+
+  return deleted.length > 0;
 }
 
 export const PARTIAL_UNTIL_WIRED = false;
