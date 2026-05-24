@@ -10,6 +10,7 @@ import {
 
 export interface CreateMastraToolRegistryOptions {
   readonly userId: string;
+  readonly knowledgeEnabled: boolean;
 }
 
 export interface MastraToolRegistry {
@@ -20,6 +21,13 @@ export interface MastraToolRegistry {
 export function createMastraToolRegistry(
   options: CreateMastraToolRegistryOptions
 ): MastraToolRegistry {
+  if (!options.knowledgeEnabled) {
+    return {
+      tools: {},
+      definitions: [],
+    };
+  }
+
   return {
     tools: {
       [KNOWLEDGE_INSPECTION_TOOL_NAME]: createKnowledgeInspectionTool({

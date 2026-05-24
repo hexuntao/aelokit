@@ -31,6 +31,12 @@ import {
 } from 'drizzle-orm';
 import { z } from 'zod';
 
+const LATEST_COST_EVENT_ORDER_BY = sql`
+  case when ${aiCostEvent.status} = 'final' then 0 else 1 end,
+  ${aiCostEvent.createdAt} desc,
+  ${aiCostEvent.id} desc
+`;
+
 const getAIUsageAuditSchema = z.object({
   pageIndex: z.number().min(0).default(0),
   pageSize: z.number().min(1).max(100).default(10),
@@ -119,6 +125,16 @@ function getNumberMetadata(
   return typeof value === 'number' ? value : 0;
 }
 
+function createLatestCostEventValueSql<T>(value: ReturnType<typeof sql.raw>) {
+  return sql<T | null>`(
+    select ${value}
+    from ${aiCostEvent}
+    where ${aiCostEvent.usageId} = ${aiUsage.id}
+    order by ${LATEST_COST_EVENT_ORDER_BY}
+    limit 1
+  )`;
+}
+
 export const getAIUsageAuditAction = adminActionClient
   .inputSchema(getAIUsageAuditSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -150,6 +166,33 @@ export const getAIUsageAuditAction = adminActionClient
         dateTo,
       } = parsedInput;
       const offset = pageIndex * pageSize;
+      const latestCostEventId = createLatestCostEventValueSql<string>(
+        sql.raw(`"${aiCostEvent.id.name}"`)
+      );
+      const latestCostEventSource = createLatestCostEventValueSql<string>(
+        sql.raw(`"${aiCostEvent.source.name}"`)
+      );
+      const latestCostEventStatus = createLatestCostEventValueSql<string>(
+        sql.raw(`"${aiCostEvent.status.name}"`)
+      );
+      const latestCostEventEstimatedCostUsd =
+        createLatestCostEventValueSql<string>(
+          sql.raw(`"${aiCostEvent.estimatedCostUsd.name}"`)
+        );
+      const latestCostEventEstimatedCredits =
+        createLatestCostEventValueSql<number>(
+          sql.raw(`"${aiCostEvent.estimatedCredits.name}"`)
+        );
+      const latestCostEventMetadata = createLatestCostEventValueSql<unknown>(
+        sql.raw(`"${aiCostEvent.metadata.name}"`)
+      );
+      const latestCostEventCreatedAt = createLatestCostEventValueSql<Date>(
+        sql.raw(`"${aiCostEvent.createdAt.name}"`)
+      );
+      const effectiveEstimatedCostUsd = sql<string | null>`coalesce(
+        ${aiUsage.estimatedCostUsd},
+        ${latestCostEventEstimatedCostUsd}
+      )`;
 
       const conditions = [];
       if (userId) {
@@ -202,13 +245,13 @@ export const getAIUsageAuditAction = adminActionClient
       const minCostValue = parseNonNegativeNumber(minCost);
       if (minCostValue !== null) {
         conditions.push(
-          sql`coalesce(${aiUsage.estimatedCostUsd}, ${aiCostEvent.estimatedCostUsd}) >= ${String(minCostValue)}`
+          sql`${effectiveEstimatedCostUsd} >= ${String(minCostValue)}`
         );
       }
       const maxCostValue = parseNonNegativeNumber(maxCost);
       if (maxCostValue !== null) {
         conditions.push(
-          sql`coalesce(${aiUsage.estimatedCostUsd}, ${aiCostEvent.estimatedCostUsd}) <= ${String(maxCostValue)}`
+          sql`${effectiveEstimatedCostUsd} <= ${String(maxCostValue)}`
         );
       }
       if (status) {
@@ -259,13 +302,13 @@ export const getAIUsageAuditAction = adminActionClient
           messageMetadata: aiMessage.metadata,
           billingReference: aiUsage.billingReference,
           createdAt: aiUsage.createdAt,
-          costEventId: aiCostEvent.id,
-          costEventSource: aiCostEvent.source,
-          costEventStatus: aiCostEvent.status,
-          costEventEstimatedCostUsd: aiCostEvent.estimatedCostUsd,
-          costEventEstimatedCredits: aiCostEvent.estimatedCredits,
-          costEventMetadata: aiCostEvent.metadata,
-          costEventCreatedAt: aiCostEvent.createdAt,
+          costEventId: latestCostEventId,
+          costEventSource: latestCostEventSource,
+          costEventStatus: latestCostEventStatus,
+          costEventEstimatedCostUsd: latestCostEventEstimatedCostUsd,
+          costEventEstimatedCredits: latestCostEventEstimatedCredits,
+          costEventMetadata: latestCostEventMetadata,
+          costEventCreatedAt: latestCostEventCreatedAt,
           reservationStatus: aiCreditReservation.reservationStatus,
           settlementStatus: aiCreditReservation.settlementStatus,
           refundStatus: aiCreditReservation.refundStatus,
@@ -274,7 +317,6 @@ export const getAIUsageAuditAction = adminActionClient
         .from(aiUsage)
         .leftJoin(aiThread, eq(aiThread.id, aiUsage.threadId))
         .leftJoin(aiMessage, eq(aiMessage.id, aiUsage.messageId))
-        .leftJoin(aiCostEvent, eq(aiCostEvent.usageId, aiUsage.id))
         .leftJoin(
           aiCreditReservation,
           eq(aiCreditReservation.usageId, aiUsage.id)
@@ -285,7 +327,7 @@ export const getAIUsageAuditAction = adminActionClient
         .offset(offset);
 
       const countQuery = db
-        .select({ count: countFn() })
+        .select({ count: sql<number>`count(distinct ${aiUsage.id})` })
         .from(aiUsage)
         .leftJoin(aiThread, eq(aiThread.id, aiUsage.threadId))
         .leftJoin(aiMessage, eq(aiMessage.id, aiUsage.messageId))

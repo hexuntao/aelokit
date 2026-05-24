@@ -653,6 +653,7 @@ export async function POST(req: Request) {
     const systemPrompt = agentContext.systemPrompt;
     const toolRegistry = createMastraToolRegistry({
       userId: context.userId,
+      knowledgeEnabled,
     });
 
     // 7. Stream text from the model
