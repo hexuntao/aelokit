@@ -1,12 +1,6 @@
 import 'server-only';
 
-import {
-  consumeStream,
-  convertToModelMessages,
-  streamText,
-  type UIMessage,
-} from 'ai';
-import { frontendTools } from '@assistant-ui/react-ai-sdk';
+import { consumeStream, type UIMessage } from 'ai';
 import type { AIUsageBillingStatus, AIUsageTokenUsage } from '@repo/ai/usage';
 import {
   preflightAICredits,
@@ -32,6 +26,7 @@ import {
   validateChatRequest,
   getSystemPrompt,
 } from '@/ai/runtime';
+import { runMastraChat } from '@/ai/mastra';
 import { RuntimeErrors, isRuntimeError } from '@/ai/errors';
 import {
   createUsageAuditEntry,
@@ -662,18 +657,19 @@ export async function POST(req: Request) {
       : getSystemPrompt();
 
     // 7. Stream text from the model
-    const result = streamText({
-      model: resolvedModel.model,
-      system: systemPrompt,
-      messages: await convertToModelMessages(messagesForModel),
-      tools: frontendTools(
-        (tools ?? {}) as Parameters<typeof frontendTools>[0]
-      ),
+    const runnerResult = await runMastraChat({
+      request: chatRequest,
+      inputMessages: messagesForModel,
+      systemPrompt,
+      tools,
+      memoryEnabled,
+      knowledgeEnabled,
       abortSignal: req.signal,
       onAbort: async () => {
         await updateMessageStatus(assistantMessageId, 'aborted', new Date());
       },
     });
+    const { result } = runnerResult;
 
     // 8. Return UI message stream response
     const citationsJson =

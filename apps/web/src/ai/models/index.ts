@@ -12,7 +12,7 @@ import type {
   AIModelSelectionSource,
 } from '@repo/ai/models';
 import type { AIProviderId } from '@repo/ai/providers';
-import type { ChatModelOption } from '@/components/ai/types';
+import type { ChatModelOption } from '@/ai/chat-types';
 import { createModel, isProviderAvailable } from '../providers';
 import {
   DEFAULT_MODEL_ID,

@@ -1,6 +1,6 @@
 import type { AIModelId, AIModelReference } from '@repo/ai/models';
 import type { AIProviderId } from '@repo/ai/providers';
-import type { ChatModelOption, ChatThreadSummary } from '@/components/ai/types';
+import type { ChatModelOption, ChatThreadSummary } from '@/ai/chat-types';
 
 export interface AppLocalModelCatalogEntry {
   readonly id: AIModelId;
