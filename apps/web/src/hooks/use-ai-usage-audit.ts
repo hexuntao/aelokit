@@ -14,6 +14,14 @@ export interface AIUsageAuditQueryParams {
   readonly userId: string;
   readonly providerId: string;
   readonly modelId: string;
+  readonly agentId: string;
+  readonly toolName: string;
+  readonly workflowStatus: string;
+  readonly knowledge: string;
+  readonly minTokens: string;
+  readonly maxTokens: string;
+  readonly minCost: string;
+  readonly maxCost: string;
   readonly status: string;
   readonly dateFrom: string;
   readonly dateTo: string;

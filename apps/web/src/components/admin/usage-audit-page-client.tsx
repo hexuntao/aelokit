@@ -15,7 +15,24 @@ import { useMemo } from 'react';
 
 export function UsageAuditPageClient() {
   const [
-    { page, size, userId, providerId, modelId, status, dateFrom, dateTo },
+    {
+      page,
+      size,
+      userId,
+      providerId,
+      modelId,
+      agentId,
+      toolName,
+      workflowStatus,
+      knowledge,
+      minTokens,
+      maxTokens,
+      minCost,
+      maxCost,
+      status,
+      dateFrom,
+      dateTo,
+    },
     setQueryStates,
   ] = useQueryStates({
     page: parseAsIndex.withDefault(0),
@@ -23,14 +40,52 @@ export function UsageAuditPageClient() {
     userId: parseAsString.withDefault(''),
     providerId: parseAsString.withDefault(''),
     modelId: parseAsString.withDefault(''),
+    agentId: parseAsString.withDefault(''),
+    toolName: parseAsString.withDefault(''),
+    workflowStatus: parseAsString.withDefault(''),
+    knowledge: parseAsString.withDefault(''),
+    minTokens: parseAsString.withDefault(''),
+    maxTokens: parseAsString.withDefault(''),
+    minCost: parseAsString.withDefault(''),
+    maxCost: parseAsString.withDefault(''),
     status: parseAsString.withDefault(''),
     dateFrom: parseAsString.withDefault(''),
     dateTo: parseAsString.withDefault(''),
   });
 
   const filters = useMemo<UsageAuditFilters>(
-    () => ({ userId, providerId, modelId, status, dateFrom, dateTo }),
-    [userId, providerId, modelId, status, dateFrom, dateTo]
+    () => ({
+      userId,
+      providerId,
+      modelId,
+      agentId,
+      toolName,
+      workflowStatus,
+      knowledge,
+      minTokens,
+      maxTokens,
+      minCost,
+      maxCost,
+      status,
+      dateFrom,
+      dateTo,
+    }),
+    [
+      userId,
+      providerId,
+      modelId,
+      agentId,
+      toolName,
+      workflowStatus,
+      knowledge,
+      minTokens,
+      maxTokens,
+      minCost,
+      maxCost,
+      status,
+      dateFrom,
+      dateTo,
+    ]
   );
 
   const { data, isLoading, error } = useAIUsageAudit({

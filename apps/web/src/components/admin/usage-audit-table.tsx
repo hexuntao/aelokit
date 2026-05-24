@@ -39,10 +39,27 @@ const STATUS_OPTIONS = [
   'rate_limited',
 ] as const;
 
+const WORKFLOW_STATUS_OPTIONS = [
+  'queued',
+  'running',
+  'succeeded',
+  'failed',
+  'retrying',
+  'cancelled',
+] as const;
+
 export interface UsageAuditFilters {
   readonly userId: string;
   readonly providerId: string;
   readonly modelId: string;
+  readonly agentId: string;
+  readonly toolName: string;
+  readonly workflowStatus: string;
+  readonly knowledge: string;
+  readonly minTokens: string;
+  readonly maxTokens: string;
+  readonly minCost: string;
+  readonly maxCost: string;
   readonly status: string;
   readonly dateFrom: string;
   readonly dateTo: string;
@@ -98,7 +115,7 @@ function StatusBadge({ value }: { readonly value: string | null }) {
 function TableSkeleton({ pageSize }: { readonly pageSize: number }) {
   return Array.from({ length: pageSize }).map((_, rowIndex) => (
     <TableRow key={rowIndex} className="h-14">
-      {Array.from({ length: 17 }).map((__, cellIndex) => (
+      {Array.from({ length: 22 }).map((__, cellIndex) => (
         <TableCell key={cellIndex} className="py-3">
           <Skeleton className="h-4 w-24" />
         </TableCell>
@@ -161,6 +178,59 @@ export function UsageAuditTable({
           placeholder={t('filters.modelId')}
           className="h-8 w-[160px]"
         />
+        <Input
+          value={filters.agentId}
+          onChange={(event) => onFiltersChange({ agentId: event.target.value })}
+          placeholder={t('filters.agentId')}
+          className="h-8 w-[160px]"
+        />
+        <Input
+          value={filters.toolName}
+          onChange={(event) =>
+            onFiltersChange({ toolName: event.target.value })
+          }
+          placeholder={t('filters.toolName')}
+          className="h-8 w-[160px]"
+        />
+        <Select
+          value={filters.knowledge || 'all'}
+          onValueChange={(value) =>
+            onFiltersChange({ knowledge: value === 'all' ? '' : value })
+          }
+        >
+          <SelectTrigger className="h-8 w-[160px]">
+            <SelectValue placeholder={t('filters.knowledge')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('filters.allKnowledge')}</SelectItem>
+            <SelectItem value="enabled">
+              {t('filters.knowledgeEnabled')}
+            </SelectItem>
+            <SelectItem value="citations">
+              {t('filters.knowledgeCited')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.workflowStatus || 'all'}
+          onValueChange={(value) =>
+            onFiltersChange({ workflowStatus: value === 'all' ? '' : value })
+          }
+        >
+          <SelectTrigger className="h-8 w-[170px]">
+            <SelectValue placeholder={t('filters.workflowStatus')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              {t('filters.allWorkflowStatuses')}
+            </SelectItem>
+            {WORKFLOW_STATUS_OPTIONS.map((workflowStatus) => (
+              <SelectItem key={workflowStatus} value={workflowStatus}>
+                {workflowStatus}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={filters.status || 'all'}
           onValueChange={(value) =>
@@ -179,6 +249,44 @@ export function UsageAuditTable({
             ))}
           </SelectContent>
         </Select>
+        <Input
+          type="number"
+          min={0}
+          value={filters.minTokens}
+          onChange={(event) =>
+            onFiltersChange({ minTokens: event.target.value })
+          }
+          placeholder={t('filters.minTokens')}
+          className="h-8 w-[130px]"
+        />
+        <Input
+          type="number"
+          min={0}
+          value={filters.maxTokens}
+          onChange={(event) =>
+            onFiltersChange({ maxTokens: event.target.value })
+          }
+          placeholder={t('filters.maxTokens')}
+          className="h-8 w-[130px]"
+        />
+        <Input
+          type="number"
+          min={0}
+          step="0.000001"
+          value={filters.minCost}
+          onChange={(event) => onFiltersChange({ minCost: event.target.value })}
+          placeholder={t('filters.minCost')}
+          className="h-8 w-[120px]"
+        />
+        <Input
+          type="number"
+          min={0}
+          step="0.000001"
+          value={filters.maxCost}
+          onChange={(event) => onFiltersChange({ maxCost: event.target.value })}
+          placeholder={t('filters.maxCost')}
+          className="h-8 w-[120px]"
+        />
         <Input
           type="date"
           value={filters.dateFrom}
@@ -213,6 +321,10 @@ export function UsageAuditTable({
                 <TableHead>{t('columns.messageId')}</TableHead>
                 <TableHead>{t('columns.provider')}</TableHead>
                 <TableHead>{t('columns.model')}</TableHead>
+                <TableHead>{t('columns.agent')}</TableHead>
+                <TableHead>{t('columns.tools')}</TableHead>
+                <TableHead>{t('columns.knowledge')}</TableHead>
+                <TableHead>{t('columns.workflow')}</TableHead>
                 <TableHead>{t('columns.inputTokens')}</TableHead>
                 <TableHead>{t('columns.outputTokens')}</TableHead>
                 <TableHead>{t('columns.totalTokens')}</TableHead>
@@ -247,6 +359,27 @@ export function UsageAuditTable({
                     </TableCell>
                     <TableCell>{item.providerId}</TableCell>
                     <TableCell>{item.modelId}</TableCell>
+                    <TableCell className="max-w-[140px] truncate font-mono text-xs">
+                      {item.agentId ?? '-'}
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate">
+                      {item.toolCallCount > 0 ? item.toolNames.join(', ') : '-'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {item.knowledgeEnabled
+                        ? `${item.knowledgeChunkCount}/${item.citationCount}`
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate">
+                      {item.workflowRuns.length > 0
+                        ? item.workflowRuns
+                            .map(
+                              (workflow) =>
+                                `${workflow.workflowId}:${workflow.status}`
+                            )
+                            .join(', ')
+                        : '-'}
+                    </TableCell>
                     <TableCell>{formatNumber(item.inputTokens)}</TableCell>
                     <TableCell>{formatNumber(item.outputTokens)}</TableCell>
                     <TableCell>{formatNumber(item.totalTokens)}</TableCell>
@@ -277,7 +410,7 @@ export function UsageAuditTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={18} className="h-24 text-center">
+                  <TableCell colSpan={22} className="h-24 text-center">
                     {t('empty')}
                   </TableCell>
                 </TableRow>

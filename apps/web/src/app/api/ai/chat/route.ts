@@ -836,17 +836,19 @@ export async function POST(req: Request) {
 
     if (
       pendingUsageId &&
-      pendingReservationId &&
       pendingRuntimeContext &&
       pendingResolvedModel &&
       !usageFinalized
     ) {
-      const refundResult = await refundAICredits({
-        reservationId: pendingReservationId,
-        usageId: pendingUsageId,
-        userId: pendingRuntimeContext.userId,
-        reason: 'route_error',
-      });
+      const refundResult = pendingReservationId
+        ? await refundAICredits({
+            reservationId: pendingReservationId,
+            usageId: pendingUsageId,
+            userId: pendingRuntimeContext.userId,
+            reason: 'route_error',
+          })
+        : undefined;
+      const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
 
       await recordUsageAudit({
         ...createUsageAuditEntry(
@@ -862,14 +864,20 @@ export async function POST(req: Request) {
               error instanceof Error ? error.message : String(error),
             providerModelId: pendingResolvedModel.providerModelId,
             requestDurationMs: Date.now() - startTime,
-            billingMode: 'credits',
-            billingStatus: refundResult.success ? 'no_charge' : 'refund_failed',
+            billingMode: getAIUsageBillingMode(creditsBillingEnabled),
+            billingStatus: pendingReservationId
+              ? refundResult?.success
+                ? 'no_charge'
+                : 'refund_failed'
+              : creditsBillingEnabled
+                ? 'no_charge'
+                : 'audit_only',
             billingReference: getBillingReference({
               usageId: pendingUsageId,
               reservationId: pendingReservationId,
-              refundError: refundResult.success
+              refundError: refundResult?.success
                 ? undefined
-                : refundResult.error.message,
+                : refundResult?.error.message,
             }),
           }
         ),
