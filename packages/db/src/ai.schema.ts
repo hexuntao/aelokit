@@ -327,6 +327,53 @@ export const aiToolCall = pgTable(
   })
 );
 
+export const aiWorkflowRun = pgTable(
+  'ai_workflow_run',
+  {
+    id: text('id').primaryKey(),
+    workflowId: text('workflow_id').notNull(),
+    workflowName: text('workflow_name').notNull(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    threadId: text('thread_id').references(() => aiThread.id, {
+      onDelete: 'set null',
+    }),
+    messageId: text('message_id').references(() => aiMessage.id, {
+      onDelete: 'set null',
+    }),
+    status: text('status').notNull().default('queued'),
+    inputMetadata: jsonb('input_metadata').notNull().default(emptyObject),
+    outputMetadata: jsonb('output_metadata').notNull().default(emptyObject),
+    failureReason: text('failure_reason'),
+    retryCount: integer('retry_count').notNull().default(0),
+    startedAt: timestamp('started_at'),
+    completedAt: timestamp('completed_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiWorkflowRunWorkflowCreatedIdx: index(
+      'ai_workflow_run_workflow_created_idx'
+    ).on(table.workflowId, table.createdAt),
+    aiWorkflowRunUserCreatedIdx: index('ai_workflow_run_user_created_idx').on(
+      table.userId,
+      table.createdAt
+    ),
+    aiWorkflowRunThreadCreatedIdx: index(
+      'ai_workflow_run_thread_created_idx'
+    ).on(table.threadId, table.createdAt),
+    aiWorkflowRunStatusCreatedIdx: index(
+      'ai_workflow_run_status_created_idx'
+    ).on(table.status, table.createdAt),
+    aiWorkflowRunMessageIdIdx: index('ai_workflow_run_message_id_idx').on(
+      table.messageId
+    ),
+    aiWorkflowRunStatusCheck: check(
+      'ai_workflow_run_status_check',
+      sql`${table.status} in ('queued', 'running', 'succeeded', 'failed', 'retrying', 'cancelled')`
+    ),
+  })
+);
+
 export const aiMessagePart = pgTable(
   'ai_message_part',
   {
@@ -506,6 +553,83 @@ export const aiCostEvent = pgTable(
     aiCostEventStatusCheck: check(
       'ai_cost_event_status_check',
       sql`${table.status} in ('estimated', 'final', 'failed', 'no_charge')`
+    ),
+  })
+);
+
+export const aiObservabilityEvent = pgTable(
+  'ai_observability_event',
+  {
+    id: text('id').primaryKey(),
+    eventType: text('event_type').notNull(),
+    severity: text('severity').notNull().default('info'),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    workflowRunId: text('workflow_run_id').references(() => aiWorkflowRun.id, {
+      onDelete: 'set null',
+    }),
+    usageId: text('usage_id').references(() => aiUsage.id, {
+      onDelete: 'set null',
+    }),
+    threadId: text('thread_id').references(() => aiThread.id, {
+      onDelete: 'set null',
+    }),
+    messageId: text('message_id').references(() => aiMessage.id, {
+      onDelete: 'set null',
+    }),
+    metadata: jsonb('metadata').notNull().default(emptyObject),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiObservabilityEventTypeCreatedIdx: index(
+      'ai_observability_event_type_created_idx'
+    ).on(table.eventType, table.createdAt),
+    aiObservabilityEventSeverityCreatedIdx: index(
+      'ai_observability_event_severity_created_idx'
+    ).on(table.severity, table.createdAt),
+    aiObservabilityEventWorkflowCreatedIdx: index(
+      'ai_observability_event_workflow_created_idx'
+    ).on(table.workflowRunId, table.createdAt),
+    aiObservabilityEventUsageCreatedIdx: index(
+      'ai_observability_event_usage_created_idx'
+    ).on(table.usageId, table.createdAt),
+    aiObservabilityEventUserCreatedIdx: index(
+      'ai_observability_event_user_created_idx'
+    ).on(table.userId, table.createdAt),
+    aiObservabilityEventSeverityCheck: check(
+      'ai_observability_event_severity_check',
+      sql`${table.severity} in ('debug', 'info', 'warn', 'error')`
+    ),
+  })
+);
+
+export const aiEvalResult = pgTable(
+  'ai_eval_result',
+  {
+    id: text('id').primaryKey(),
+    workflowRunId: text('workflow_run_id').references(() => aiWorkflowRun.id, {
+      onDelete: 'cascade',
+    }),
+    scorerId: text('scorer_id').notNull(),
+    status: text('status').notNull().default('skipped'),
+    score: numeric('score', { precision: 8, scale: 4 }),
+    metadata: jsonb('metadata').notNull().default(emptyObject),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiEvalResultWorkflowCreatedIdx: index(
+      'ai_eval_result_workflow_created_idx'
+    ).on(table.workflowRunId, table.createdAt),
+    aiEvalResultScorerCreatedIdx: index('ai_eval_result_scorer_created_idx').on(
+      table.scorerId,
+      table.createdAt
+    ),
+    aiEvalResultStatusCreatedIdx: index('ai_eval_result_status_created_idx').on(
+      table.status,
+      table.createdAt
+    ),
+    aiEvalResultStatusCheck: check(
+      'ai_eval_result_status_check',
+      sql`${table.status} in ('passed', 'failed', 'skipped', 'error')`
     ),
   })
 );

@@ -92,6 +92,13 @@
       "when": 1779438146733,
       "tag": "0012_sad_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1779587036545,
+      "tag": "0013_striped_spectrum",
+      "breakpoints": true
     }
   ]
 }

@@ -8,3 +8,6 @@ export * from './persistence';
 export * from './entitlements';
 export * from './memory';
 export * from './tools';
+export * from './observability';
+export * from './evals';
+export * from './workflows';
