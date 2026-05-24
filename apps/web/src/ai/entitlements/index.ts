@@ -1,5 +1,3 @@
-import 'server-only';
-
 import type { AIRuntimeContext } from '../context';
 
 export interface EntitlementCheckResult {
@@ -7,14 +5,57 @@ export interface EntitlementCheckResult {
   readonly reason?: string;
 }
 
+export interface AIEntitlementRequest {
+  readonly requestedModelId?: string;
+  readonly allowedModelIds: readonly string[];
+  readonly knowledgeEnabled: boolean;
+  readonly knowledgeAvailable: boolean;
+  readonly memoryEnabled: boolean;
+  readonly toolsRequested: number;
+  readonly toolsAllowed: boolean;
+  readonly creditsBillingEnabled: boolean;
+  readonly creditsRequired: number;
+  readonly currentCredits?: number;
+}
+
 export interface AIEntitlementPolicy {
-  canChat(context: AIRuntimeContext): EntitlementCheckResult;
-  canStream(context: AIRuntimeContext): EntitlementCheckResult;
+  canChat(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+  canUseModel(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+  canUseKnowledge(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+  canUseMemory(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+  canUseTools(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+  canUseCredits(
+    context: AIRuntimeContext,
+    request: AIEntitlementRequest
+  ): EntitlementCheckResult;
+}
+
+export interface EntitlementDecision {
+  readonly allowed: boolean;
+  readonly checks: Readonly<Record<string, EntitlementCheckResult>>;
+  readonly error?: {
+    readonly code: 'forbidden' | 'unauthenticated' | 'payment_required';
+    readonly message: string;
+  };
 }
 
 export const DefaultEntitlementPolicy: AIEntitlementPolicy = {
-  canChat: (context: AIRuntimeContext): EntitlementCheckResult => {
-    // v0.2: 最小 entitlement，只检查用户已认证
+  canChat: (context): EntitlementCheckResult => {
     if (!context.userId || !context.session.user) {
       return {
         allowed: false,
@@ -22,41 +63,141 @@ export const DefaultEntitlementPolicy: AIEntitlementPolicy = {
       };
     }
 
-    // 可以在 v0.3+ 扩展为更复杂的权限检查
     return { allowed: true };
   },
 
-  canStream: (context: AIRuntimeContext): EntitlementCheckResult => {
-    // v0.2: 最小 entitlement，与 canChat 保持一致
-    return DefaultEntitlementPolicy.canChat(context);
+  canUseModel: (_context, request): EntitlementCheckResult => {
+    if (!request.requestedModelId) {
+      return { allowed: true };
+    }
+
+    if (request.allowedModelIds.includes(request.requestedModelId)) {
+      return { allowed: true };
+    }
+
+    return {
+      allowed: false,
+      reason: `Selected model "${request.requestedModelId}" is not allowed.`,
+    };
+  },
+
+  canUseKnowledge: (_context, request): EntitlementCheckResult => {
+    if (!request.knowledgeEnabled) {
+      return { allowed: true };
+    }
+
+    if (request.knowledgeAvailable) {
+      return { allowed: true };
+    }
+
+    return {
+      allowed: false,
+      reason: 'Knowledge retrieval is not available for this request.',
+    };
+  },
+
+  canUseMemory: (_context, request): EntitlementCheckResult => {
+    if (!request.memoryEnabled) {
+      return { allowed: true };
+    }
+
+    return { allowed: true };
+  },
+
+  canUseTools: (_context, request): EntitlementCheckResult => {
+    if (request.toolsRequested === 0) {
+      return { allowed: true };
+    }
+
+    if (request.toolsAllowed) {
+      return { allowed: true };
+    }
+
+    return {
+      allowed: false,
+      reason: 'Tool usage is not allowed for this request.',
+    };
+  },
+
+  canUseCredits: (_context, request): EntitlementCheckResult => {
+    if (!request.creditsBillingEnabled) {
+      return { allowed: true };
+    }
+
+    if (request.currentCredits === undefined) {
+      return {
+        allowed: false,
+        reason: 'Credits balance is required when AI billing is enabled.',
+      };
+    }
+
+    if (request.currentCredits >= request.creditsRequired) {
+      return { allowed: true };
+    }
+
+    return {
+      allowed: false,
+      reason: `Insufficient credits. Required ${request.creditsRequired}, current balance ${request.currentCredits}.`,
+    };
   },
 };
 
-export function enforceEntitlement(
+function toDecisionError(
   context: AIRuntimeContext,
-  policy: AIEntitlementPolicy = DefaultEntitlementPolicy
-):
-  | { readonly allowed: true }
-  | {
-      readonly allowed: false;
-      readonly error: {
-        readonly code: 'forbidden' | 'unauthenticated';
-        readonly message: string;
-      };
-    } {
-  const check = policy.canChat(context);
-  if (check.allowed) {
-    return { allowed: true };
+  checkName: keyof EntitlementDecision['checks'],
+  reason: string
+): EntitlementDecision['error'] {
+  if (!context.userId || !context.session.user) {
+    return {
+      code: 'unauthenticated',
+      message: reason,
+    };
   }
 
-  // 确定是 unauthenticated 还是 forbidden
-  const isUnauthenticated = !context.userId || !context.session.user;
+  if (checkName === 'credits') {
+    return {
+      code: 'payment_required',
+      message: reason,
+    };
+  }
+
   return {
-    allowed: false,
-    error: {
-      code: isUnauthenticated ? 'unauthenticated' : 'forbidden',
-      message: check.reason ?? 'Access denied.',
-    },
+    code: 'forbidden',
+    message: reason,
+  };
+}
+
+export function enforceEntitlement(
+  context: AIRuntimeContext,
+  request: AIEntitlementRequest,
+  policy: AIEntitlementPolicy = DefaultEntitlementPolicy
+): EntitlementDecision {
+  const checks = {
+    chat: policy.canChat(context, request),
+    model: policy.canUseModel(context, request),
+    knowledge: policy.canUseKnowledge(context, request),
+    memory: policy.canUseMemory(context, request),
+    tools: policy.canUseTools(context, request),
+    credits: policy.canUseCredits(context, request),
+  } as const;
+
+  for (const [checkName, check] of Object.entries(checks)) {
+    if (!check.allowed) {
+      return {
+        allowed: false,
+        checks,
+        error: toDecisionError(
+          context,
+          checkName as keyof typeof checks,
+          check.reason ?? 'Access denied.'
+        ),
+      };
+    }
+  }
+
+  return {
+    allowed: true,
+    checks,
   };
 }
 

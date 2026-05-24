@@ -2,6 +2,7 @@ import 'server-only';
 
 import { consumeStream, type UIMessage } from 'ai';
 import type { AIUsageBillingStatus, AIUsageTokenUsage } from '@repo/ai/usage';
+import { getUserCredits } from '@repo/credits';
 import {
   preflightAICredits,
   refundAICredits,
@@ -21,6 +22,10 @@ import {
   resolveModel,
   type ResolvedModel,
 } from '@/ai/models';
+import {
+  getAppLocalModelCatalog,
+  isSelectableModel,
+} from '@/ai/models/catalog';
 import {
   createChatRuntimeRequest,
   validateChatRequest,
@@ -274,8 +279,17 @@ export async function POST(req: Request) {
     }
 
     // 3. Auth/Entitlement check (TASK-014)
-    const entitlementCheck = enforceEntitlement(context);
-    if (!entitlementCheck.allowed) {
+    const entitlementCheck = enforceEntitlement(context, {
+      allowedModelIds: [],
+      knowledgeEnabled: false,
+      knowledgeAvailable: true,
+      memoryEnabled: false,
+      toolsRequested: 0,
+      toolsAllowed: false,
+      creditsBillingEnabled: false,
+      creditsRequired: 0,
+    });
+    if (!entitlementCheck.allowed && entitlementCheck.error) {
       const error =
         entitlementCheck.error.code === 'forbidden'
           ? RuntimeErrors.forbidden(entitlementCheck.error.message)
@@ -298,8 +312,9 @@ export async function POST(req: Request) {
     }: ChatRequestBody = await req.json();
 
     const memoryEnabled = isMemoryEnabledForRequest(requestMemoryEnabled);
-    const knowledgeEnabled =
-      requestKnowledgeEnabled === true && isKnowledgeRetrievalEnabled();
+    const knowledgeRequested = requestKnowledgeEnabled === true;
+    const knowledgeAvailable = isKnowledgeRetrievalEnabled();
+    const knowledgeEnabled = knowledgeRequested && knowledgeAvailable;
 
     const lastUserMessage = getLastUserMessage(messages);
     if (!lastUserMessage) {
@@ -400,6 +415,73 @@ export async function POST(req: Request) {
     };
     pendingRuntimeContext = runtimeContext;
     pendingResolvedModel = resolvedModel;
+    const usageId = nanoid();
+    pendingUsageId = usageId;
+    const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
+    const billingMode = getAIUsageBillingMode(creditsBillingEnabled);
+    const estimatedRequiredCredits = estimateInitialAICredits(messages);
+    const requestedToolCount = Object.keys(tools ?? {}).length;
+    const selectableModelIds = getAppLocalModelCatalog()
+      .filter(isSelectableModel)
+      .map((model) => model.id);
+    const currentCredits = creditsBillingEnabled
+      ? await getUserCredits(context.userId)
+      : undefined;
+
+    const requestEntitlement = enforceEntitlement(runtimeContext, {
+      requestedModelId: resolvedModel.reference.modelId,
+      allowedModelIds: selectableModelIds,
+      knowledgeEnabled: knowledgeRequested,
+      knowledgeAvailable,
+      memoryEnabled,
+      toolsRequested: requestedToolCount,
+      toolsAllowed: false,
+      creditsBillingEnabled,
+      creditsRequired: estimatedRequiredCredits,
+      currentCredits,
+    });
+
+    if (!requestEntitlement.allowed) {
+      await updateMessageStatus(assistantMessageId, 'error', new Date());
+      await recordUsageAudit({
+        ...createUsageAuditEntry(runtimeContext, resolvedModel.reference, {
+          status: 'error',
+          startedAt: new Date(startTime),
+          completedAt: new Date(),
+          failureReason: requestEntitlement.error?.code,
+          errorMessage: requestEntitlement.error?.message,
+          providerModelId: resolvedModel.providerModelId,
+          requestDurationMs: Date.now() - startTime,
+          billingMode,
+          billingStatus:
+            requestEntitlement.error?.code === 'payment_required'
+              ? 'preflight_failed'
+              : creditsBillingEnabled
+                ? 'no_charge'
+                : 'audit_only',
+          billingReference: getBillingReference({
+            usageId,
+            estimatedCredits: estimatedRequiredCredits,
+          }),
+        }),
+        id: usageId,
+      });
+
+      const error =
+        requestEntitlement.error?.code === 'forbidden' ||
+        requestEntitlement.error?.code === 'payment_required'
+          ? RuntimeErrors.forbidden(requestEntitlement.error.message)
+          : RuntimeErrors.unauthenticated();
+
+      return jsonError(
+        error,
+        requestEntitlement.error?.code === 'payment_required'
+          ? 402
+          : requestEntitlement.error?.code === 'forbidden'
+            ? 403
+            : 401
+      );
+    }
 
     // 6. Create and validate chat request
     const chatRequest = createChatRuntimeRequest(
@@ -415,15 +497,11 @@ export async function POST(req: Request) {
       return jsonError(error, 400);
     }
 
-    const usageId = nanoid();
-    pendingUsageId = usageId;
-    const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
-    const billingMode = getAIUsageBillingMode(creditsBillingEnabled);
     let reservedCredits: number | undefined;
     const toolAuditById = new Map<string, Record<string, unknown>>();
 
     if (creditsBillingEnabled) {
-      reservedCredits = estimateInitialAICredits(messages);
+      reservedCredits = estimatedRequiredCredits;
       const preflightResult = await preflightAICredits({
         usageId,
         userId: context.userId,
