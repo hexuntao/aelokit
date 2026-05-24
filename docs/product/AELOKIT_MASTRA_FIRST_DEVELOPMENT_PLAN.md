@@ -71,26 +71,39 @@ shell：
 
 ## 3. 当前代码基线
 
-当前代码已经不是空白 Mastra 集成：
+当前代码已经进入 Mastra-first Agent Core 的第一层闭环，但不是完整 Mastra 原生
+runtime：
 
 - `apps/web/package.json` 已有 `@mastra/core`、`@mastra/memory`、
   `@mastra/pg`、`@mastra/rag`。
-- `apps/web/src/ai/mastra/*` 已有 Mastra storage、memory config 和 instance
-  helper。
+- `apps/web/src/ai/mastra/*` 已有 Mastra storage、memory config、instance helper
+  和 chat runner。
+- `apps/web/src/ai/mastra/runner-core.ts` 已创建 app-local Mastra chat
+  `Agent`、`RequestContext`、system prompt mapping 和 runner 测试入口。
+- `apps/web/src/app/api/ai/chat/route.ts` 已通过 `runMastraChat()` 委托生成路径，
+  不再把 route 本身作为直接 `streamText()` 调用点。
+- 但 `runMastraChat()` 内部仍然通过 Vercel AI SDK `streamText()` 返回
+  AI SDK-compatible UI message stream；尚未确认或切换到 Mastra 官方 Agent
+  streaming API。
+- `@mastra/ai-sdk` 尚未安装。是否需要它取决于下一次 External Docs Gate 对
+  Mastra-to-AI-SDK streaming bridge 的确认。
 - `apps/web/src/ai/memory/*` 与 `apps/web/src/ai/memory-service.ts` 已使用
   Mastra memory 相关能力处理 confirmed memory。
 - `apps/web/src/ai/knowledge/*` 已使用 Mastra RAG/vector 相关能力处理 chunking
   和 vector retrieval。
-- `apps/web/src/app/api/ai/chat/route.ts` 仍然直接使用 Vercel AI SDK
-  `streamText()` 作为主 chat generation path。
 - `apps/web/src/ai/models/*` 已包含模型目录、可选模型、用户默认模型和
   per-chat 模型选择优先级。
+- `thread.modelId` 当前语义已接近“最近一次使用的模型”：已有 thread 在 provider /
+  model 改变时会更新 thread 上的 provider/model 字段。
 - `packages/ai/src/adapters/mastra/index.ts` 是 contract-only bridge metadata，
   不是 live Mastra runtime adapter。
+- `apps/web/src/ai/mastra/index.ts` 中仍有旧的 skeleton note，称 Mastra
+  Agent/workflow runtime out of scope；该注释已落后于当前 runner 代码，需要在
+  后续代码任务中清理。
 
-因此下一步不是“引入 Mastra”，而是把 chat generation core 从直接
-`streamText()` 收拢到 Mastra Agent runner，同时保留 AeloKit 现有 route、
-persistence、audit、billing 和 UI contract。
+因此下一步不是“新增 Mastra runner”，而是完成 Phase 1 的代码级验收与硬化：
+确认 runner 边界、修正过期状态说明、处理 focused test open-handle 问题，并通过
+External Docs Gate 判断是否需要推进到 Mastra 官方 Agent streaming path。
 
 ## 4. External Docs Gate 基线
 
@@ -153,9 +166,14 @@ adapter-compatible shapes，但不能实例化 Mastra 或 provider SDK。
 目标：把主 chat generation path 改造成 Mastra-agent-shaped，同时保持现有 route 和
 UI contract 稳定。
 
+当前状态：部分完成。app-local Mastra chat runner 已存在，`/api/ai/chat` 已调用
+`runMastraChat()`，但 runner 内部仍使用 Vercel AI SDK `streamText()` 生成
+AI SDK-compatible UI message stream；Mastra 官方 Agent streaming path 尚未验证。
+
 范围：
 
-- 在 `apps/web/src/ai` 下新增 app-local Mastra chat agent factory / runner。
+- 维护 `apps/web/src/ai` 下已存在的 app-local Mastra chat agent factory /
+  runner。
 - 保留 `/api/ai/chat` 作为唯一 chat stream endpoint。
 - 保留 assistant-ui 和当前 transport。
 - 保留当前模型选择语义：per-chat model > user default model > system default model。
@@ -163,14 +181,18 @@ UI contract 稳定。
 - 保留 credits billing feature flag，默认 audit-only。
 - 增加 focused tests，覆盖 runner input mapping、selected model metadata、
   system prompt/context construction、failure handling。
+- 清理与当前代码事实不一致的旧状态说明，例如 Mastra skeleton note。
 
 验收：
 
 - route 仍返回 AI SDK-compatible UI message stream。
+- route 继续通过 `runMastraChat()` 委托生成路径。
 - assistant message metadata 仍包含 thread、message、provider、model、usage、
   knowledge/citation 等必要字段。
 - usage audit / cost audit 每个请求只 finalize 一次。
 - `packages/ai` 继续 runtime-free。
+- focused runner tests 不仅子测试通过，也应能让测试命令正常退出；若存在 open
+  handle，必须明确记录或修复。
 - 相关 typecheck、focused Biome check、package export check、DB shim check 和
   focused tests 通过。
 
@@ -182,11 +204,14 @@ UI contract 稳定。
 - 不重写 AI Workspace UI。
 - 不运行 DB migration。
 
-决策门：
+已确认决策：
 
-- 是否允许新增 `@mastra/ai-sdk`。如果允许，优先使用官方 AI SDK-compatible
-  streaming utilities；如果不允许，先做本地 runner abstraction，保持 dependency
-  文件不变。
+- 条件允许新增 `@mastra/ai-sdk`。实施前必须先刷新 Mastra 官方文档；只有确认它是
+  官方推荐的 Mastra-to-AI-SDK streaming bridge，且当前依赖无法无损完成转换时，
+  才允许新增这一项依赖。除此之外不新增其他依赖。
+- 如果官方文档显示当前 Vercel AI SDK `streamText()` wrapper 已经是最稳妥的
+  AI SDK-compatible streaming path，可以先保持现状，但必须把状态命名为
+  Mastra-agent-shaped runner，而不是完整 Mastra-native streaming。
 
 ### Phase 2：Memory / Knowledge 进入 Agent Context
 
@@ -251,10 +276,11 @@ product-safe。
 - 不增加 destructive tools。
 - 不绕过 AeloKit permission decision 直接执行 Mastra tool。
 
-决策门：
+已确认决策：
 
-- 确认第一个真实工具领域。建议优先选择 read-only knowledge inspection 或
-  read-only account metadata，而不是 payment、storage mutation 或外部副作用。
+- 第一个真实工具领域选择 read-only knowledge inspection。该工具只读取当前用户
+  有权限的 knowledge source、document、chunk 和 citation metadata；不写入数据，
+  不触发 embedding，不调用外部 MCP。
 
 ### Phase 4：Workflows、Evals 与 Observability
 
@@ -290,9 +316,11 @@ observability primitives，而不是继续堆在单个 route 或单个 agent loo
 - 不把 workflow 存在本身当成 observability。
 - 不把 long-running job 无边界地塞进 request route。
 
-决策门：
+已确认决策：
 
-- 确认第一个产品 workflow。优先选择审计价值高、破坏性低的工作流。
+- 第一个 auditable Mastra workflow 选择 Knowledge ingestion / re-index audit
+  workflow，但不进入 Phase 1。它应在 Agent Core 和 Memory / Knowledge Context
+  闭环之后实施。
 
 ### Phase 5：Admin、Credits 与 Product Controls
 
@@ -378,101 +406,48 @@ Runtime smoke 独立处理：
 
 ## 8. 推荐下一步实现目标
 
-推荐下一步：Phase 1，Mastra Agent Core。
+推荐下一步：Phase 1 验收与硬化，而不是重新实现 runner。
 
 推荐范围：
 
 - 保留 `/api/ai/chat`。
 - 保留 assistant-ui。
 - 保留当前 model selection 和 thread/message persistence。
-- 增加 app-local Mastra chat agent runner。
-- 保留 usage audit 和 credits boundary。
-- 增加 focused static tests。
-- 不安装 `@mastra/ai-sdk`，除非用户明确确认。
-- 不做 runtime smoke，除非用户明确确认。
+- 保留已存在的 app-local Mastra chat agent runner。
+- 确认 route 到 runner 的 metadata、usage audit、credits boundary 没有丢失。
+- 清理过期状态说明，例如 `apps/web/src/ai/mastra/index.ts` 中的 skeleton note。
+- 处理或明确记录 focused runner test 的 open-handle / 不退出问题。
+- 通过 External Docs Gate 判断是否需要新增 `@mastra/ai-sdk`，以及是否要推进到
+  Mastra 官方 Agent streaming path。
+- Phase 1 不做 runtime smoke；真实运行时验收单独开 validation goal。
 
-推荐 `/goal` 草案：
+推荐任务形态：
 
-```md
-/goal
+- 类型：实现前审查 + 小范围硬化任务。
+- 目标：把已经存在的 Mastra-agent-shaped runner 做到 code-level accepted。
+- 验收重点：边界不漂移、测试可稳定退出、文档/状态命名与真实代码一致。
 
-# Goal: AeloKit Mastra-first Agent Core
-
-## 类型
-
-实现任务。不拆 app，不创建新 package。
-
-## 目标
-
-为现有 `POST /api/ai/chat` route 增加 app-local Mastra-first chat agent
-runner，同时保留 assistant-ui、model selection、thread/message persistence、
-usage audit 和 credits boundary。
-
-## 必读
-
-- `AGENTS.md`
-- `apps/AGENTS.md`
-- `apps/web/AGENTS.md`
-- `docs/product/AELOKIT_AI_SAAS_PLATFORM_PRD.md`
-- `docs/product/AELOKIT_MASTRA_FIRST_DEVELOPMENT_PLAN.md`
-- `apps/web/src/app/api/ai/chat/route.ts`
-- `apps/web/src/ai/runtime/index.ts`
-- `apps/web/src/ai/models/index.ts`
-- `apps/web/src/ai/mastra/*`
-- `apps/web/src/ai/memory/index.ts`
-- `apps/web/src/ai/knowledge/*`
-- `apps/web/src/ai/usage/index.ts`
-- `apps/web/src/ai/persistence/index.ts`
-- `packages/ai/src/adapters/mastra/index.ts`
-
-## External Docs Gate
-
-实施前检查 Mastra 官方最新文档：
-
-- Agent class / stream API
-- AI SDK-compatible streaming
-- Memory / storage
-- Tools
-- Runtime context
-
-## Scope
-
-1. 修复 `apps/web/src/ai` 反向 import UI component types 的小边界债。
-2. 在 `apps/web/src/ai` 下新增 app-local Mastra chat agent runner / factory。
-3. 让 `/api/ai/chat` 通过 runner 执行生成，同时保留 auth、entitlement、
-   model resolution、persistence、usage audit、citations 和 billing behavior。
-4. 增加 focused tests 覆盖 runner input mapping 和 metadata preservation。
-5. 运行 focused static checks。
-
-## Non-goals
+本阶段仍然不做：
 
 - 不创建 `/api/chat`。
 - 不把 runtime 放进 `packages/ai`。
 - 不创建 future apps 或 packages。
-- 不安装依赖，除非用户明确确认。
+- 不安装除条件确认的 `@mastra/ai-sdk` 以外的依赖。
 - 不运行 DB migration。
-- 不做 runtime smoke，除非用户明确确认。
-- 不启用真实 MCP 或 side-effecting tools。
+- 不做 runtime smoke。
+- 不启用真实 MCP、read-only knowledge inspection tool 或 workflow。
 
-## Acceptance
+## 9. 已确认决策
 
-- `POST /api/ai/chat` 仍是唯一 chat stream route。
-- assistant-ui client contract 保持兼容。
-- provider/model/thread/message/usage metadata 保持不丢。
-- usage audit 只 finalize 一次。
-- credits charging 继续 feature-flagged 且默认关闭。
-- `packages/ai` 继续 contract-only。
-- 相关 typecheck、focused Biome check、package export check、DB shim check 和
-  focused tests 通过。
-```
-
-## 9. 待确认问题
-
-- `thread.modelId` 的语义是“创建时使用的模型”还是“最近一次使用的模型”。
-  当前代码更接近“最近一次使用的模型”。
-- 是否允许新增 `@mastra/ai-sdk`，以使用官方 Mastra-to-AI-SDK stream conversion。
-- Phase 1 完成后是否允许做 authenticated browser smoke。
-- 第一个真实 tool 选择 knowledge inspection、account metadata，还是其他 read-only
-  domain。
-- 第一个 auditable Mastra workflow 选择哪个产品场景。
-
+- `thread.modelId` 表示最近一次使用的模型。暂不追踪创建时模型；如果后续需要该能力，
+  应新增显式字段，而不是复用 `modelId`。
+- Phase 1 条件允许新增 `@mastra/ai-sdk`。前提是先刷新 Mastra 官方文档，并确认它是
+  官方推荐且必要的 Mastra-to-AI-SDK streaming bridge；除此之外不新增其他依赖。
+- Phase 1 不做 authenticated browser smoke。完成后如需真实运行时验收，单独创建
+  validation goal。
+- 第一个真实 tool 选择 read-only knowledge inspection。它只读取当前用户有权限的
+  knowledge source、document、chunk 和 citation metadata，不写入数据、不触发
+  embedding、不调用外部 MCP。
+- 第一个 auditable Mastra workflow 选择 Knowledge ingestion / re-index audit
+  workflow，但不进入 Phase 1；应在 Agent Core 和 Memory / Knowledge Context 闭环
+  之后实施。
