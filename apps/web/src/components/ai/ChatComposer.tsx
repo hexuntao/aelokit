@@ -21,6 +21,9 @@ import {
 
 export function ChatComposer() {
   const {
+    availableAgents,
+    selectedAgentId,
+    setSelectedAgentId,
     availableModels,
     selectedModelId,
     setSelectedModelId,
@@ -69,6 +72,22 @@ export function ChatComposer() {
           className="flex flex-col gap-3 w-full max-w-4xl mx-auto"
         >
           <div className="flex items-center gap-2">
+            <Select
+              value={selectedAgentId}
+              onValueChange={setSelectedAgentId}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select an agent" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableAgents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={selectedModelId}
               onValueChange={setSelectedModelId}

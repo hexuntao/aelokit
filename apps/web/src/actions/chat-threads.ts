@@ -32,6 +32,8 @@ function toThreadSummary(thread: {
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly agentId?: string;
+  readonly agentName?: string;
   readonly providerId?: string;
   readonly providerName?: string;
   readonly modelId?: string;
@@ -43,6 +45,8 @@ function toThreadSummary(thread: {
     status: thread.status,
     createdAt: thread.createdAt.toISOString(),
     updatedAt: thread.updatedAt.toISOString(),
+    agentId: thread.agentId,
+    agentName: thread.agentName,
     providerId: thread.providerId,
     providerName: thread.providerName,
     modelId: thread.modelId,

@@ -25,6 +25,7 @@ import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
 import { getThreadInsights } from './thread-insights';
 import type {
+  ChatAgentOption,
   ChatModelOption,
   ChatThreadSummary,
   ChatUIMessage,
@@ -43,6 +44,8 @@ interface ChatProviderProps {
   readonly initialThreads?: readonly ChatThreadSummary[];
   readonly initialThreadId?: string;
   readonly initialMessages?: readonly ChatUIMessage[];
+  readonly initialAgentOptions?: readonly ChatAgentOption[];
+  readonly initialSelectedAgentId?: string;
   readonly initialModelOptions?: readonly ChatModelOption[];
   readonly initialUserDefaultModelId?: string;
   readonly initialSystemDefaultModelId?: string;
@@ -53,6 +56,9 @@ interface ChatContextType {
   error: Error | null;
   errorType: ChatErrorType;
   errorMetadata: Record<string, unknown>;
+  availableAgents: readonly ChatAgentOption[];
+  selectedAgentId: string;
+  setSelectedAgentId: (agentId: string) => void;
   availableModels: readonly ChatModelOption[];
   selectedModelId: string;
   setSelectedModelId: (modelId: string) => void;
@@ -111,6 +117,8 @@ export function ChatProvider({
   initialThreads = [],
   initialThreadId,
   initialMessages = [],
+  initialAgentOptions = [],
+  initialSelectedAgentId,
   initialModelOptions = [],
   initialUserDefaultModelId,
   initialSystemDefaultModelId = 'gpt-5.5',
@@ -122,6 +130,11 @@ export function ChatProvider({
   const [errorType, setErrorType] = useState<ChatErrorType>('unknown');
   const [errorMetadata, setErrorMetadata] = useState<Record<string, unknown>>(
     {}
+  );
+  const [availableAgents] =
+    useState<readonly ChatAgentOption[]>(initialAgentOptions);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(
+    initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? ''
   );
   const [availableModels] =
     useState<readonly ChatModelOption[]>(initialModelOptions);
@@ -151,6 +164,7 @@ export function ChatProvider({
   const [isThreadListLoading, setIsThreadListLoading] = useState(false);
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const threadIdRef = useRef<string | undefined>(initialThreadId);
+  const selectedAgentIdRef = useRef(selectedAgentId);
   const selectedModelIdRef = useRef(selectedModelId);
   const memoryEnabledRef = useRef(memoryEnabled);
   const knowledgeEnabledRef = useRef(knowledgeEnabled);
@@ -212,6 +226,7 @@ export function ChatProvider({
   }, []);
 
   threadIdRef.current = threadId;
+  selectedAgentIdRef.current = selectedAgentId;
   selectedModelIdRef.current = selectedModelId;
   memoryEnabledRef.current = memoryEnabled;
   knowledgeEnabledRef.current = knowledgeEnabled;
@@ -242,6 +257,7 @@ export function ChatProvider({
             ...body,
             messages,
             threadId: threadIdRef.current,
+            agentId: selectedAgentIdRef.current || undefined,
             modelId: selectedModelIdRef.current || undefined,
             memoryEnabled: memoryEnabledRef.current,
             knowledgeEnabled: knowledgeEnabledRef.current,
@@ -298,6 +314,11 @@ export function ChatProvider({
         setLastCitations([]);
       }
 
+      const responseAgentId = message.metadata?.agentId;
+      if (responseAgentId) {
+        setSelectedAgentId(responseAgentId);
+      }
+
       const knowledgeEnabledMeta = message.metadata?.knowledgeEnabled;
       setLastKnowledgeActive(knowledgeEnabledMeta === true);
     },
@@ -313,13 +334,21 @@ export function ChatProvider({
     clearError();
     setThreadId(undefined);
     threadIdRef.current = undefined;
+    setSelectedAgentId(initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? '');
     setSelectedModelId(getPreferredModelId());
     runtime.thread.reset();
     void runtime.thread.composer.reset();
     setLastCitations([]);
     setLastKnowledgeActive(false);
     syncThreadUrl(undefined);
-  }, [clearError, getPreferredModelId, runtime, syncThreadUrl]);
+  }, [
+    clearError,
+    getPreferredModelId,
+    initialAgentOptions,
+    initialSelectedAgentId,
+    runtime,
+    syncThreadUrl,
+  ]);
 
   const openThread = useCallback(
     async (nextThreadId: string) => {
@@ -350,6 +379,12 @@ export function ChatProvider({
         runtime.thread.reset();
         void runtime.thread.composer.reset();
         runtime.thread.importExternalState(threadState.messages);
+        setSelectedAgentId(
+          threadState.thread.agentId ??
+            initialSelectedAgentId ??
+            initialAgentOptions[0]?.id ??
+            ''
+        );
         setSelectedModelId(getPreferredModelId(threadState.thread.modelId));
 
         const insights = getThreadInsights(threadState.messages);
@@ -388,16 +423,25 @@ export function ChatProvider({
       const initialThread = initialThreads.find(
         (thread) => thread.id === initialThreadId
       );
+      setSelectedAgentId(
+        initialThread?.agentId ??
+          initialSelectedAgentId ??
+          initialAgentOptions[0]?.id ??
+          ''
+      );
       setSelectedModelId(getPreferredModelId(initialThread?.modelId));
       return;
     }
 
+    setSelectedAgentId(initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? '');
     setSelectedModelId(getPreferredModelId(initialSelectedModelId));
     runtime.thread.reset();
     void runtime.thread.composer.reset();
   }, [
     getPreferredModelId,
     initialMessages,
+    initialAgentOptions,
+    initialSelectedAgentId,
     initialSelectedModelId,
     initialThreadId,
     initialThreads,
@@ -441,6 +485,9 @@ export function ChatProvider({
           error,
           errorType,
           errorMetadata,
+          availableAgents,
+          selectedAgentId,
+          setSelectedAgentId,
           availableModels,
           selectedModelId,
           setSelectedModelId,

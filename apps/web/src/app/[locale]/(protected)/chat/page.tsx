@@ -1,6 +1,11 @@
 import { getChatModelPreferenceState } from '@/ai/models';
+import {
+  getDefaultAgent,
+  getSelectableAgentOptions,
+} from '@/ai/agents';
 import { getMessages, getThread, listThreads } from '@/ai/persistence';
 import type {
+  ChatAgentOption,
   ChatModelOption,
   ChatThreadSummary,
   ChatUIMessage,
@@ -18,6 +23,8 @@ function serializeThread(thread: {
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly agentId?: string;
+  readonly agentName?: string;
   readonly providerId?: string;
   readonly providerName?: string;
   readonly modelId?: string;
@@ -29,6 +36,8 @@ function serializeThread(thread: {
     status: thread.status,
     createdAt: thread.createdAt.toISOString(),
     updatedAt: thread.updatedAt.toISOString(),
+    agentId: thread.agentId,
+    agentName: thread.agentName,
     providerId: thread.providerId,
     providerName: thread.providerName,
     modelId: thread.modelId,
@@ -52,12 +61,16 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   let initialThreads: readonly ChatThreadSummary[] = [];
   let initialThreadId: string | undefined;
   let initialMessages: readonly ChatUIMessage[] = [];
+  let initialAgentOptions: readonly ChatAgentOption[] = [];
+  let initialSelectedAgentId: string | undefined;
   let initialModelOptions: readonly ChatModelOption[] = [];
   let initialUserDefaultModelId: string | undefined;
   let initialSystemDefaultModelId = 'gpt-5.5';
   let initialSelectedModelId: string | undefined;
 
   if (session?.user?.id) {
+    initialAgentOptions = getSelectableAgentOptions();
+    initialSelectedAgentId = getDefaultAgent().id;
     const modelPreferences = await getChatModelPreferenceState(session.user.id);
     initialModelOptions = modelPreferences.availableModels;
     initialUserDefaultModelId = modelPreferences.userDefaultModelId;
@@ -81,6 +94,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         if (messagesResult.success) {
           initialThreadId = requestedThreadId;
           initialMessages = messagesResult.data as readonly ChatUIMessage[];
+          initialSelectedAgentId =
+            threadResult.data.agentId ?? initialSelectedAgentId;
           initialSelectedModelId =
             threadResult.data.modelId ?? initialSelectedModelId;
         }
@@ -96,6 +111,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             initialThreads={initialThreads}
             initialThreadId={initialThreadId}
             initialMessages={initialMessages}
+            initialAgentOptions={initialAgentOptions}
+            initialSelectedAgentId={initialSelectedAgentId}
             initialModelOptions={initialModelOptions}
             initialUserDefaultModelId={initialUserDefaultModelId}
             initialSystemDefaultModelId={initialSystemDefaultModelId}

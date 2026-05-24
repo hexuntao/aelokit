@@ -11,6 +11,7 @@ import { CitationList, CitationSummary } from './CitationList';
 import { Button } from '@/components/ui/button';
 import { BookOpen } from 'lucide-react';
 import type {
+  ChatAgentOption,
   ChatModelOption,
   ChatThreadSummary,
   ChatUIMessage,
@@ -87,6 +88,8 @@ interface ChatInterfaceProps {
   readonly initialThreads?: readonly ChatThreadSummary[];
   readonly initialThreadId?: string;
   readonly initialMessages?: readonly ChatUIMessage[];
+  readonly initialAgentOptions?: readonly ChatAgentOption[];
+  readonly initialSelectedAgentId?: string;
   readonly initialModelOptions?: readonly ChatModelOption[];
   readonly initialUserDefaultModelId?: string;
   readonly initialSystemDefaultModelId?: string;
@@ -97,6 +100,8 @@ export function ChatInterface({
   initialThreads,
   initialThreadId,
   initialMessages,
+  initialAgentOptions,
+  initialSelectedAgentId,
   initialModelOptions,
   initialUserDefaultModelId,
   initialSystemDefaultModelId,
@@ -107,6 +112,8 @@ export function ChatInterface({
       initialThreads={initialThreads}
       initialThreadId={initialThreadId}
       initialMessages={initialMessages}
+      initialAgentOptions={initialAgentOptions}
+      initialSelectedAgentId={initialSelectedAgentId}
       initialModelOptions={initialModelOptions}
       initialUserDefaultModelId={initialUserDefaultModelId}
       initialSystemDefaultModelId={initialSystemDefaultModelId}

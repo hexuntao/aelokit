@@ -6,6 +6,7 @@ import {
   aiMessage,
   aiMessagePart,
   aiToolCall,
+  aiAgent,
   aiModel,
   aiProvider,
 } from '@repo/db/ai-schema';
@@ -57,6 +58,8 @@ export interface ThreadData {
   readonly status: ThreadStatus;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly agentId?: string;
+  readonly agentName?: string;
   readonly providerId?: string;
   readonly providerName?: string;
   readonly modelId?: string;
@@ -183,6 +186,8 @@ function toThreadData(thread: {
   readonly status: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly agentId: string | null;
+  readonly agentName: string | null;
   readonly providerId: string | null;
   readonly providerName: string | null;
   readonly modelId: string | null;
@@ -195,6 +200,8 @@ function toThreadData(thread: {
     status: thread.status as ThreadStatus,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
+    agentId: thread.agentId ?? undefined,
+    agentName: thread.agentName ?? undefined,
     providerId: thread.providerId ?? undefined,
     providerName: thread.providerName ?? undefined,
     modelId: thread.modelId ?? undefined,
@@ -205,6 +212,7 @@ function toThreadData(thread: {
 export async function ensureThread(options: {
   readonly threadId?: string;
   readonly userId: string;
+  readonly agentId?: string;
   readonly providerId?: string;
   readonly modelId?: string;
   readonly firstMessage?: UIMessage;
@@ -226,12 +234,14 @@ export async function ensureThread(options: {
     }
 
     if (
-      options.providerId &&
-      options.modelId &&
-      (existingThread.data.providerId !== options.providerId ||
-        existingThread.data.modelId !== options.modelId)
+      options.agentId !== existingThread.data.agentId ||
+      (options.providerId &&
+        options.modelId &&
+        (existingThread.data.providerId !== options.providerId ||
+          existingThread.data.modelId !== options.modelId))
     ) {
       return updateThread(options.threadId, options.userId, {
+        agentId: options.agentId,
         providerId: options.providerId,
         modelId: options.modelId,
       });
@@ -246,6 +256,7 @@ export async function ensureThread(options: {
   return createThread({
     userId: options.userId,
     title: createThreadTitle(options.firstMessage),
+    agentId: options.agentId,
     providerId: options.providerId,
     modelId: options.modelId,
     metadata: {
@@ -312,12 +323,15 @@ export async function getThread(
         status: aiThread.status,
         createdAt: aiThread.createdAt,
         updatedAt: aiThread.updatedAt,
+        agentId: aiThread.agentId,
+        agentName: aiAgent.displayName,
         providerId: aiThread.providerId,
         providerName: aiProvider.displayName,
         modelId: aiThread.modelId,
         modelName: aiModel.displayName,
       })
       .from(aiThread)
+      .leftJoin(aiAgent, eq(aiAgent.id, aiThread.agentId))
       .leftJoin(aiProvider, eq(aiProvider.id, aiThread.providerId))
       .leftJoin(
         aiModel,
@@ -361,12 +375,15 @@ export async function listThreads(
         status: aiThread.status,
         createdAt: aiThread.createdAt,
         updatedAt: aiThread.updatedAt,
+        agentId: aiThread.agentId,
+        agentName: aiAgent.displayName,
         providerId: aiThread.providerId,
         providerName: aiProvider.displayName,
         modelId: aiThread.modelId,
         modelName: aiModel.displayName,
       })
       .from(aiThread)
+      .leftJoin(aiAgent, eq(aiAgent.id, aiThread.agentId))
       .leftJoin(aiProvider, eq(aiProvider.id, aiThread.providerId))
       .leftJoin(
         aiModel,
@@ -406,6 +423,7 @@ export async function updateThread(
     readonly title?: string;
     readonly status?: ThreadStatus;
     readonly metadata?: Record<string, unknown>;
+    readonly agentId?: string;
     readonly providerId?: string;
     readonly modelId?: string;
   }>
@@ -420,6 +438,7 @@ export async function updateThread(
         ...(updates.metadata !== undefined
           ? { metadata: updates.metadata }
           : {}),
+        ...(updates.agentId !== undefined ? { agentId: updates.agentId } : {}),
         ...(updates.providerId !== undefined
           ? { providerId: updates.providerId }
           : {}),
@@ -438,6 +457,7 @@ export async function updateThread(
         status: thread.status as ThreadStatus,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
+        agentId: thread.agentId ?? undefined,
         providerId: thread.providerId ?? undefined,
         modelId: thread.modelId ?? undefined,
       },

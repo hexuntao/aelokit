@@ -11,6 +11,7 @@ import {
 export interface CreateMastraToolRegistryOptions {
   readonly userId: string;
   readonly knowledgeEnabled: boolean;
+  readonly allowedToolIds?: readonly string[];
 }
 
 export interface MastraToolRegistry {
@@ -21,7 +22,12 @@ export interface MastraToolRegistry {
 export function createMastraToolRegistry(
   options: CreateMastraToolRegistryOptions
 ): MastraToolRegistry {
-  if (!options.knowledgeEnabled) {
+  const allowKnowledgeTool =
+    options.knowledgeEnabled &&
+    (options.allowedToolIds === undefined ||
+      options.allowedToolIds.includes(KNOWLEDGE_INSPECTION_TOOL_ID));
+
+  if (!allowKnowledgeTool) {
     return {
       tools: {},
       definitions: [],

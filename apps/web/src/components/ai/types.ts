@@ -1,4 +1,5 @@
 export type {
+  ChatAgentOption,
   CitationMetadata,
   ChatMessageMetadata,
   ChatModelOption,

@@ -17,6 +17,10 @@ import {
   type AIRuntimeContext,
 } from '@/ai/context';
 import {
+  ensureAIAgentCatalog,
+  resolveAgentSelection,
+} from '@/ai/agents';
+import {
   ensureAIModelCatalog,
   getUserDefaultModelReference,
   resolveModel,
@@ -64,6 +68,7 @@ type ChatRequestBody = {
   readonly messages?: UIMessage[];
   readonly threadId?: string;
   readonly modelId?: string;
+  readonly agentId?: string;
   readonly tools?: Record<string, unknown>;
   readonly memoryEnabled?: boolean;
   readonly knowledgeEnabled?: boolean;
@@ -306,6 +311,7 @@ export async function POST(req: Request) {
       messages = [],
       threadId,
       modelId,
+      agentId,
       tools,
       memoryEnabled: requestMemoryEnabled,
       knowledgeEnabled: requestKnowledgeEnabled,
@@ -324,12 +330,24 @@ export async function POST(req: Request) {
       return jsonError(error, 400);
     }
 
+    await ensureAIAgentCatalog();
     await ensureAIModelCatalog();
+    const resolvedAgent = resolveAgentSelection({
+      requestedAgentId: agentId,
+    });
+    const agentKnowledgeEnabled =
+      knowledgeEnabled && resolvedAgent.agent.features.knowledge;
+    const agentMemoryEnabled =
+      memoryEnabled && resolvedAgent.agent.features.memory;
 
     // 5. Resolve model with per-chat > user default > system default.
     let selectedModel: { providerId: 'openai'; modelId: string } | undefined;
-    if (modelId) {
-      selectedModel = { providerId: 'openai' as const, modelId };
+    const requestedModelId = modelId ?? resolvedAgent.agent.defaultModelId;
+    if (requestedModelId) {
+      selectedModel = {
+        providerId: 'openai' as const,
+        modelId: requestedModelId,
+      };
     }
 
     const userDefaultModel = await getUserDefaultModelReference(context.userId);
@@ -355,6 +373,7 @@ export async function POST(req: Request) {
     const threadResult = await ensureThread({
       threadId,
       userId: context.userId,
+      agentId: resolvedAgent.agent.id,
       providerId: resolvedModel.reference.providerId,
       modelId: resolvedModel.reference.modelId,
       firstMessage: lastUserMessage,
@@ -390,6 +409,9 @@ export async function POST(req: Request) {
       role: 'assistant',
       content: [],
       metadata: {
+        agentId: resolvedAgent.agent.id,
+        requestedAgentId: agentId,
+        agentFallbackFromUnknown: resolvedAgent.fallbackFromUnknown,
         modelSelectionSource: resolvedModel.source,
         providerId: resolvedModel.reference.providerId,
         modelId: resolvedModel.reference.modelId,
@@ -412,6 +434,7 @@ export async function POST(req: Request) {
       ...context,
       threadId: persistedThread.id,
       messageId: assistantMessageId,
+      selectedAgent: { agentId: resolvedAgent.agent.id },
     };
     pendingRuntimeContext = runtimeContext;
     pendingResolvedModel = resolvedModel;
@@ -431,11 +454,13 @@ export async function POST(req: Request) {
     const requestEntitlement = enforceEntitlement(runtimeContext, {
       requestedModelId: resolvedModel.reference.modelId,
       allowedModelIds: selectableModelIds,
-      knowledgeEnabled: knowledgeRequested,
-      knowledgeAvailable,
-      memoryEnabled,
       toolsRequested: requestedToolCount,
-      toolsAllowed: false,
+      knowledgeEnabled: knowledgeRequested,
+      knowledgeAvailable:
+        !knowledgeRequested ||
+        (knowledgeAvailable && resolvedAgent.agent.features.knowledge),
+      memoryEnabled: agentMemoryEnabled,
+      toolsAllowed: resolvedAgent.agent.features.tools,
       creditsBillingEnabled,
       creditsRequired: estimatedRequiredCredits,
       currentCredits,
@@ -484,11 +509,7 @@ export async function POST(req: Request) {
     }
 
     // 6. Create and validate chat request
-    const chatRequest = createChatRuntimeRequest(
-      messages,
-      runtimeContext,
-      resolvedModel
-    );
+    const chatRequest = createChatRuntimeRequest(messages, runtimeContext, resolvedModel);
 
     const chatValidation = validateChatRequest(chatRequest);
     if (!chatValidation.valid) {
@@ -739,9 +760,9 @@ export async function POST(req: Request) {
       threadId: persistedThread.id,
       messages,
       lastUserMessage,
-      baseSystemPrompt: getSystemPrompt(),
-      memoryEnabled,
-      knowledgeEnabled,
+      baseSystemPrompt: `${getSystemPrompt()}\n\n${resolvedAgent.agent.instructions}`,
+      memoryEnabled: agentMemoryEnabled,
+      knowledgeEnabled: agentKnowledgeEnabled,
     });
 
     const messagesForModel = [...agentContext.inputMessages];
@@ -751,7 +772,8 @@ export async function POST(req: Request) {
     const systemPrompt = agentContext.systemPrompt;
     const toolRegistry = createMastraToolRegistry({
       userId: context.userId,
-      knowledgeEnabled,
+      knowledgeEnabled: agentKnowledgeEnabled,
+      allowedToolIds: resolvedAgent.agent.allowedToolIds,
     });
 
     // 7. Stream text from the model
@@ -761,8 +783,8 @@ export async function POST(req: Request) {
       systemPrompt,
       tools,
       serverTools: toolRegistry.tools,
-      memoryEnabled,
-      knowledgeEnabled,
+      memoryEnabled: agentMemoryEnabled,
+      knowledgeEnabled: agentKnowledgeEnabled,
       abortSignal: req.signal,
       onAbort: async () => {
         await updateMessageStatus(assistantMessageId, 'aborted', new Date());
@@ -827,9 +849,10 @@ export async function POST(req: Request) {
       headers: {
         'x-ai-thread-id': persistedThread.id,
         'x-ai-message-id': assistantMessageId,
-        'x-ai-memory-enabled': String(memoryEnabled),
+        'x-ai-agent-id': resolvedAgent.agent.id,
+        'x-ai-memory-enabled': String(agentMemoryEnabled),
         'x-ai-memory-context-count': String(memoryContextMessages.length),
-        'x-ai-knowledge-enabled': String(knowledgeEnabled),
+        'x-ai-knowledge-enabled': String(agentKnowledgeEnabled),
         'x-ai-knowledge-chunk-count': String(knowledgeChunks.length),
         ...(citationsJson ? { 'x-ai-knowledge-citations': citationsJson } : {}),
       },
@@ -849,12 +872,15 @@ export async function POST(req: Request) {
         await updateMessageMetadata(assistantMessageId, {
           finishReason,
           isAborted,
-          memoryEnabled,
+          memoryEnabled: agentMemoryEnabled,
           memoryContextCount: memoryContextMessages.length,
-          knowledgeEnabled,
+          knowledgeEnabled: agentKnowledgeEnabled,
           knowledgeChunkCount: knowledgeChunks.length,
           citations: knowledgeCitations,
           knowledgeError: agentContext.knowledgeError,
+          agentId: resolvedAgent.agent.id,
+          requestedAgentId: agentId,
+          agentFallbackFromUnknown: resolvedAgent.fallbackFromUnknown,
           modelSelectionSource: resolvedModel.source,
           providerId: resolvedModel.reference.providerId,
           modelId: resolvedModel.reference.modelId,
@@ -890,10 +916,11 @@ export async function POST(req: Request) {
             messageId: assistantMessageId,
             providerId: resolvedModel.reference.providerId,
             modelId: resolvedModel.reference.modelId,
+            agentId: resolvedAgent.agent.id,
             modelSelectionSource: resolvedModel.source,
-            memoryEnabled,
+            memoryEnabled: agentMemoryEnabled,
             memoryContextCount: memoryContextMessages.length,
-            knowledgeEnabled,
+            knowledgeEnabled: agentKnowledgeEnabled,
             knowledgeChunkCount: knowledgeChunks.length,
             knowledgeError: agentContext.knowledgeError,
           };
@@ -913,7 +940,7 @@ export async function POST(req: Request) {
             citations:
               knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
             knowledgeError: agentContext.knowledgeError,
-            knowledgeEnabled,
+            knowledgeEnabled: agentKnowledgeEnabled,
           };
         }
         return undefined;

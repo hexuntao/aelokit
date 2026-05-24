@@ -15,6 +15,7 @@ export interface ChatMessageMetadata {
   readonly messageId?: string;
   readonly providerId?: string;
   readonly modelId?: string;
+  readonly agentId?: string;
   readonly totalTokens?: number;
   readonly inputTokens?: number;
   readonly outputTokens?: number;
@@ -32,12 +33,21 @@ export interface ChatModelOption {
   readonly label: string;
 }
 
+export interface ChatAgentOption {
+  readonly id: string;
+  readonly slug: string;
+  readonly label: string;
+  readonly description: string;
+}
+
 export interface ChatThreadSummary {
   readonly id: string;
   readonly title?: string;
   readonly status: 'active' | 'archived' | 'deleted';
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly agentId?: string;
+  readonly agentName?: string;
   readonly providerId?: string;
   readonly providerName?: string;
   readonly modelId?: string;
