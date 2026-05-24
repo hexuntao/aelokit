@@ -4,6 +4,7 @@ export * from './storage';
 export * from './memory';
 export * from './config';
 export * from './instance';
+export * from './context';
 export * from './runner';
 
 export const PARTIAL_UNTIL_WIRED = false;

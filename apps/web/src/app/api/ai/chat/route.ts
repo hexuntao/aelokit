@@ -26,7 +26,7 @@ import {
   validateChatRequest,
   getSystemPrompt,
 } from '@/ai/runtime';
-import { runMastraChat } from '@/ai/mastra';
+import { buildMastraAgentContext, runMastraChat } from '@/ai/mastra';
 import { RuntimeErrors, isRuntimeError } from '@/ai/errors';
 import {
   createUsageAuditEntry,
@@ -43,16 +43,9 @@ import {
   updateMessageMetadata,
   updateMessageStatus,
 } from '@/ai/persistence';
+import { isMemoryEnabledForRequest } from '@/ai/memory';
 import {
-  extractMemoryMessageText,
-  getMemoryContextForChat,
-  isMemoryEnabledForRequest,
-} from '@/ai/memory';
-import {
-  retrieveKnowledgeContext,
-  formatRetrievalContextForPrompt,
   isKnowledgeRetrievalEnabled,
-  type RetrievedChunk,
   type SourceCitationMetadata,
 } from '@/ai/knowledge';
 import { nanoid } from 'nanoid';
@@ -591,71 +584,21 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6.5. Memory context injection (v0.3 TASK-005)
-    // Read-only durable memory recall by user/resourceId. The persisted chat
-    // thread remains separate from Mastra memory threads.
-    const memoryResult = await getMemoryContextForChat(
-      context.userId,
-      persistedThread.id,
-      memoryEnabled
-    );
+    const agentContext = await buildMastraAgentContext({
+      userId: context.userId,
+      threadId: persistedThread.id,
+      messages,
+      lastUserMessage,
+      baseSystemPrompt: getSystemPrompt(),
+      memoryEnabled,
+      knowledgeEnabled,
+    });
 
-    const memoryContextMessages: UIMessage[] = [];
-    if (memoryResult.success && memoryResult.messages.length > 0) {
-      for (const msg of memoryResult.messages) {
-        const mastraMsg = msg as {
-          role?: string;
-          content?: unknown;
-          id?: string;
-        };
-        if (mastraMsg.role === 'user' || mastraMsg.role === 'assistant') {
-          const textContent = extractMemoryMessageText(mastraMsg);
-          if (textContent) {
-            memoryContextMessages.push({
-              id: mastraMsg.id ?? `memory-${crypto.randomUUID()}`,
-              role: mastraMsg.role as 'user' | 'assistant',
-              parts: [{ type: 'text' as const, text: textContent }],
-            });
-          }
-        }
-      }
-    }
-
-    const messagesForModel = [...memoryContextMessages, ...messages];
-
-    // 6.6. Knowledge retrieval context injection (v0.3 TASK-008)
-    let knowledgeContextText = '';
-    let knowledgeCitations: readonly SourceCitationMetadata[] = [];
-    let knowledgeChunks: readonly RetrievedChunk[] = [];
-
-    if (knowledgeEnabled && lastUserMessage) {
-      const userQuery = lastUserMessage.parts
-        .filter(
-          (part): part is { type: 'text'; text: string } => part.type === 'text'
-        )
-        .map((part) => part.text)
-        .join(' ');
-
-      if (userQuery.trim()) {
-        const retrievalResult = await retrieveKnowledgeContext(userQuery, {
-          userId: context.userId,
-          topK: 5,
-          minScore: 0.0,
-          includeOtherUserPublic: false,
-        });
-
-        if (retrievalResult.success && retrievalResult.chunks.length > 0) {
-          knowledgeContextText =
-            formatRetrievalContextForPrompt(retrievalResult);
-          knowledgeCitations = retrievalResult.citations;
-          knowledgeChunks = retrievalResult.chunks;
-        }
-      }
-    }
-
-    const systemPrompt = knowledgeContextText
-      ? `${getSystemPrompt()}\n\n${knowledgeContextText}`
-      : getSystemPrompt();
+    const messagesForModel = [...agentContext.inputMessages];
+    const memoryContextMessages = [...agentContext.memoryMessages];
+    const knowledgeCitations = agentContext.knowledgeCitations;
+    const knowledgeChunks = agentContext.knowledgeChunks;
+    const systemPrompt = agentContext.systemPrompt;
 
     // 7. Stream text from the model
     const runnerResult = await runMastraChat({
@@ -710,6 +653,7 @@ export async function POST(req: Request) {
           knowledgeEnabled,
           knowledgeChunkCount: knowledgeChunks.length,
           citations: knowledgeCitations,
+          knowledgeError: agentContext.knowledgeError,
           modelSelectionSource: resolvedModel.source,
           providerId: resolvedModel.reference.providerId,
           modelId: resolvedModel.reference.modelId,
@@ -750,6 +694,7 @@ export async function POST(req: Request) {
             memoryContextCount: memoryContextMessages.length,
             knowledgeEnabled,
             knowledgeChunkCount: knowledgeChunks.length,
+            knowledgeError: agentContext.knowledgeError,
           };
         }
         if (part.type === 'finish') {
@@ -766,6 +711,7 @@ export async function POST(req: Request) {
               : undefined,
             citations:
               knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
+            knowledgeError: agentContext.knowledgeError,
             knowledgeEnabled,
           };
         }

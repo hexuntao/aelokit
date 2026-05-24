@@ -138,7 +138,7 @@ export async function createDefaultMastraChatAgent(
     // Mastra accepts AI SDK-compatible models, but its public type surface is
     // broader than the concrete resolved model type we keep in app wiring.
     model: resolvedModel.model as never,
-  });
+  }) as unknown as MastraChatAgent;
 }
 
 function normalizeAgentInstructions(
@@ -150,22 +150,20 @@ function normalizeAgentInstructions(
 
   if (Array.isArray(instructions)) {
     return instructions
-      .map((message) =>
-        typeof message === 'string'
-          ? message
-          : typeof message.content === 'string'
-            ? message.content
-            : ''
-      )
+      .map((message) => {
+        if (typeof message === 'string') {
+          return message;
+        }
+
+        const content = (message as { content?: unknown }).content;
+        return typeof content === 'string' ? content : '';
+      })
       .filter(Boolean)
       .join('\n\n');
   }
 
-  return typeof instructions === 'string'
-    ? instructions
-    : typeof instructions.content === 'string'
-      ? instructions.content
-      : '';
+  const content = (instructions as { content?: unknown }).content;
+  return typeof content === 'string' ? content : '';
 }
 
 async function resolveStreamText(
