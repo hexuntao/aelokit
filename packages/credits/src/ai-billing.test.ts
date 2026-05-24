@@ -33,6 +33,7 @@ function createReservationRecord(options: {
 
 function createMemoryDependencies(initialBalance: number) {
   let balance = initialBalance;
+  let reservationWrites = 0;
   let settlementWrites = 0;
   let refundWrites = 0;
   const now = new Date('2026-05-22T00:00:00.000Z');
@@ -48,6 +49,19 @@ function createMemoryDependencies(initialBalance: number) {
         (reservation) => reservation.usageId === usageId
       ) ?? null,
     createReservation: async (params) => {
+      if (balance < params.requiredCredits) {
+        return {
+          success: false,
+          error: {
+            code: 'insufficient_credits',
+            message: 'Insufficient credits.',
+            retryable: false,
+          },
+        };
+      }
+
+      balance -= params.requiredCredits;
+      reservationWrites += 1;
       const reservation = createReservationRecord({
         id: params.reservationId,
         usageId: params.usageId,
@@ -56,7 +70,7 @@ function createMemoryDependencies(initialBalance: number) {
         now,
       });
       reservations.set(reservation.id, reservation);
-      return reservation;
+      return { success: true, data: reservation };
     },
     settleReservation: async (params) => {
       const reservation = reservations.get(params.reservationId);
@@ -75,30 +89,25 @@ function createMemoryDependencies(initialBalance: number) {
         return { success: true, data: reservation };
       }
 
-      if (balance < params.settledCredits) {
-        const failed: AICreditReservationRecord = {
-          ...reservation,
-          settlementStatus: 'settlement_failed',
-          failureReason: 'insufficient_credits',
-          updatedAt: now,
-        };
-        reservations.set(failed.id, failed);
-        return {
-          success: false,
-          error: {
-            code: 'insufficient_credits',
-            message: 'Insufficient credits.',
-            retryable: false,
-          },
-        };
+      const settledCredits = Math.min(
+        params.settledCredits,
+        reservation.reservedCredits
+      );
+      const releasedCredits = Math.max(
+        0,
+        reservation.reservedCredits - settledCredits
+      );
+      if (releasedCredits > 0) {
+        balance += releasedCredits;
       }
-
-      balance -= params.settledCredits;
       settlementWrites += 1;
       const settled: AICreditReservationRecord = {
         ...reservation,
         settlementStatus: 'settled',
-        settledCredits: params.settledCredits,
+        settledCredits,
+        refundStatus: releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
+        refundedCredits: releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
+        refundedAt: releasedCredits > 0 ? now : reservation.refundedAt,
         settledAt: now,
         updatedAt: now,
       };
@@ -123,12 +132,13 @@ function createMemoryDependencies(initialBalance: number) {
       }
 
       if (reservation.settlementStatus !== 'settled') {
+        balance += reservation.reservedCredits;
         const noCharge: AICreditReservationRecord = {
           ...reservation,
           reservationStatus: 'cancelled',
           settlementStatus: 'no_charge',
-          refundStatus: 'no_charge',
-          refundedCredits: 0,
+          refundStatus: 'refunded',
+          refundedCredits: reservation.reservedCredits,
           refundedAt: now,
           failureReason: params.reason,
           updatedAt: now,
@@ -157,6 +167,7 @@ function createMemoryDependencies(initialBalance: number) {
   return {
     dependencies,
     getBalance: () => balance,
+    getReservationWrites: () => reservationWrites,
     getSettlementWrites: () => settlementWrites,
     getRefundWrites: () => refundWrites,
   };
@@ -204,6 +215,8 @@ test('reserveAICredits creates a reservation after successful preflight', async 
     assert.equal(result.data.reservationStatus, 'reserved');
     assert.equal(result.data.reservedCredits, 3);
   }
+  assert.equal(store.getBalance(), 7);
+  assert.equal(store.getReservationWrites(), 1);
 });
 
 test('reserveAICredits fails when preflight fails', async () => {
@@ -250,11 +263,11 @@ test('settleAICredits settles once and duplicate settlement is idempotent', asyn
 
   assert.equal(first.success, true);
   assert.equal(second.success, true);
-  assert.equal(store.getBalance(), 6);
+  assert.equal(store.getBalance(), 7);
   assert.equal(store.getSettlementWrites(), 1);
 });
 
-test('settleAICredits fails without enough credits', async () => {
+test('settleAICredits caps overage to reserved credits', async () => {
   const store = createMemoryDependencies(3);
   const reservation = await reserveAICredits(
     { usageId: 'usage-1', userId: 'user-1', requiredCredits: 3 },
@@ -273,10 +286,11 @@ test('settleAICredits fails without enough credits', async () => {
     store.dependencies
   );
 
-  assert.equal(result.success, false);
-  if (!result.success) {
-    assert.equal(result.error.code, 'insufficient_credits');
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.settledCredits, 3);
   }
+  assert.equal(store.getBalance(), 0);
 });
 
 test('refundAICredits refunds settled usage once', async () => {
@@ -323,6 +337,34 @@ test('refundAICredits refunds settled usage once', async () => {
   assert.equal(store.getRefundWrites(), 1);
 });
 
+test('settleAICredits releases unused reserved credits back to balance', async () => {
+  const store = createMemoryDependencies(10);
+  const reservation = await reserveAICredits(
+    { usageId: 'usage-1', userId: 'user-1', requiredCredits: 5 },
+    store.dependencies
+  );
+  assert.equal(reservation.success, true);
+  if (!reservation.success) return;
+
+  const result = await settleAICredits(
+    {
+      reservationId: reservation.data.id,
+      usageId: 'usage-1',
+      userId: 'user-1',
+      settledCredits: 3,
+    },
+    store.dependencies
+  );
+
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.settledCredits, 3);
+    assert.equal(result.data.refundStatus, 'refunded');
+    assert.equal(result.data.refundedCredits, 2);
+  }
+  assert.equal(store.getBalance(), 7);
+});
+
 test('refundAICredits fails for missing reservation', async () => {
   const store = createMemoryDependencies(10);
 
@@ -363,8 +405,9 @@ test('failed stream before settlement becomes no_charge and does not charge', as
 
   assert.equal(refund.success, true);
   if (refund.success) {
-    assert.equal(refund.data.refundStatus, 'no_charge');
+    assert.equal(refund.data.refundStatus, 'refunded');
     assert.equal(refund.data.settlementStatus, 'no_charge');
+    assert.equal(refund.data.refundedCredits, 3);
   }
   assert.equal(store.getBalance(), 10);
   assert.equal(store.getSettlementWrites(), 0);
@@ -391,7 +434,7 @@ test('aborted stream before settlement is no_charge', async () => {
 
   assert.equal(refund.success, true);
   if (refund.success) {
-    assert.equal(refund.data.refundStatus, 'no_charge');
+    assert.equal(refund.data.refundStatus, 'refunded');
     assert.equal(refund.data.failureReason, 'aborted');
   }
   assert.equal(store.getBalance(), 10);

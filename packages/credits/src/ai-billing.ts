@@ -117,7 +117,7 @@ export interface AICreditBillingDependencies {
   ) => Promise<AICreditReservationRecord | null>;
   readonly createReservation: (
     params: Required<AICreditReservationParams>
-  ) => Promise<AICreditReservationRecord>;
+  ) => Promise<AICreditBillingResult<AICreditReservationRecord>>;
   readonly settleReservation: (
     params: AICreditSettlementParams
   ) => Promise<AICreditBillingResult<AICreditReservationRecord>>;
@@ -212,38 +212,56 @@ async function findReservationByUsageId(
 
 async function createReservationRecord(
   params: Required<AICreditReservationParams>
-): Promise<AICreditReservationRecord> {
+): Promise<AICreditBillingResult<AICreditReservationRecord>> {
   const db = await getDb();
   const now = new Date();
 
-  await db.insert(aiCreditReservation).values({
-    id: params.reservationId,
-    usageId: params.usageId,
-    userId: params.userId,
-    reservationStatus: 'reserved',
-    settlementStatus: 'pending',
-    refundStatus: 'not_required',
-    reservedCredits: params.requiredCredits,
-    settledCredits: null,
-    refundedCredits: null,
-    failureReason: null,
-    expiresAt: params.expiresAt,
-    reservedAt: now,
-    createdAt: now,
-    updatedAt: now,
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select id from ${userCredit} where ${userCredit.userId} = ${params.userId} for update`
+    );
+
+    const ledgerError = await consumeReservedAICredits(tx, params, now);
+    if (ledgerError) {
+      return {
+        success: false,
+        error: ledgerError,
+      };
+    }
+
+    const [created] = await tx
+      .insert(aiCreditReservation)
+      .values({
+        id: params.reservationId,
+        usageId: params.usageId,
+        userId: params.userId,
+        reservationStatus: 'reserved',
+        settlementStatus: 'pending',
+        refundStatus: 'not_required',
+        reservedCredits: params.requiredCredits,
+        settledCredits: null,
+        refundedCredits: null,
+        failureReason: null,
+        expiresAt: params.expiresAt,
+        reservedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return {
+      success: true,
+      data: normalizeReservation(created),
+    };
   });
-
-  const reservation = await findReservationById(params.reservationId);
-  if (!reservation) {
-    throw new Error('Failed to create AI credit reservation.');
-  }
-
-  return reservation;
 }
 
-async function consumeAICreditsInSettlement(
+async function consumeReservedAICredits(
   tx: any,
-  params: AICreditSettlementParams,
+  params: Pick<
+    AICreditReservationParams,
+    'usageId' | 'userId' | 'requiredCredits'
+  >,
   now: Date
 ): Promise<AICreditBillingError | null> {
   const [creditRecord] = await tx
@@ -254,10 +272,10 @@ async function consumeAICreditsInSettlement(
     .where(eq(userCredit.userId, params.userId))
     .limit(1);
 
-  if (!creditRecord || creditRecord.currentCredits < params.settledCredits) {
+  if (!creditRecord || creditRecord.currentCredits < params.requiredCredits) {
     return billingError(
       'insufficient_credits',
-      'Insufficient credits during AI credits settlement.'
+      'Insufficient credits during AI credits reservation.'
     );
   }
 
@@ -279,7 +297,7 @@ async function consumeAICreditsInSettlement(
       asc(creditTransaction.createdAt)
     );
 
-  let remainingToDeduct = params.settledCredits;
+  let remainingToDeduct = params.requiredCredits;
   for (const transaction of earnTransactions) {
     if (remainingToDeduct <= 0) break;
     const remainingAmount = transaction.remainingAmount ?? 0;
@@ -306,7 +324,7 @@ async function consumeAICreditsInSettlement(
   await tx
     .update(userCredit)
     .set({
-      currentCredits: creditRecord.currentCredits - params.settledCredits,
+      currentCredits: creditRecord.currentCredits - params.requiredCredits,
       updatedAt: now,
     })
     .where(eq(userCredit.userId, params.userId));
@@ -315,10 +333,9 @@ async function consumeAICreditsInSettlement(
     id: randomUUID(),
     userId: params.userId,
     type: CREDIT_TRANSACTION_TYPE.AI_USAGE,
-    amount: -params.settledCredits,
+    amount: -params.requiredCredits,
     remainingAmount: null,
-    description:
-      params.description ?? `AI usage settlement for usage ${params.usageId}`,
+    description: `AI usage reservation hold for usage ${params.usageId}`,
     paymentId: params.usageId,
     createdAt: now,
     updatedAt: now,
@@ -390,12 +407,47 @@ async function settleReservationRecord(
       const [updated] = await tx
         .update(aiCreditReservation)
         .set({
-          settlementStatus: 'settlement_failed',
+          reservationStatus: 'cancelled',
+          settlementStatus: 'no_charge',
+          refundStatus: 'refunded',
+          refundedCredits: reservation.reservedCredits,
           failureReason: 'reservation_expired',
+          refundedAt: now,
           updatedAt: now,
         })
         .where(eq(aiCreditReservation.id, params.reservationId))
         .returning();
+
+      await tx.insert(creditTransaction).values({
+        id: randomUUID(),
+        userId: params.userId,
+        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
+        amount: reservation.reservedCredits,
+        remainingAmount: reservation.reservedCredits,
+        description: `Released expired AI reservation for usage ${params.usageId}`,
+        paymentId: params.usageId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const [creditRecord] = await tx
+        .select({
+          id: userCredit.id,
+          currentCredits: userCredit.currentCredits,
+        })
+        .from(userCredit)
+        .where(eq(userCredit.userId, params.userId))
+        .limit(1);
+
+      if (creditRecord) {
+        await tx
+          .update(userCredit)
+          .set({
+            currentCredits: creditRecord.currentCredits + reservation.reservedCredits,
+            updatedAt: now,
+          })
+          .where(eq(userCredit.id, creditRecord.id));
+      }
 
       return {
         success: false,
@@ -403,29 +455,64 @@ async function settleReservationRecord(
       };
     }
 
-    const ledgerError = await consumeAICreditsInSettlement(tx, params, now);
-    if (ledgerError) {
-      const [updated] = await tx
-        .update(aiCreditReservation)
-        .set({
-          settlementStatus: 'settlement_failed',
-          failureReason: ledgerError.code,
-          updatedAt: now,
-        })
-        .where(eq(aiCreditReservation.id, params.reservationId))
-        .returning();
+    const settledCredits = Math.min(
+      params.settledCredits,
+      reservation.reservedCredits
+    );
+    const releasedCredits = Math.max(
+      0,
+      reservation.reservedCredits - settledCredits
+    );
 
-      return {
-        success: false,
-        error: ledgerError,
-      };
+    if (releasedCredits > 0) {
+      const [creditRecord] = await tx
+        .select({
+          id: userCredit.id,
+          currentCredits: userCredit.currentCredits,
+        })
+        .from(userCredit)
+        .where(eq(userCredit.userId, params.userId))
+        .limit(1);
+
+      if (creditRecord) {
+        await tx
+          .update(userCredit)
+          .set({
+            currentCredits: creditRecord.currentCredits + releasedCredits,
+            updatedAt: now,
+          })
+          .where(eq(userCredit.id, creditRecord.id));
+      } else {
+        await tx.insert(userCredit).values({
+          id: randomUUID(),
+          userId: params.userId,
+          currentCredits: releasedCredits,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await tx.insert(creditTransaction).values({
+        id: randomUUID(),
+        userId: params.userId,
+        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
+        amount: releasedCredits,
+        remainingAmount: releasedCredits,
+        description: `Released unused AI reservation credits for usage ${params.usageId}`,
+        paymentId: params.usageId,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
 
     const [updated] = await tx
       .update(aiCreditReservation)
       .set({
         settlementStatus: 'settled',
-        settledCredits: params.settledCredits,
+        settledCredits,
+        refundStatus: releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
+        refundedCredits: releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
+        refundedAt: releasedCredits > 0 ? now : reservation.refundedAt,
         failureReason: null,
         settledAt: now,
         updatedAt: now,
@@ -485,13 +572,53 @@ async function refundReservationRecord(
     }
 
     if (reservation.settlementStatus !== 'settled') {
+      const creditsToRelease = reservation.reservedCredits;
+      const [creditRecord] = await tx
+        .select({
+          id: userCredit.id,
+          currentCredits: userCredit.currentCredits,
+        })
+        .from(userCredit)
+        .where(eq(userCredit.userId, params.userId))
+        .limit(1);
+
+      if (creditRecord) {
+        await tx
+          .update(userCredit)
+          .set({
+            currentCredits: creditRecord.currentCredits + creditsToRelease,
+            updatedAt: now,
+          })
+          .where(eq(userCredit.id, creditRecord.id));
+      } else {
+        await tx.insert(userCredit).values({
+          id: randomUUID(),
+          userId: params.userId,
+          currentCredits: creditsToRelease,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await tx.insert(creditTransaction).values({
+        id: randomUUID(),
+        userId: params.userId,
+        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
+        amount: creditsToRelease,
+        remainingAmount: creditsToRelease,
+        description: `Released AI reservation for usage ${params.usageId}: ${params.reason}`,
+        paymentId: params.usageId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
       const [updated] = await tx
         .update(aiCreditReservation)
         .set({
           reservationStatus: 'cancelled',
           settlementStatus: 'no_charge',
-          refundStatus: 'no_charge',
-          refundedCredits: 0,
+          refundStatus: 'refunded',
+          refundedCredits: creditsToRelease,
           failureReason: params.reason,
           refundedAt: now,
           updatedAt: now,
@@ -667,10 +794,7 @@ export async function reserveAICredits(
       expiresAt,
     });
 
-    return {
-      success: true,
-      data: reservation,
-    };
+    return reservation;
   } catch (error) {
     return {
       success: false,
@@ -695,6 +819,11 @@ export async function settleAICredits(
         'AI credits settlement requires a reservation id.'
       ),
     };
+  }
+
+  const creditError = validateCredits(params.settledCredits);
+  if (creditError) {
+    return { success: false, error: creditError };
   }
 
   return dependencies.settleReservation(params);

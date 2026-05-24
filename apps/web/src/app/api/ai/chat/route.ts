@@ -181,6 +181,9 @@ function getBillingReference(options: {
   reservationId?: string;
   reservedCredits?: number;
   estimatedCredits?: number;
+  settledCredits?: number;
+  refundedCredits?: number;
+  overageCredits?: number;
   settlementError?: string;
   refundError?: string;
 }): Readonly<Record<string, unknown>> {
@@ -189,6 +192,9 @@ function getBillingReference(options: {
     reservationId: options.reservationId,
     reservedCredits: options.reservedCredits,
     estimatedCredits: options.estimatedCredits,
+    settledCredits: options.settledCredits,
+    refundedCredits: options.refundedCredits,
+    overageCredits: options.overageCredits,
     settlementError: options.settlementError,
     refundError: options.refundError,
   };
@@ -514,6 +520,9 @@ export async function POST(req: Request) {
       let billingStatus: AIUsageBillingStatus = creditsBillingEnabled
         ? 'no_charge'
         : 'audit_only';
+      let settledCredits: number | undefined;
+      let refundedCredits: number | undefined;
+      let overageCredits = 0;
       let settlementError: string | undefined;
       let refundError: string | undefined;
 
@@ -528,6 +537,13 @@ export async function POST(req: Request) {
           });
 
           if (settlementResult.success) {
+            settledCredits = settlementResult.data.settledCredits ?? 0;
+            refundedCredits =
+              settlementResult.data.refundedCredits ?? undefined;
+            overageCredits = Math.max(
+              0,
+              estimatedCredits - (settledCredits ?? 0)
+            );
             billingStatus = 'settled';
           } else {
             billingStatus = 'settlement_failed';
@@ -554,14 +570,11 @@ export async function POST(req: Request) {
           });
 
           if (refundResult.success) {
+            refundedCredits = refundResult.data.refundedCredits ?? undefined;
             billingStatus =
               refundResult.data.refundStatus === 'refunded'
                 ? 'refunded'
-                : options.status === 'rate_limited'
-                  ? 'rate_limited'
-                  : options.status === 'timeout'
-                    ? 'timeout'
-                    : 'no_charge';
+                : 'no_charge';
           } else {
             billingStatus = 'refund_failed';
             refundError = refundResult.error.message;
@@ -600,6 +613,9 @@ export async function POST(req: Request) {
             reservationId: pendingReservationId,
             reservedCredits,
             estimatedCredits,
+            settledCredits,
+            refundedCredits,
+            overageCredits,
             settlementError,
             refundError,
           }),
@@ -619,9 +635,9 @@ export async function POST(req: Request) {
           source: 'provider-reported',
           status:
             billingStatus === 'no_charge' ||
+            billingStatus === 'refunded' ||
             billingStatus === 'refund_failed' ||
-            billingStatus === 'rate_limited' ||
-            billingStatus === 'timeout'
+            settledCredits === 0
               ? 'no_charge'
               : options.status === 'success'
                 ? 'final'
@@ -630,6 +646,10 @@ export async function POST(req: Request) {
             billingMode,
             billingStatus,
             reservationId: pendingReservationId,
+            reservedCredits,
+            settledCredits,
+            refundedCredits,
+            overageCredits,
             finishReason: options.finishReason,
           },
         });
