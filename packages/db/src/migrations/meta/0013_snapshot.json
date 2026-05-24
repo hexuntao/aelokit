@@ -139,12 +139,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -328,12 +324,8 @@
           "name": "apikey_user_id_user_id_fk",
           "tableFrom": "apikey",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -440,12 +432,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -455,9 +443,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -600,16 +586,12 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "user_normalized_email_unique": {
           "name": "user_normalized_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "normalized_email"
-          ]
+          "columns": ["normalized_email"]
         }
       },
       "policies": {},
@@ -775,12 +757,8 @@
           "name": "credit_transaction_user_id_user_id_fk",
           "tableFrom": "credit_transaction",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1070,12 +1048,8 @@
           "name": "payment_user_id_user_id_fk",
           "tableFrom": "payment",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1085,9 +1059,7 @@
         "payment_invoice_id_unique": {
           "name": "payment_invoice_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invoice_id"
-          ]
+          "columns": ["invoice_id"]
         }
       },
       "policies": {},
@@ -1160,12 +1132,8 @@
           "name": "user_credit_user_id_user_id_fk",
           "tableFrom": "user_credit",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1330,12 +1298,8 @@
           "name": "ai_agent_default_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_agent",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "default_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1343,12 +1307,8 @@
           "name": "ai_agent_default_model_id_ai_model_id_fk",
           "tableFrom": "ai_agent",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "default_model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["default_model_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1356,14 +1316,8 @@
           "name": "ai_agent_default_model_fk",
           "tableFrom": "ai_agent",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "default_provider_id",
-            "default_model_id"
-          ],
-          "columnsTo": [
-            "provider_id",
-            "id"
-          ],
+          "columnsFrom": ["default_provider_id", "default_model_id"],
+          "columnsTo": ["provider_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1573,12 +1527,8 @@
           "name": "ai_cost_event_usage_id_ai_usage_id_fk",
           "tableFrom": "ai_cost_event",
           "tableTo": "ai_usage",
-          "columnsFrom": [
-            "usage_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["usage_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1586,12 +1536,8 @@
           "name": "ai_cost_event_user_id_user_id_fk",
           "tableFrom": "ai_cost_event",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1599,12 +1545,8 @@
           "name": "ai_cost_event_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_cost_event",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1612,12 +1554,8 @@
           "name": "ai_cost_event_model_id_ai_model_id_fk",
           "tableFrom": "ai_cost_event",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1625,14 +1563,8 @@
           "name": "ai_cost_event_provider_model_fk",
           "tableFrom": "ai_cost_event",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "provider_id",
-            "model_id"
-          ],
-          "columnsTo": [
-            "provider_id",
-            "id"
-          ],
+          "columnsFrom": ["provider_id", "model_id"],
+          "columnsTo": ["provider_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1844,12 +1776,8 @@
           "name": "ai_credit_reservation_user_id_user_id_fk",
           "tableFrom": "ai_credit_reservation",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1993,12 +1921,8 @@
           "name": "ai_eval_result_workflow_run_id_ai_workflow_run_id_fk",
           "tableFrom": "ai_eval_result",
           "tableTo": "ai_workflow_run",
-          "columnsFrom": [
-            "workflow_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workflow_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2167,12 +2091,8 @@
           "name": "ai_memory_draft_user_id_user_id_fk",
           "tableFrom": "ai_memory_draft",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2357,12 +2277,8 @@
           "name": "ai_message_thread_id_ai_thread_id_fk",
           "tableFrom": "ai_message",
           "tableTo": "ai_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2370,12 +2286,8 @@
           "name": "ai_message_parent_message_id_ai_message_id_fk",
           "tableFrom": "ai_message",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "parent_message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_message_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2533,12 +2445,8 @@
           "name": "ai_message_part_message_id_ai_message_id_fk",
           "tableFrom": "ai_message_part",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2546,12 +2454,8 @@
           "name": "ai_message_part_tool_call_id_ai_tool_call_id_fk",
           "tableFrom": "ai_message_part",
           "tableTo": "ai_tool_call",
-          "columnsFrom": [
-            "tool_call_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tool_call_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2817,12 +2721,8 @@
           "name": "ai_model_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_model",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3018,12 +2918,8 @@
           "name": "ai_observability_event_user_id_user_id_fk",
           "tableFrom": "ai_observability_event",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3031,12 +2927,8 @@
           "name": "ai_observability_event_workflow_run_id_ai_workflow_run_id_fk",
           "tableFrom": "ai_observability_event",
           "tableTo": "ai_workflow_run",
-          "columnsFrom": [
-            "workflow_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workflow_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3044,12 +2936,8 @@
           "name": "ai_observability_event_usage_id_ai_usage_id_fk",
           "tableFrom": "ai_observability_event",
           "tableTo": "ai_usage",
-          "columnsFrom": [
-            "usage_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["usage_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3057,12 +2945,8 @@
           "name": "ai_observability_event_thread_id_ai_thread_id_fk",
           "tableFrom": "ai_observability_event",
           "tableTo": "ai_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3070,12 +2954,8 @@
           "name": "ai_observability_event_message_id_ai_message_id_fk",
           "tableFrom": "ai_observability_event",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3365,12 +3245,8 @@
           "name": "ai_thread_user_id_user_id_fk",
           "tableFrom": "ai_thread",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3378,12 +3254,8 @@
           "name": "ai_thread_agent_id_ai_agent_id_fk",
           "tableFrom": "ai_thread",
           "tableTo": "ai_agent",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3391,12 +3263,8 @@
           "name": "ai_thread_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_thread",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3404,12 +3272,8 @@
           "name": "ai_thread_model_id_ai_model_id_fk",
           "tableFrom": "ai_thread",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3417,14 +3281,8 @@
           "name": "ai_thread_model_fk",
           "tableFrom": "ai_thread",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "provider_id",
-            "model_id"
-          ],
-          "columnsTo": [
-            "provider_id",
-            "id"
-          ],
+          "columnsFrom": ["provider_id", "model_id"],
+          "columnsTo": ["provider_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3605,12 +3463,8 @@
           "name": "ai_tool_call_thread_id_ai_thread_id_fk",
           "tableFrom": "ai_tool_call",
           "tableTo": "ai_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3618,12 +3472,8 @@
           "name": "ai_tool_call_message_id_ai_message_id_fk",
           "tableFrom": "ai_tool_call",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3935,12 +3785,8 @@
           "name": "ai_usage_user_id_user_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3948,12 +3794,8 @@
           "name": "ai_usage_thread_id_ai_thread_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3961,12 +3803,8 @@
           "name": "ai_usage_message_id_ai_message_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3974,12 +3812,8 @@
           "name": "ai_usage_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3987,12 +3821,8 @@
           "name": "ai_usage_model_id_ai_model_id_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4000,14 +3830,8 @@
           "name": "ai_usage_provider_model_fk",
           "tableFrom": "ai_usage",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "provider_id",
-            "model_id"
-          ],
-          "columnsTo": [
-            "provider_id",
-            "id"
-          ],
+          "columnsFrom": ["provider_id", "model_id"],
+          "columnsTo": ["provider_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4121,12 +3945,8 @@
           "name": "ai_user_model_setting_user_id_user_id_fk",
           "tableFrom": "ai_user_model_setting",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4134,12 +3954,8 @@
           "name": "ai_user_model_setting_provider_id_ai_provider_id_fk",
           "tableFrom": "ai_user_model_setting",
           "tableTo": "ai_provider",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4147,12 +3963,8 @@
           "name": "ai_user_model_setting_model_id_ai_model_id_fk",
           "tableFrom": "ai_user_model_setting",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "model_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["model_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4160,14 +3972,8 @@
           "name": "ai_user_model_setting_provider_model_fk",
           "tableFrom": "ai_user_model_setting",
           "tableTo": "ai_model",
-          "columnsFrom": [
-            "provider_id",
-            "model_id"
-          ],
-          "columnsTo": [
-            "provider_id",
-            "id"
-          ],
+          "columnsFrom": ["provider_id", "model_id"],
+          "columnsTo": ["provider_id", "id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4385,12 +4191,8 @@
           "name": "ai_workflow_run_user_id_user_id_fk",
           "tableFrom": "ai_workflow_run",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4398,12 +4200,8 @@
           "name": "ai_workflow_run_thread_id_ai_thread_id_fk",
           "tableFrom": "ai_workflow_run",
           "tableTo": "ai_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4411,12 +4209,8 @@
           "name": "ai_workflow_run_message_id_ai_message_id_fk",
           "tableFrom": "ai_workflow_run",
           "tableTo": "ai_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4560,12 +4354,8 @@
           "name": "knowledge_chunk_document_id_knowledge_document_id_fk",
           "tableFrom": "knowledge_chunk",
           "tableTo": "knowledge_document",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4573,12 +4363,8 @@
           "name": "knowledge_chunk_source_id_knowledge_source_id_fk",
           "tableFrom": "knowledge_chunk",
           "tableTo": "knowledge_source",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4676,12 +4462,8 @@
           "name": "knowledge_document_source_id_knowledge_source_id_fk",
           "tableFrom": "knowledge_document",
           "tableTo": "knowledge_source",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4885,12 +4667,8 @@
           "name": "knowledge_source_user_id_user_id_fk",
           "tableFrom": "knowledge_source",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4996,12 +4774,8 @@
           "name": "knowledge_source_access_source_id_knowledge_source_id_fk",
           "tableFrom": "knowledge_source_access",
           "tableTo": "knowledge_source",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5009,12 +4783,8 @@
           "name": "knowledge_source_access_user_id_user_id_fk",
           "tableFrom": "knowledge_source_access",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5035,32 +4805,17 @@
     "public.knowledge_source_kind": {
       "name": "knowledge_source_kind",
       "schema": "public",
-      "values": [
-        "manual-note",
-        "uploaded-file",
-        "url",
-        "integration"
-      ]
+      "values": ["manual-note", "uploaded-file", "url", "integration"]
     },
     "public.knowledge_source_status": {
       "name": "knowledge_source_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "indexing",
-        "ready",
-        "failed",
-        "archived"
-      ]
+      "values": ["draft", "indexing", "ready", "failed", "archived"]
     },
     "public.knowledge_source_visibility": {
       "name": "knowledge_source_visibility",
       "schema": "public",
-      "values": [
-        "private",
-        "shared",
-        "public"
-      ]
+      "values": ["private", "shared", "public"]
     }
   },
   "schemas": {},
