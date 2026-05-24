@@ -1,12 +1,4 @@
-import { frontendTools } from '@assistant-ui/react-ai-sdk';
-import { Agent } from '@mastra/core/agent';
-import { RequestContext } from '@mastra/core/di';
-import {
-  convertToModelMessages,
-  streamText,
-  type ModelMessage,
-  type UIMessage,
-} from 'ai';
+import type { ModelMessage, ToolSet, UIMessage } from 'ai';
 import type { AIRuntimeContext } from '../context';
 import type { ResolvedModel } from '../models';
 import type { ChatRuntimeRequest } from '../runtime';
@@ -33,25 +25,54 @@ export interface MastraChatRunnerOptions {
   readonly knowledgeEnabled: boolean;
   readonly abortSignal?: AbortSignal;
   readonly onAbort?: () => Promise<void> | void;
-  readonly executeStream?: typeof streamText;
+  readonly executeStream?: typeof import('ai').streamText;
+  readonly convertMessages?: (
+    messages: readonly UIMessage[]
+  ) => Promise<ModelMessage[]> | ModelMessage[];
+  readonly createAgentExecution?: (
+    options: Pick<
+      MastraChatRunnerOptions,
+      'request' | 'systemPrompt' | 'memoryEnabled' | 'knowledgeEnabled'
+    >
+  ) => Promise<MastraChatAgentExecution> | MastraChatAgentExecution;
+}
+
+export interface MastraRequestContextLike<TShape extends Record<string, any>> {
+  set<TKey extends keyof TShape>(key: TKey, value: TShape[TKey]): void;
+  get<TKey extends keyof TShape>(key: TKey): TShape[TKey] | undefined;
+}
+
+export interface MastraChatAgentLike {
+  getInstructions(options: {
+    requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
+  }): Promise<unknown> | unknown;
 }
 
 export interface MastraChatAgentExecution {
-  readonly agent: Agent<
-    string,
-    Record<string, never>,
-    undefined,
-    MastraChatRequestContextShape
-  >;
-  readonly requestContext: RequestContext<MastraChatRequestContextShape>;
+  readonly agent: MastraChatAgentLike;
+  readonly requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
 }
 
 export interface MastraChatRunnerResult extends MastraChatAgentExecution {
   readonly systemPrompt: string;
-  readonly result: ReturnType<typeof streamText>;
+  readonly result: ReturnType<typeof import('ai').streamText>;
 }
 
 type MastraChatAgent = MastraChatAgentExecution['agent'];
+
+class AeloKitMastraRequestContext<TShape extends Record<string, any>>
+  implements MastraRequestContextLike<TShape>
+{
+  private readonly values = new Map<keyof TShape, TShape[keyof TShape]>();
+
+  set<TKey extends keyof TShape>(key: TKey, value: TShape[TKey]) {
+    this.values.set(key, value);
+  }
+
+  get<TKey extends keyof TShape>(key: TKey): TShape[TKey] | undefined {
+    return this.values.get(key) as TShape[TKey] | undefined;
+  }
+}
 
 function createMastraChatRequestContextValue(
   runtimeContext: AIRuntimeContext,
@@ -80,7 +101,7 @@ export function createMastraChatRequestContext(
   systemPrompt: string,
   memoryEnabled: boolean,
   knowledgeEnabled: boolean
-): RequestContext<MastraChatRequestContextShape> {
+): MastraRequestContextLike<MastraChatRequestContextShape> {
   const value = createMastraChatRequestContextValue(
     runtimeContext,
     resolvedModel,
@@ -89,7 +110,8 @@ export function createMastraChatRequestContext(
     knowledgeEnabled
   );
 
-  const requestContext = new RequestContext<MastraChatRequestContextShape>();
+  const requestContext =
+    new AeloKitMastraRequestContext<MastraChatRequestContextShape>();
   requestContext.set('userId', value.userId);
   requestContext.set('threadId', value.threadId);
   requestContext.set('messageId', value.messageId);
@@ -103,9 +125,11 @@ export function createMastraChatRequestContext(
   return requestContext;
 }
 
-export function createDefaultMastraChatAgent(
+export async function createDefaultMastraChatAgent(
   resolvedModel: ResolvedModel
-): MastraChatAgent {
+): Promise<MastraChatAgent> {
+  const { Agent } = await import('@mastra/core/agent');
+
   return new Agent({
     id: 'aelokit-default-chat-agent',
     name: 'AeloKit Default Chat Agent',
@@ -144,12 +168,46 @@ function normalizeAgentInstructions(
       : '';
 }
 
-export function createMastraChatAgentExecution(
+async function resolveStreamText(
+  executeStream?: typeof import('ai').streamText
+) {
+  if (executeStream) {
+    return executeStream;
+  }
+
+  const { streamText } = await import('ai');
+  return streamText;
+}
+
+async function resolveModelMessages(
+  inputMessages: readonly UIMessage[],
+  convertMessages?: MastraChatRunnerOptions['convertMessages']
+): Promise<ModelMessage[]> {
+  if (convertMessages) {
+    return convertMessages(inputMessages);
+  }
+
+  const { convertToModelMessages } = await import('ai');
+  return (await convertToModelMessages([...inputMessages])) as ModelMessage[];
+}
+
+async function resolveTools(
+  tools: Record<string, unknown> | undefined
+): Promise<ToolSet> {
+  if (!tools || Object.keys(tools).length === 0) {
+    return {};
+  }
+
+  const { frontendTools } = await import('@assistant-ui/react-ai-sdk');
+  return frontendTools(tools as Parameters<typeof frontendTools>[0]);
+}
+
+export async function createMastraChatAgentExecution(
   options: Pick<
     MastraChatRunnerOptions,
     'request' | 'systemPrompt' | 'memoryEnabled' | 'knowledgeEnabled'
   >
-): MastraChatAgentExecution {
+): Promise<MastraChatAgentExecution> {
   const requestContext = createMastraChatRequestContext(
     options.request.context,
     options.request.resolvedModel,
@@ -159,7 +217,7 @@ export function createMastraChatAgentExecution(
   );
 
   return {
-    agent: createDefaultMastraChatAgent(options.request.resolvedModel),
+    agent: await createDefaultMastraChatAgent(options.request.resolvedModel),
     requestContext,
   };
 }
@@ -167,25 +225,25 @@ export function createMastraChatAgentExecution(
 export async function runMastraChat(
   options: MastraChatRunnerOptions
 ): Promise<MastraChatRunnerResult> {
-  const execution = createMastraChatAgentExecution(options);
+  const execution = await (options.createAgentExecution?.(options) ??
+    createMastraChatAgentExecution(options));
   const systemPrompt = normalizeAgentInstructions(
     await execution.agent.getInstructions({
-      requestContext:
-        execution.requestContext as unknown as RequestContext<unknown>,
+      requestContext: execution.requestContext,
     })
   );
-  const executeStream = options.executeStream ?? streamText;
-  const modelMessages = (await convertToModelMessages([
-    ...options.inputMessages,
-  ])) as ModelMessage[];
+  const executeStream = await resolveStreamText(options.executeStream);
+  const modelMessages = await resolveModelMessages(
+    options.inputMessages,
+    options.convertMessages
+  );
+  const tools = await resolveTools(options.tools);
 
   const result = executeStream({
     model: options.request.resolvedModel.model,
     system: systemPrompt,
     messages: modelMessages,
-    tools: frontendTools(
-      (options.tools ?? {}) as Parameters<typeof frontendTools>[0]
-    ),
+    tools,
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
   });

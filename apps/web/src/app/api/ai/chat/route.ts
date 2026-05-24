@@ -40,6 +40,7 @@ import {
   createMessage,
   ensureThread,
   saveMessageParts,
+  updateMessageMetadata,
   updateMessageStatus,
 } from '@/ai/persistence';
 import {
@@ -701,6 +702,18 @@ export async function POST(req: Request) {
             threadId: persistedThread.id,
           }
         );
+        await updateMessageMetadata(assistantMessageId, {
+          finishReason,
+          isAborted,
+          memoryEnabled,
+          memoryContextCount: memoryContextMessages.length,
+          knowledgeEnabled,
+          knowledgeChunkCount: knowledgeChunks.length,
+          citations: knowledgeCitations,
+          modelSelectionSource: resolvedModel.source,
+          providerId: resolvedModel.reference.providerId,
+          modelId: resolvedModel.reference.modelId,
+        });
         await updateMessageStatus(assistantMessageId, status, new Date());
 
         const totalUsage = await result.totalUsage;
@@ -732,7 +745,11 @@ export async function POST(req: Request) {
             messageId: assistantMessageId,
             providerId: resolvedModel.reference.providerId,
             modelId: resolvedModel.reference.modelId,
+            modelSelectionSource: resolvedModel.source,
+            memoryEnabled,
+            memoryContextCount: memoryContextMessages.length,
             knowledgeEnabled,
+            knowledgeChunkCount: knowledgeChunks.length,
           };
         }
         if (part.type === 'finish') {

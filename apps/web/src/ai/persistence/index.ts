@@ -755,6 +755,28 @@ export async function updateMessageStatus(
   }
 }
 
+export async function updateMessageMetadata(
+  messageId: string,
+  metadata: Record<string, unknown>
+): Promise<PersistenceResult<void>> {
+  try {
+    const db = await getDb();
+    await db
+      .update(aiMessage)
+      .set({
+        metadata: sql`${aiMessage.metadata} || ${JSON.stringify(metadata)}::jsonb`,
+      })
+      .where(eq(aiMessage.id, messageId));
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
 export async function createToolCall(options: {
   readonly id?: string;
   readonly threadId: string;

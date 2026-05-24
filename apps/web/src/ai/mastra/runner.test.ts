@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { UIMessage } from 'ai';
-import {
-  createMastraChatAgentExecution,
-  createMastraChatRequestContext,
-  runMastraChat,
-} from './runner-core';
+import { createMastraChatRequestContext, runMastraChat } from './runner-core';
 import type { ChatRuntimeRequest } from '../runtime';
 
 function createRuntimeRequest(): ChatRuntimeRequest {
@@ -59,21 +55,27 @@ test('creates a Mastra request context with model source and feature flags', () 
   assert.equal(requestContext.get('systemPrompt'), 'System prompt');
 });
 
-test('builds the default Mastra chat agent with request-context-backed instructions', async () => {
+test('builds Mastra chat request context with request-context-backed instructions', async () => {
   const request = createRuntimeRequest();
-  const execution = createMastraChatAgentExecution({
-    request,
-    systemPrompt: 'Prompt from context',
-    memoryEnabled: false,
-    knowledgeEnabled: true,
-  });
+  const requestContext = createMastraChatRequestContext(
+    request.context,
+    request.resolvedModel,
+    'Prompt from context',
+    false,
+    true
+  );
+  const agent = {
+    getInstructions: ({
+      requestContext: currentContext,
+    }: {
+      requestContext: typeof requestContext;
+    }) => currentContext.get('systemPrompt'),
+  };
 
-  const instructions = await execution.agent.getInstructions({
-    requestContext: execution.requestContext as never,
-  });
+  const instructions = await agent.getInstructions({ requestContext });
 
   assert.equal(instructions, 'Prompt from context');
-  assert.equal(execution.requestContext.get('knowledgeEnabled'), true);
+  assert.equal(requestContext.get('knowledgeEnabled'), true);
 });
 
 test('runs the Mastra chat runner with resolved prompt and converted messages', async () => {
@@ -99,6 +101,32 @@ test('runs the Mastra chat runner with resolved prompt and converted messages', 
     memoryEnabled: true,
     knowledgeEnabled: true,
     abortSignal: new AbortController().signal,
+    convertMessages: (messages) =>
+      messages.map((message) => ({
+        role: message.role,
+        content:
+          message.parts
+            ?.filter((part) => part.type === 'text')
+            .map((part) => part.text)
+            .join(' ') ?? '',
+      })) as never,
+    createAgentExecution: () => {
+      const requestContext = createMastraChatRequestContext(
+        request.context,
+        request.resolvedModel,
+        'Base system prompt\n\nKnowledge context block',
+        true,
+        true
+      );
+
+      return {
+        agent: {
+          getInstructions: ({ requestContext: currentContext }) =>
+            currentContext.get('systemPrompt'),
+        },
+        requestContext,
+      };
+    },
     executeStream: ((options) => {
       captured.model = options.model;
       captured.system =
