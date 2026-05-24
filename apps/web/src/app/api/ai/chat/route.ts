@@ -38,16 +38,19 @@ import { enforceEntitlement } from '@/ai/entitlements';
 import { getAIUsageBillingMode } from '@/ai/billing-policy';
 import {
   createMessage,
+  createToolCall,
   ensureThread,
   saveMessageParts,
   updateMessageMetadata,
   updateMessageStatus,
+  updateToolCall,
 } from '@/ai/persistence';
 import { isMemoryEnabledForRequest } from '@/ai/memory';
 import {
   isKnowledgeRetrievalEnabled,
   type SourceCitationMetadata,
 } from '@/ai/knowledge';
+import { createMastraToolRegistry, getToolIdByName } from '@/ai/tools';
 import { nanoid } from 'nanoid';
 
 export const maxDuration = 30;
@@ -188,6 +191,51 @@ function getBillingReference(options: {
     estimatedCredits: options.estimatedCredits,
     settlementError: options.settlementError,
     refundError: options.refundError,
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function asToolOutputRecord(value: unknown): Record<string, unknown> {
+  return asRecord(value) ?? { value: value ?? null };
+}
+
+function getToolErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? 'unknown');
+}
+
+function withToolAuditMetadata(
+  providerMetadata: unknown,
+  toolCalls: readonly Record<string, unknown>[]
+): unknown {
+  if (toolCalls.length === 0) {
+    return providerMetadata;
+  }
+
+  const providerMetadataRecord = asRecord(providerMetadata);
+  const aelokitMetadata = asRecord(providerMetadataRecord?.aelokit);
+
+  if (providerMetadataRecord) {
+    return {
+      ...providerMetadataRecord,
+      aelokit: {
+        ...(aelokitMetadata ?? {}),
+        toolCalls,
+      },
+    };
+  }
+
+  return {
+    providerMetadata: providerMetadata ?? null,
+    aelokit: {
+      toolCalls,
+    },
   };
 }
 
@@ -366,6 +414,7 @@ export async function POST(req: Request) {
     const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
     const billingMode = getAIUsageBillingMode(creditsBillingEnabled);
     let reservedCredits: number | undefined;
+    const toolAuditById = new Map<string, Record<string, unknown>>();
 
     if (creditsBillingEnabled) {
       reservedCredits = estimateInitialAICredits(messages);
@@ -538,7 +587,10 @@ export async function POST(req: Request) {
                 ? options.error.message
                 : (options.finishReason ?? String(options.error ?? 'unknown')),
           rawUsage: options.totalUsage,
-          providerMetadata: options.providerMetadata,
+          providerMetadata: withToolAuditMetadata(
+            options.providerMetadata,
+            Array.from(toolAuditById.values())
+          ),
           providerModelId: resolvedModel.providerModelId,
           requestDurationMs: Date.now() - startTime,
           billingMode,
@@ -599,6 +651,9 @@ export async function POST(req: Request) {
     const knowledgeCitations = agentContext.knowledgeCitations;
     const knowledgeChunks = agentContext.knowledgeChunks;
     const systemPrompt = agentContext.systemPrompt;
+    const toolRegistry = createMastraToolRegistry({
+      userId: context.userId,
+    });
 
     // 7. Stream text from the model
     const runnerResult = await runMastraChat({
@@ -606,11 +661,58 @@ export async function POST(req: Request) {
       inputMessages: messagesForModel,
       systemPrompt,
       tools,
+      serverTools: toolRegistry.tools,
       memoryEnabled,
       knowledgeEnabled,
       abortSignal: req.signal,
       onAbort: async () => {
         await updateMessageStatus(assistantMessageId, 'aborted', new Date());
+      },
+      onToolCallStart: async ({ toolCall }) => {
+        const toolId = getToolIdByName(toolRegistry, toolCall.toolName);
+        toolAuditById.set(toolCall.toolCallId, {
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          toolId,
+          status: 'running',
+          startedAt: new Date().toISOString(),
+        });
+        await createToolCall({
+          id: toolCall.toolCallId,
+          threadId: persistedThread.id,
+          messageId: assistantMessageId,
+          toolName: toolCall.toolName,
+          toolId,
+          status: 'running',
+          input: asRecord(toolCall.input),
+          providerExecuted: Boolean(toolCall.providerExecuted),
+        });
+      },
+      onToolCallFinish: async ({ toolCall, success, output, error }) => {
+        const existingAudit = toolAuditById.get(toolCall.toolCallId) ?? {};
+        toolAuditById.set(toolCall.toolCallId, {
+          ...existingAudit,
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          toolId: getToolIdByName(toolRegistry, toolCall.toolName),
+          status: success ? 'success' : 'error',
+          completedAt: new Date().toISOString(),
+        });
+
+        if (success) {
+          await updateToolCall(toolCall.toolCallId, {
+            status: 'success',
+            output: asToolOutputRecord(output),
+            completedAt: new Date(),
+          });
+          return;
+        }
+
+        await updateToolCall(toolCall.toolCallId, {
+          status: 'error',
+          errorMessage: getToolErrorMessage(error),
+          completedAt: new Date(),
+        });
       },
     });
     const { result } = runnerResult;

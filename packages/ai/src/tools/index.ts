@@ -12,6 +12,18 @@ export type AIToolCapability =
   | 'transform'
   | 'external-action';
 
+export type AIToolPermissionScope =
+  | 'knowledge:read'
+  | 'memory:read'
+  | 'mcp:read'
+  | 'mcp:execute'
+  | 'workflow:read'
+  | 'workflow:execute';
+
+export type AIToolPermissionMode = 'read' | 'write' | 'execute' | 'admin';
+
+export type AIToolSchemaValidationMode = 'none' | 'runtime' | 'provider';
+
 export type AIToolCallStatus =
   | 'pending'
   | 'running'
@@ -76,6 +88,29 @@ export interface AIToolDefinition {
   // Input and output stay unknown until app/runtime layers validate schemas.
   readonly input: AIToolInputMetadata;
   readonly output: AIToolOutputMetadata;
+}
+
+export interface AIToolPermissionRequirement {
+  readonly scope: AIToolPermissionScope;
+  readonly mode: AIToolPermissionMode;
+  readonly resourceKind?: string;
+}
+
+export interface AIToolSchemaValidationPolicy {
+  readonly input: AIToolSchemaValidationMode;
+  readonly output: AIToolSchemaValidationMode;
+}
+
+export interface AIMCPToolCompatibility {
+  readonly compatible: boolean;
+  readonly name?: string;
+  readonly serverName?: string;
+}
+
+export interface AIToolRegistryEntry extends AIToolDefinition {
+  readonly permissions: ReadonlyArray<AIToolPermissionRequirement>;
+  readonly schemaValidation: AIToolSchemaValidationPolicy;
+  readonly mcp: AIMCPToolCompatibility;
 }
 
 export interface AIToolExecutionContext {

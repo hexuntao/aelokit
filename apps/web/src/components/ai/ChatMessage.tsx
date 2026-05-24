@@ -35,16 +35,79 @@ function formatUnknownValue(value: unknown): string {
   }
 }
 
-function getToolStatusLabel(
-  part: Extract<ThreadAssistantMessagePart, { type: 'tool-call' }>
-) {
-  if (part.isError) {
+type ToolLikePart =
+  | Extract<ThreadAssistantMessagePart, { type: 'tool-call' }>
+  | Record<string, unknown>;
+
+function getToolStatusLabel(part: ToolLikePart) {
+  const partRecord = part as Record<string, unknown>;
+  const state =
+    typeof partRecord.state === 'string' ? partRecord.state : undefined;
+
+  if (partRecord.isError === true || state === 'output-error') {
     return 'error';
   }
-  if (part.result !== undefined) {
+  if (
+    partRecord.result !== undefined ||
+    partRecord.output !== undefined ||
+    state === 'output-available'
+  ) {
     return 'complete';
   }
+  if (state === 'input-available') {
+    return 'ready';
+  }
   return 'running';
+}
+
+function getToolName(part: ToolLikePart): string {
+  const partRecord = part as Record<string, unknown>;
+
+  if (typeof partRecord.toolName === 'string') {
+    return partRecord.toolName;
+  }
+
+  if (
+    typeof partRecord.type === 'string' &&
+    partRecord.type.startsWith('tool-')
+  ) {
+    return partRecord.type.replace(/^tool-/, '');
+  }
+
+  return 'tool';
+}
+
+function getToolSummary(part: ToolLikePart): string {
+  const partRecord = part as Record<string, unknown>;
+  const summary =
+    partRecord.result ??
+    partRecord.output ??
+    partRecord.input ??
+    partRecord.argsText ??
+    undefined;
+  return formatUnknownValue(summary);
+}
+
+function renderToolPart(part: ToolLikePart) {
+  const status = getToolStatusLabel(part);
+  const summary = getToolSummary(part);
+
+  return (
+    <div className="rounded-md border bg-background/70 px-3 py-2 text-xs">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 font-medium">
+          <Wrench className="size-3.5" />
+          {getToolName(part)}
+        </div>
+        <span className="text-muted-foreground">{status}</span>
+      </div>
+      {summary ? (
+        <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 font-mono text-[11px]">
+          {summary}
+        </pre>
+      ) : null}
+    </div>
+  );
 }
 
 function getProvenanceLabel(provenance: string): string {
@@ -92,28 +155,7 @@ function MessagePart({
         </div>
       );
     case 'tool-call': {
-      const status = getToolStatusLabel(part);
-      const summary =
-        part.result !== undefined
-          ? formatUnknownValue(part.result)
-          : part.argsText;
-
-      return (
-        <div className="rounded-md border bg-background/70 px-3 py-2 text-xs">
-          <div className="mb-1 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 font-medium">
-              <Wrench className="size-3.5" />
-              {part.toolName}
-            </div>
-            <span className="text-muted-foreground">{status}</span>
-          </div>
-          {summary ? (
-            <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-muted/60 p-2 font-mono text-[11px]">
-              {summary}
-            </pre>
-          ) : null}
-        </div>
-      );
+      return renderToolPart(part);
     }
     case 'source': {
       const partAny = part as Record<string, unknown>;
@@ -200,10 +242,20 @@ function MessagePart({
           {formatUnknownValue(part.data)}
         </pre>
       );
-    default:
+    default: {
+      const partRecord = part as Record<string, unknown>;
+      if (
+        typeof partRecord.type === 'string' &&
+        (partRecord.type.startsWith('tool-') ||
+          partRecord.type === 'dynamic-tool')
+      ) {
+        return renderToolPart(partRecord);
+      }
+
       return isAssistantRunning ? (
         <span className="text-muted-foreground">Loading...</span>
       ) : null;
+    }
   }
 }
 

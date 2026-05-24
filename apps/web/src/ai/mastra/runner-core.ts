@@ -21,10 +21,17 @@ export interface MastraChatRunnerOptions {
   readonly inputMessages: readonly UIMessage[];
   readonly systemPrompt: string;
   readonly tools?: Record<string, unknown>;
+  readonly serverTools?: ToolSet;
   readonly memoryEnabled: boolean;
   readonly knowledgeEnabled: boolean;
   readonly abortSignal?: AbortSignal;
   readonly onAbort?: () => Promise<void> | void;
+  readonly onToolCallStart?: (
+    event: MastraToolCallStartEvent
+  ) => Promise<void> | void;
+  readonly onToolCallFinish?: (
+    event: MastraToolCallFinishEvent
+  ) => Promise<void> | void;
   readonly executeStream?: typeof import('ai').streamText;
   readonly convertMessages?: (
     messages: readonly UIMessage[]
@@ -56,6 +63,24 @@ export interface MastraChatAgentExecution {
 export interface MastraChatRunnerResult extends MastraChatAgentExecution {
   readonly systemPrompt: string;
   readonly result: ReturnType<typeof import('ai').streamText>;
+}
+
+export interface MastraToolCallEventBase {
+  readonly toolCall: {
+    readonly toolCallId: string;
+    readonly toolName: string;
+    readonly input: unknown;
+    readonly providerExecuted?: boolean;
+  };
+}
+
+export interface MastraToolCallStartEvent extends MastraToolCallEventBase {}
+
+export interface MastraToolCallFinishEvent extends MastraToolCallEventBase {
+  readonly success: boolean;
+  readonly output?: unknown;
+  readonly error?: unknown;
+  readonly durationMs?: number;
 }
 
 type MastraChatAgent = MastraChatAgentExecution['agent'];
@@ -190,14 +215,22 @@ async function resolveModelMessages(
 }
 
 async function resolveTools(
-  tools: Record<string, unknown> | undefined
+  tools: Record<string, unknown> | undefined,
+  serverTools: ToolSet | undefined
 ): Promise<ToolSet> {
-  if (!tools || Object.keys(tools).length === 0) {
-    return {};
+  let frontendToolSet: ToolSet = {};
+
+  if (tools && Object.keys(tools).length > 0) {
+    const { frontendTools } = await import('@assistant-ui/react-ai-sdk');
+    frontendToolSet = frontendTools(
+      tools as Parameters<typeof frontendTools>[0]
+    );
   }
 
-  const { frontendTools } = await import('@assistant-ui/react-ai-sdk');
-  return frontendTools(tools as Parameters<typeof frontendTools>[0]);
+  return {
+    ...frontendToolSet,
+    ...(serverTools ?? {}),
+  };
 }
 
 export async function createMastraChatAgentExecution(
@@ -235,7 +268,7 @@ export async function runMastraChat(
     options.inputMessages,
     options.convertMessages
   );
-  const tools = await resolveTools(options.tools);
+  const tools = await resolveTools(options.tools, options.serverTools);
 
   const result = executeStream({
     model: options.request.resolvedModel.model,
@@ -244,6 +277,8 @@ export async function runMastraChat(
     tools,
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
+    experimental_onToolCallStart: options.onToolCallStart,
+    experimental_onToolCallFinish: options.onToolCallFinish,
   });
 
   return {
