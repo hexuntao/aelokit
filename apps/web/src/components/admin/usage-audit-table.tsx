@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { AIUsageAuditItem } from '@/actions/get-ai-usage-audit';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@repo/shared/utils';
-import { SearchIcon, ShieldAlertIcon, XIcon } from 'lucide-react';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  SearchIcon,
+  ShieldAlertIcon,
+  XIcon,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const STATUS_OPTIONS = [
@@ -139,6 +146,15 @@ export function UsageAuditTable({
   const t = useTranslations('Dashboard.admin.usage');
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const isUnauthorized = error?.message.toLowerCase().includes('unauthorized');
+  const [expandedIds, setExpandedIds] = useState<readonly string[]>([]);
+
+  const toggleExpanded = (usageId: string) => {
+    setExpandedIds((current) =>
+      current.includes(usageId)
+        ? current.filter((id) => id !== usageId)
+        : [...current, usageId]
+    );
+  };
 
   return (
     <div className="w-full space-y-4">
@@ -343,71 +359,139 @@ export function UsageAuditTable({
               {loading ? (
                 <TableSkeleton pageSize={pageSize} />
               ) : data.length > 0 ? (
-                data.map((item) => (
-                  <TableRow key={item.id} className="h-14">
-                    <TableCell className="max-w-[160px] truncate font-mono text-xs">
-                      {item.id}
-                    </TableCell>
-                    <TableCell className="max-w-[160px] truncate font-mono text-xs">
-                      {item.userId}
-                    </TableCell>
-                    <TableCell className="max-w-[160px] truncate font-mono text-xs">
-                      {item.threadId ?? '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[160px] truncate font-mono text-xs">
-                      {item.messageId ?? '-'}
-                    </TableCell>
-                    <TableCell>{item.providerId}</TableCell>
-                    <TableCell>{item.modelId}</TableCell>
-                    <TableCell className="max-w-[140px] truncate font-mono text-xs">
-                      {item.agentId ?? '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[180px] truncate">
-                      {item.toolCallCount > 0 ? item.toolNames.join(', ') : '-'}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {item.knowledgeEnabled
-                        ? `${item.knowledgeChunkCount}/${item.citationCount}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[180px] truncate">
-                      {item.workflowRuns.length > 0
-                        ? item.workflowRuns
-                            .map(
-                              (workflow) =>
-                                `${workflow.workflowId}:${workflow.status}`
-                            )
-                            .join(', ')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>{formatNumber(item.inputTokens)}</TableCell>
-                    <TableCell>{formatNumber(item.outputTokens)}</TableCell>
-                    <TableCell>{formatNumber(item.totalTokens)}</TableCell>
-                    <TableCell>{formatMoney(item.estimatedCostUsd)}</TableCell>
-                    <TableCell>{formatNumber(item.estimatedCredits)}</TableCell>
-                    <TableCell>
-                      <StatusBadge value={item.billingMode} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge value={item.billingStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge value={item.reservationStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge value={item.settlementStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge value={item.refundStatus} />
-                    </TableCell>
-                    <TableCell className="max-w-[220px] truncate">
-                      {item.failureReason ?? '-'}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDate(item.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                data.flatMap((item) => {
+                  const isExpanded = expandedIds.includes(item.id);
+
+                  return [
+                    <TableRow key={item.id} className="h-14">
+                      <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-left"
+                          onClick={() => toggleExpanded(item.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDownIcon className="size-3.5" />
+                          ) : (
+                            <ChevronRightIcon className="size-3.5" />
+                          )}
+                          <span>{item.id}</span>
+                        </button>
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                        {item.userId}
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                        {item.threadId ?? '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate font-mono text-xs">
+                        {item.messageId ?? '-'}
+                      </TableCell>
+                      <TableCell>{item.providerId}</TableCell>
+                      <TableCell>{item.modelId}</TableCell>
+                      <TableCell className="max-w-[140px] truncate font-mono text-xs">
+                        {item.agentId ?? '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {item.toolCallCount > 0 ? item.toolNames.join(', ') : '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {item.knowledgeEnabled
+                          ? `${item.knowledgeChunkCount}/${item.citationCount}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {item.workflowRuns.length > 0
+                          ? item.workflowRuns
+                              .map(
+                                (workflow) =>
+                                  `${workflow.workflowId}:${workflow.status}`
+                              )
+                              .join(', ')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>{formatNumber(item.inputTokens)}</TableCell>
+                      <TableCell>{formatNumber(item.outputTokens)}</TableCell>
+                      <TableCell>{formatNumber(item.totalTokens)}</TableCell>
+                      <TableCell>{formatMoney(item.estimatedCostUsd)}</TableCell>
+                      <TableCell>{formatNumber(item.estimatedCredits)}</TableCell>
+                      <TableCell>
+                        <StatusBadge value={item.billingMode} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge value={item.billingStatus} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge value={item.reservationStatus} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge value={item.settlementStatus} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge value={item.refundStatus} />
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate">
+                        {item.failureReason ?? '-'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(item.createdAt)}
+                      </TableCell>
+                    </TableRow>,
+                    ...(isExpanded
+                      ? [
+                          <TableRow key={`${item.id}-details`}>
+                            <TableCell colSpan={22} className="bg-muted/20">
+                              <div className="grid gap-4 py-2 lg:grid-cols-2">
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Workflow Runs
+                                  </div>
+                                  <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+                                    {JSON.stringify(item.workflowRuns, null, 2)}
+                                  </pre>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Eval Results
+                                  </div>
+                                  <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+                                    {JSON.stringify(item.evalResults, null, 2)}
+                                  </pre>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Observability Events
+                                  </div>
+                                  <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+                                    {JSON.stringify(
+                                      item.observabilityEvents,
+                                      null,
+                                      2
+                                    )}
+                                  </pre>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Audit Metadata
+                                  </div>
+                                  <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+                                    {JSON.stringify(
+                                      {
+                                        metadata: item.metadata,
+                                        costEvent: item.costEvent,
+                                      },
+                                      null,
+                                      2
+                                    )}
+                                  </pre>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>,
+                        ]
+                      : []),
+                  ];
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={22} className="h-24 text-center">

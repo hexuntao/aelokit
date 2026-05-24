@@ -8,7 +8,9 @@ import { getDb } from '@/db';
 import {
   aiCostEvent,
   aiCreditReservation,
+  aiEvalResult,
   aiMessage,
+  aiObservabilityEvent,
   aiThread,
   aiToolCall,
   aiUsage,
@@ -19,7 +21,6 @@ import { adminActionClient } from '@/lib/safe-action';
 import type { SessionUser } from '@/lib/auth-types';
 import {
   and,
-  count as countFn,
   desc,
   eq,
   gte,
@@ -86,6 +87,24 @@ export interface AIUsageAuditItem {
     readonly id: string;
     readonly workflowId: string;
     readonly status: string;
+    readonly createdAt: Date;
+    readonly failureReason: string | null;
+    readonly metadata: unknown;
+  }[];
+  readonly evalResults: readonly {
+    readonly id: string;
+    readonly workflowRunId: string | null;
+    readonly scorerId: string;
+    readonly status: string;
+    readonly score: string | null;
+    readonly metadata: unknown;
+    readonly createdAt: Date;
+  }[];
+  readonly observabilityEvents: readonly {
+    readonly id: string;
+    readonly eventType: string;
+    readonly severity: string;
+    readonly metadata: unknown;
     readonly createdAt: Date;
   }[];
   readonly costEvent: {
@@ -363,6 +382,8 @@ export const getAIUsageAuditAction = adminActionClient
                 status: aiWorkflowRun.status,
                 messageId: aiWorkflowRun.messageId,
                 threadId: aiWorkflowRun.threadId,
+                failureReason: aiWorkflowRun.failureReason,
+                metadata: aiWorkflowRun.outputMetadata,
                 createdAt: aiWorkflowRun.createdAt,
               })
               .from(aiWorkflowRun)
@@ -378,10 +399,60 @@ export const getAIUsageAuditAction = adminActionClient
               )
           : [],
       ]);
+      const workflowRunIds = workflowRows.map((workflow) => workflow.id);
+      const usageIds = rows.map((row) => row.id);
+      const [evalRows, observabilityRows] = await Promise.all([
+        workflowRunIds.length > 0
+          ? db
+              .select({
+                id: aiEvalResult.id,
+                workflowRunId: aiEvalResult.workflowRunId,
+                scorerId: aiEvalResult.scorerId,
+                status: aiEvalResult.status,
+                score: aiEvalResult.score,
+                metadata: aiEvalResult.metadata,
+                createdAt: aiEvalResult.createdAt,
+              })
+              .from(aiEvalResult)
+              .where(inArray(aiEvalResult.workflowRunId, workflowRunIds))
+              .orderBy(desc(aiEvalResult.createdAt))
+          : [],
+        usageIds.length > 0 || workflowRunIds.length > 0
+          ? db
+              .select({
+                id: aiObservabilityEvent.id,
+                usageId: aiObservabilityEvent.usageId,
+                workflowRunId: aiObservabilityEvent.workflowRunId,
+                threadId: aiObservabilityEvent.threadId,
+                messageId: aiObservabilityEvent.messageId,
+                eventType: aiObservabilityEvent.eventType,
+                severity: aiObservabilityEvent.severity,
+                metadata: aiObservabilityEvent.metadata,
+                createdAt: aiObservabilityEvent.createdAt,
+              })
+              .from(aiObservabilityEvent)
+              .where(
+                or(
+                  usageIds.length > 0
+                    ? inArray(aiObservabilityEvent.usageId, usageIds)
+                    : undefined,
+                  workflowRunIds.length > 0
+                    ? inArray(aiObservabilityEvent.workflowRunId, workflowRunIds)
+                    : undefined
+                )
+              )
+              .orderBy(desc(aiObservabilityEvent.createdAt))
+          : [],
+      ]);
       const toolsByMessageId = new Map<string, typeof toolRows>();
       const workflowsByMessageOrThreadId = new Map<
         string,
         typeof workflowRows
+      >();
+      const evalsByWorkflowRunId = new Map<string, typeof evalRows>();
+      const observabilityByUsageOrWorkflowId = new Map<
+        string,
+        typeof observabilityRows
       >();
 
       for (const tool of toolRows) {
@@ -404,6 +475,27 @@ export const getAIUsageAuditAction = adminActionClient
           workflowsByMessageOrThreadId.set(workflow.threadId, existing);
         }
       }
+      for (const evalResult of evalRows) {
+        if (!evalResult.workflowRunId) {
+          continue;
+        }
+        const existing = evalsByWorkflowRunId.get(evalResult.workflowRunId) ?? [];
+        existing.push(evalResult);
+        evalsByWorkflowRunId.set(evalResult.workflowRunId, existing);
+      }
+      for (const event of observabilityRows) {
+        if (event.usageId) {
+          const existing = observabilityByUsageOrWorkflowId.get(event.usageId) ?? [];
+          existing.push(event);
+          observabilityByUsageOrWorkflowId.set(event.usageId, existing);
+        }
+        if (event.workflowRunId) {
+          const existing =
+            observabilityByUsageOrWorkflowId.get(event.workflowRunId) ?? [];
+          existing.push(event);
+          observabilityByUsageOrWorkflowId.set(event.workflowRunId, existing);
+        }
+      }
 
       const items: AIUsageAuditItem[] = rows.map((row) => {
         const messageMetadata = asRecord(row.messageMetadata);
@@ -421,6 +513,20 @@ export const getAIUsageAuditAction = adminActionClient
         const workflowRuns = Array.from(
           new Map(
             workflowRowsForUsage.map((workflow) => [workflow.id, workflow])
+          ).values()
+        );
+        const evalResults = workflowRuns.flatMap(
+          (workflow) => evalsByWorkflowRunId.get(workflow.id) ?? []
+        );
+        const observabilityEvents = Array.from(
+          new Map(
+            [
+              ...(observabilityByUsageOrWorkflowId.get(row.id) ?? []),
+              ...workflowRuns.flatMap(
+                (workflow) =>
+                  observabilityByUsageOrWorkflowId.get(workflow.id) ?? []
+              ),
+            ].map((event) => [event.id, event])
           ).values()
         );
         const citations = Array.isArray(messageMetadata.citations)
@@ -468,6 +574,24 @@ export const getAIUsageAuditAction = adminActionClient
             workflowId: workflow.workflowId,
             status: workflow.status,
             createdAt: workflow.createdAt,
+            failureReason: workflow.failureReason,
+            metadata: sanitizeAuditMetadata(workflow.metadata),
+          })),
+          evalResults: evalResults.map((evalResult) => ({
+            id: evalResult.id,
+            workflowRunId: evalResult.workflowRunId,
+            scorerId: evalResult.scorerId,
+            status: evalResult.status,
+            score: evalResult.score,
+            metadata: sanitizeAuditMetadata(evalResult.metadata),
+            createdAt: evalResult.createdAt,
+          })),
+          observabilityEvents: observabilityEvents.map((event) => ({
+            id: event.id,
+            eventType: event.eventType,
+            severity: event.severity,
+            metadata: sanitizeAuditMetadata(event.metadata),
+            createdAt: event.createdAt,
           })),
           costEvent: row.costEventId
             ? {
