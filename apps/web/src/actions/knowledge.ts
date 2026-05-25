@@ -89,7 +89,13 @@ export const checkEmbeddingProviderStatusAction = userActionClient.action(
 );
 
 export const getUserKnowledgeSourcesAction = userActionClient.action(
-  async ({ ctx }): Promise<{ success: boolean; sources?: KnowledgeSourceRecord[]; error?: string }> => {
+  async ({
+    ctx,
+  }): Promise<{
+    success: boolean;
+    sources?: KnowledgeSourceRecord[];
+    error?: string;
+  }> => {
     const user = (ctx as { user: SessionUser }).user;
 
     try {
@@ -109,60 +115,64 @@ export const getUserKnowledgeSourcesAction = userActionClient.action(
 
 export const archiveKnowledgeSourceAction = userActionClient
   .inputSchema(sourceIdSchema)
-  .action(async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
-    const user = (ctx as { user: SessionUser }).user;
+  .action(
+    async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
+      const user = (ctx as { user: SessionUser }).user;
 
-    try {
-      const source = await archiveKnowledgeSource(
-        parsedInput.sourceId as AIKnowledgeSourceId,
-        user.id
-      );
+      try {
+        const source = await archiveKnowledgeSource(
+          parsedInput.sourceId as AIKnowledgeSourceId,
+          user.id
+        );
 
-      if (!source) {
+        if (!source) {
+          return {
+            success: false,
+            error: 'Knowledge source not found.',
+          };
+        }
+
+        return {
+          success: true,
+          source,
+        };
+      } catch (error) {
         return {
           success: false,
-          error: 'Knowledge source not found.',
+          error: error instanceof Error ? error.message : String(error),
         };
       }
-
-      return {
-        success: true,
-        source,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
     }
-  });
+  );
 
 export const deleteKnowledgeSourceAction = userActionClient
   .inputSchema(sourceIdSchema)
-  .action(async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
-    const user = (ctx as { user: SessionUser }).user;
+  .action(
+    async ({ parsedInput, ctx }): Promise<ManageKnowledgeSourceResult> => {
+      const user = (ctx as { user: SessionUser }).user;
 
-    try {
-      const deleted = await deleteKnowledgeSource(
-        parsedInput.sourceId as AIKnowledgeSourceId,
-        user.id
-      );
+      try {
+        const deleted = await deleteKnowledgeSource(
+          parsedInput.sourceId as AIKnowledgeSourceId,
+          user.id
+        );
 
-      if (!deleted) {
+        if (!deleted) {
+          return {
+            success: false,
+            error: 'Knowledge source not found.',
+          };
+        }
+
+        return {
+          success: true,
+          deleted: true,
+        };
+      } catch (error) {
         return {
           success: false,
-          error: 'Knowledge source not found.',
+          error: error instanceof Error ? error.message : String(error),
         };
       }
-
-      return {
-        success: true,
-        deleted: true,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
     }
-  });
+  );

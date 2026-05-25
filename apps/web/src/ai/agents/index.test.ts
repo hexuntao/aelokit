@@ -35,10 +35,6 @@ test('exposes agent options for UI selection', () => {
   assert.equal(options.length >= 3, true);
   assert.deepEqual(
     options.map((option) => option.id),
-    [
-      'agent-default-chat',
-      'agent-knowledge-focused',
-      'agent-concise-assistant',
-    ]
+    ['agent-default-chat', 'agent-knowledge-focused', 'agent-concise-assistant']
   );
 });

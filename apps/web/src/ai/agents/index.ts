@@ -108,7 +108,9 @@ export function resolveAgentSelection(options?: {
       continue;
     }
 
-    const matchedAgent = APP_LOCAL_AGENTS.find((agent) => agent.id === candidateId);
+    const matchedAgent = APP_LOCAL_AGENTS.find(
+      (agent) => agent.id === candidateId
+    );
     if (matchedAgent) {
       return {
         agent: matchedAgent,

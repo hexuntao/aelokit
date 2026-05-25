@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  enforceEntitlement,
-  type AIEntitlementRequest,
-} from './index';
+import { enforceEntitlement, type AIEntitlementRequest } from './index';
 import type { AIRuntimeContext } from '../context';
 
 function createContext(

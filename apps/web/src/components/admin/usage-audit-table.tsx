@@ -393,7 +393,9 @@ export function UsageAuditTable({
                         {item.agentId ?? '-'}
                       </TableCell>
                       <TableCell className="max-w-[180px] truncate">
-                        {item.toolCallCount > 0 ? item.toolNames.join(', ') : '-'}
+                        {item.toolCallCount > 0
+                          ? item.toolNames.join(', ')
+                          : '-'}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {item.knowledgeEnabled
@@ -413,8 +415,12 @@ export function UsageAuditTable({
                       <TableCell>{formatNumber(item.inputTokens)}</TableCell>
                       <TableCell>{formatNumber(item.outputTokens)}</TableCell>
                       <TableCell>{formatNumber(item.totalTokens)}</TableCell>
-                      <TableCell>{formatMoney(item.estimatedCostUsd)}</TableCell>
-                      <TableCell>{formatNumber(item.estimatedCredits)}</TableCell>
+                      <TableCell>
+                        {formatMoney(item.estimatedCostUsd)}
+                      </TableCell>
+                      <TableCell>
+                        {formatNumber(item.estimatedCredits)}
+                      </TableCell>
                       <TableCell>
                         <StatusBadge value={item.billingMode} />
                       </TableCell>

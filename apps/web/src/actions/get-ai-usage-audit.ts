@@ -19,17 +19,7 @@ import {
 import { isDemoWebsite } from '@/lib/demo';
 import { adminActionClient } from '@/lib/safe-action';
 import type { SessionUser } from '@/lib/auth-types';
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  lte,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 const LATEST_COST_EVENT_ORDER_BY = sql`
@@ -437,7 +427,10 @@ export const getAIUsageAuditAction = adminActionClient
                     ? inArray(aiObservabilityEvent.usageId, usageIds)
                     : undefined,
                   workflowRunIds.length > 0
-                    ? inArray(aiObservabilityEvent.workflowRunId, workflowRunIds)
+                    ? inArray(
+                        aiObservabilityEvent.workflowRunId,
+                        workflowRunIds
+                      )
                     : undefined
                 )
               )
@@ -479,13 +472,15 @@ export const getAIUsageAuditAction = adminActionClient
         if (!evalResult.workflowRunId) {
           continue;
         }
-        const existing = evalsByWorkflowRunId.get(evalResult.workflowRunId) ?? [];
+        const existing =
+          evalsByWorkflowRunId.get(evalResult.workflowRunId) ?? [];
         existing.push(evalResult);
         evalsByWorkflowRunId.set(evalResult.workflowRunId, existing);
       }
       for (const event of observabilityRows) {
         if (event.usageId) {
-          const existing = observabilityByUsageOrWorkflowId.get(event.usageId) ?? [];
+          const existing =
+            observabilityByUsageOrWorkflowId.get(event.usageId) ?? [];
           existing.push(event);
           observabilityByUsageOrWorkflowId.set(event.usageId, existing);
         }

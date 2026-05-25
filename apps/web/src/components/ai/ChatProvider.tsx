@@ -334,7 +334,9 @@ export function ChatProvider({
     clearError();
     setThreadId(undefined);
     threadIdRef.current = undefined;
-    setSelectedAgentId(initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? '');
+    setSelectedAgentId(
+      initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? ''
+    );
     setSelectedModelId(getPreferredModelId());
     runtime.thread.reset();
     void runtime.thread.composer.reset();
@@ -433,7 +435,9 @@ export function ChatProvider({
       return;
     }
 
-    setSelectedAgentId(initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? '');
+    setSelectedAgentId(
+      initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? ''
+    );
     setSelectedModelId(getPreferredModelId(initialSelectedModelId));
     runtime.thread.reset();
     void runtime.thread.composer.reset();

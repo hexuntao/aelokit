@@ -32,7 +32,9 @@ export const getAIEvalResultsAction = adminActionClient
     const db = await getDb();
     const filters = [];
     if (parsedInput.workflowRunIds?.length) {
-      filters.push(inArray(aiEvalResult.workflowRunId, parsedInput.workflowRunIds));
+      filters.push(
+        inArray(aiEvalResult.workflowRunId, parsedInput.workflowRunIds)
+      );
     }
     if (parsedInput.scorerId) {
       filters.push(eq(aiEvalResult.scorerId, parsedInput.scorerId));
