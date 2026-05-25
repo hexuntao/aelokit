@@ -57,6 +57,7 @@ export interface AICreditReservationRecord {
     | 'cancelled';
   readonly reservedCredits: number;
   readonly settledCredits?: number;
+  readonly releasedCredits?: number;
   readonly refundedCredits?: number;
   readonly creditAllocations: readonly AICreditAllocation[];
   readonly failureReason?: string;
@@ -286,6 +287,15 @@ function isExpiredAllocation(
   return Boolean(
     allocation.expirationDate &&
       allocation.expirationDate.getTime() <= now.getTime()
+  );
+}
+
+function getActiveAllocations(
+  allocations: readonly AICreditAllocation[],
+  now: Date
+): readonly AICreditAllocation[] {
+  return allocations.filter(
+    (allocation) => !isExpiredAllocation(allocation, now)
   );
 }
 
@@ -553,16 +563,16 @@ async function restoreCreditAllocations(
       };
     }
 
-    const remainingAmount = transaction.remainingAmount ?? 0;
-    await tx
-      .update(creditTransaction)
-      .set({
-        remainingAmount: remainingAmount + allocation.amount,
-        updatedAt: params.now,
-      })
-      .where(eq(creditTransaction.id, transaction.id));
-
     if (!isExpiredAllocation(allocation, params.now)) {
+      const remainingAmount = transaction.remainingAmount ?? 0;
+      await tx
+        .update(creditTransaction)
+        .set({
+          remainingAmount: remainingAmount + allocation.amount,
+          updatedAt: params.now,
+        })
+        .where(eq(creditTransaction.id, transaction.id));
+
       restoredCredits += allocation.amount;
     }
   }
@@ -677,10 +687,14 @@ async function settleReservationRecord(
     }
 
     if (reservation.expiresAt && reservation.expiresAt < now) {
+      const activeAllocations = getActiveAllocations(
+        normalizeCreditAllocations(reservation.creditAllocations),
+        now
+      );
       const restoreResult = await restoreCreditAllocations(tx, {
         userId: params.userId,
         usageId: params.usageId,
-        allocations: normalizeCreditAllocations(reservation.creditAllocations),
+        allocations: activeAllocations,
         now,
         description: `Released expired AI reservation for usage ${params.usageId}`,
       });
@@ -691,13 +705,16 @@ async function settleReservationRecord(
         };
       }
 
-      const [updated] = await tx
+      await tx
         .update(aiCreditReservation)
         .set({
           reservationStatus: 'cancelled',
           settlementStatus: 'no_charge',
-          refundStatus: 'refunded',
-          refundedCredits: reservation.reservedCredits,
+          refundStatus: 'cancelled',
+          refundedCredits: activeAllocations.reduce(
+            (sum, allocation) => sum + allocation.amount,
+            0
+          ),
           failureReason: 'reservation_expired',
           refundedAt: now,
           updatedAt: now,
@@ -745,14 +762,12 @@ async function settleReservationRecord(
       .set({
         settlementStatus: 'settled',
         settledCredits,
-        refundStatus:
-          releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
-        refundedCredits:
-          releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
+        refundStatus: reservation.refundStatus,
+        refundedCredits: reservation.refundedCredits,
         creditAllocations: serializeCreditAllocations(
           normalizeCreditAllocations(reservation.creditAllocations)
         ),
-        refundedAt: releasedCredits > 0 ? now : reservation.refundedAt,
+        refundedAt: reservation.refundedAt,
         failureReason: null,
         settledAt: now,
         updatedAt: now,
@@ -762,7 +777,10 @@ async function settleReservationRecord(
 
     return {
       success: true,
-      data: normalizeReservation(updated),
+      data: {
+        ...normalizeReservation(updated),
+        releasedCredits,
+      },
     };
   });
 }
@@ -811,9 +829,21 @@ async function refundReservationRecord(
       };
     }
 
+    if (
+      reservation.settlementStatus !== 'settled' &&
+      (reservation.refundStatus === 'cancelled' ||
+        reservation.refundStatus === 'no_charge')
+    ) {
+      return {
+        success: true,
+        data: normalizeReservation(reservation),
+      };
+    }
+
     if (reservation.settlementStatus !== 'settled') {
-      const allocations = normalizeCreditAllocations(
-        reservation.creditAllocations
+      const allocations = getActiveAllocations(
+        normalizeCreditAllocations(reservation.creditAllocations),
+        now
       );
       const creditsToRelease = allocations.reduce(
         (sum, allocation) => sum + allocation.amount,
@@ -838,7 +868,7 @@ async function refundReservationRecord(
         .set({
           reservationStatus: 'cancelled',
           settlementStatus: 'no_charge',
-          refundStatus: 'refunded',
+          refundStatus: 'cancelled',
           refundedCredits: creditsToRelease,
           failureReason: params.reason,
           refundedAt: now,

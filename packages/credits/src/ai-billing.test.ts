@@ -142,6 +142,9 @@ function createLedgerStore(options?: {
     for (const allocation of allocations) {
       const transaction = earnTransactions.get(allocation.transactionId);
       assert.ok(transaction, `Missing transaction ${allocation.transactionId}`);
+      if (allocation.expirationDate && allocation.expirationDate <= now) {
+        continue;
+      }
       earnTransactions.set(allocation.transactionId, {
         ...transaction,
         remainingAmount: transaction.remainingAmount + allocation.amount,
@@ -275,11 +278,10 @@ function createLedgerStore(options?: {
         ...reservation,
         settlementStatus: 'settled',
         settledCredits,
-        refundStatus:
-          releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
-        refundedCredits:
-          releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
-        refundedAt: releasedCredits > 0 ? now : reservation.refundedAt,
+        releasedCredits,
+        refundStatus: reservation.refundStatus,
+        refundedCredits: reservation.refundedCredits,
+        refundedAt: reservation.refundedAt,
         settledAt: now,
         updatedAt: now,
       };
@@ -303,14 +305,29 @@ function createLedgerStore(options?: {
         return { success: true, data: reservation };
       }
 
+      if (
+        reservation.settlementStatus !== 'settled' &&
+        (reservation.refundStatus === 'cancelled' ||
+          reservation.refundStatus === 'no_charge')
+      ) {
+        return { success: true, data: reservation };
+      }
+
       if (reservation.settlementStatus !== 'settled') {
-        restoreAllocations(reservation.creditAllocations);
+        const activeAllocations = reservation.creditAllocations.filter(
+          (allocation) =>
+            !allocation.expirationDate || allocation.expirationDate > now
+        );
+        restoreAllocations(activeAllocations);
         const noCharge: AICreditReservationRecord = {
           ...reservation,
           reservationStatus: 'cancelled',
           settlementStatus: 'no_charge',
-          refundStatus: 'refunded',
-          refundedCredits: reservation.reservedCredits,
+          refundStatus: 'cancelled',
+          refundedCredits: activeAllocations.reduce(
+            (sum, allocation) => sum + allocation.amount,
+            0
+          ),
           refundedAt: now,
           failureReason: params.reason,
           updatedAt: now,
@@ -354,6 +371,23 @@ function createLedgerStore(options?: {
       ),
     getRemainingAmount: (transactionId: string) =>
       earnTransactions.get(transactionId)?.remainingAmount,
+    simulateExpirationJob: () => {
+      let expiredAmount = 0;
+      for (const transaction of earnTransactions.values()) {
+        if (
+          transaction.expirationDate &&
+          transaction.expirationDate <= now &&
+          transaction.remainingAmount > 0
+        ) {
+          expiredAmount += transaction.remainingAmount;
+          earnTransactions.set(transaction.id, {
+            ...transaction,
+            remainingAmount: 0,
+          });
+        }
+      }
+      return expiredAmount;
+    },
   };
 }
 
@@ -483,10 +517,73 @@ test('settleAICredits releases only the unused tail of reserved allocations', as
   }
 
   assert.equal(result.data.settledCredits, 3);
-  assert.equal(result.data.refundedCredits, 3);
+  assert.equal(result.data.releasedCredits, 3);
+  assert.equal(result.data.refundStatus, 'not_required');
+  assert.equal(result.data.refundedCredits, undefined);
   assert.equal(store.getRemainingAmount('credit-expiring-soon'), 1);
   assert.equal(store.getRemainingAmount('credit-later'), 4);
   assert.equal(store.getBalance(), 5);
+});
+
+test('refundAICredits can refund settled credits after partial settlement release', async () => {
+  const store = createLedgerStore({
+    earnTransactions: [
+      {
+        id: 'credit-expiring-soon',
+        remainingAmount: 4,
+        expirationDate: new Date('2026-05-30T00:00:00.000Z'),
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+      },
+      {
+        id: 'credit-later',
+        remainingAmount: 4,
+        expirationDate: new Date('2026-06-10T00:00:00.000Z'),
+        createdAt: new Date('2026-05-02T00:00:00.000Z'),
+      },
+    ],
+  });
+  const reservation = await reserveAICredits(
+    { usageId: 'usage-partial-refund', userId: 'user-1', requiredCredits: 6 },
+    store.dependencies
+  );
+  assert.equal(reservation.success, true);
+  if (!reservation.success) {
+    return;
+  }
+
+  const settlement = await settleAICredits(
+    {
+      reservationId: reservation.data.id,
+      usageId: 'usage-partial-refund',
+      userId: 'user-1',
+      settledCredits: 3,
+    },
+    store.dependencies
+  );
+  assert.equal(settlement.success, true);
+  if (!settlement.success) {
+    return;
+  }
+
+  const refund = await refundAICredits(
+    {
+      reservationId: reservation.data.id,
+      usageId: 'usage-partial-refund',
+      userId: 'user-1',
+      reason: 'user_refund',
+    },
+    store.dependencies
+  );
+
+  assert.equal(refund.success, true);
+  if (!refund.success) {
+    return;
+  }
+
+  assert.equal(refund.data.refundStatus, 'refunded');
+  assert.equal(refund.data.refundedCredits, 3);
+  assert.equal(store.getBalance(), 8);
+  assert.equal(store.getRefundWrites(), 1);
 });
 
 test('settleAICredits is idempotent and caps overage to reserved credits', async () => {
@@ -598,6 +695,7 @@ test('refundAICredits returns no_charge before settlement', async () => {
   assert.equal(refund.success, true);
   if (refund.success) {
     assert.equal(refund.data.settlementStatus, 'no_charge');
+    assert.equal(refund.data.refundStatus, 'cancelled');
     assert.equal(refund.data.refundedCredits, 3);
     assert.equal(refund.data.failureReason, 'aborted');
   }
@@ -732,5 +830,7 @@ test('expired transactions are restored to their original allocation without bec
 
   assert.equal(result.success, true);
   assert.equal(store.getBalance(), 2);
-  assert.equal(store.getRemainingAmount('credit-expired-after-reservation'), 2);
+  assert.equal(store.getRemainingAmount('credit-expired-after-reservation'), 0);
+  assert.equal(store.simulateExpirationJob(), 0);
+  assert.equal(store.getBalance(), 2);
 });

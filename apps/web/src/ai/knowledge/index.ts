@@ -37,6 +37,7 @@ export {
 export type {
   KnowledgeSourceRecord,
   KnowledgeDocumentRecord,
+  DeleteKnowledgeSourceResult,
 } from './ingestion';
 export {
   retrieveKnowledgeContext,

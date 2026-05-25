@@ -69,6 +69,19 @@ export function KnowledgeSourceManager({
         return;
       }
 
+      if (result.data.cleanupFailed && result.data.source) {
+        setSources((current) =>
+          current.map((source) =>
+            source.id === sourceId ? result.data!.source! : source
+          )
+        );
+        toast.warning(
+          result.data.error ??
+            'Knowledge source archived, but vector cleanup needs retry.'
+        );
+        return;
+      }
+
       setSources((current) =>
         current.filter((source) => source.id !== sourceId)
       );

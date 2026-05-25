@@ -59,6 +59,12 @@ import {
 } from '@/ai/knowledge';
 import { createMastraToolRegistry, getToolIdByName } from '@/ai/tools';
 import { nanoid } from 'nanoid';
+import {
+  getAIChatBillingReference,
+  resolveAIChatRefundOutcome,
+  resolveAIChatRouteErrorBillingOutcome,
+  type AIChatBillingAction,
+} from './billing-audit';
 
 export const maxDuration = 30;
 
@@ -182,30 +188,6 @@ function getErrorStatus(error: unknown): 'error' | 'timeout' | 'rate_limited' {
   }
 
   return 'error';
-}
-
-function getBillingReference(options: {
-  usageId: string;
-  reservationId?: string;
-  reservedCredits?: number;
-  estimatedCredits?: number;
-  settledCredits?: number;
-  refundedCredits?: number;
-  overageCredits?: number;
-  settlementError?: string;
-  refundError?: string;
-}): Readonly<Record<string, unknown>> {
-  return {
-    usageId: options.usageId,
-    reservationId: options.reservationId,
-    reservedCredits: options.reservedCredits,
-    estimatedCredits: options.estimatedCredits,
-    settledCredits: options.settledCredits,
-    refundedCredits: options.refundedCredits,
-    overageCredits: options.overageCredits,
-    settlementError: options.settlementError,
-    refundError: options.refundError,
-  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -343,8 +325,8 @@ export async function POST(req: Request) {
     const persistedThreadConfig = existingThreadResult.data;
     const requestedAgentId = agentId ?? persistedThreadConfig?.agentId;
 
-    await ensureAIAgentCatalog();
     await ensureAIModelCatalog();
+    await ensureAIAgentCatalog();
     const resolvedAgent = resolveAgentSelection({
       requestedAgentId,
     });
@@ -509,7 +491,7 @@ export async function POST(req: Request) {
               : creditsBillingEnabled
                 ? 'no_charge'
                 : 'audit_only',
-          billingReference: getBillingReference({
+          billingReference: getAIChatBillingReference({
             usageId,
             estimatedCredits: estimatedRequiredCredits,
           }),
@@ -571,7 +553,7 @@ export async function POST(req: Request) {
             requestDurationMs: Date.now() - startTime,
             billingMode,
             billingStatus: 'preflight_failed',
-            billingReference: getBillingReference({
+            billingReference: getAIChatBillingReference({
               usageId,
               reservedCredits,
               settlementError: preflightResult.error.message,
@@ -608,7 +590,7 @@ export async function POST(req: Request) {
             requestDurationMs: Date.now() - startTime,
             billingMode,
             billingStatus: 'reservation_failed',
-            billingReference: getBillingReference({
+            billingReference: getAIChatBillingReference({
               usageId,
               reservedCredits,
               settlementError: reservationResult.error.message,
@@ -648,7 +630,11 @@ export async function POST(req: Request) {
       let billingStatus: AIUsageBillingStatus = creditsBillingEnabled
         ? 'no_charge'
         : 'audit_only';
+      let billingAction: AIChatBillingAction = creditsBillingEnabled
+        ? 'no_charge'
+        : 'audit_only';
       let settledCredits: number | undefined;
+      let releasedCredits: number | undefined;
       let refundedCredits: number | undefined;
       let overageCredits = 0;
       let settlementError: string | undefined;
@@ -666,6 +652,8 @@ export async function POST(req: Request) {
 
           if (settlementResult.success) {
             settledCredits = settlementResult.data.settledCredits ?? 0;
+            releasedCredits =
+              settlementResult.data.releasedCredits ?? undefined;
             refundedCredits =
               settlementResult.data.refundedCredits ?? undefined;
             overageCredits = Math.max(
@@ -673,6 +661,8 @@ export async function POST(req: Request) {
               estimatedCredits - (settledCredits ?? 0)
             );
             billingStatus = 'settled';
+            billingAction =
+              releasedCredits && releasedCredits > 0 ? 'released' : 'settled';
           } else {
             billingStatus = 'settlement_failed';
             settlementError = settlementResult.error.message;
@@ -699,12 +689,18 @@ export async function POST(req: Request) {
 
           if (refundResult.success) {
             refundedCredits = refundResult.data.refundedCredits ?? undefined;
-            billingStatus =
-              refundResult.data.refundStatus === 'refunded'
-                ? 'refunded'
-                : 'no_charge';
+            const refundOutcome = resolveAIChatRefundOutcome(
+              refundResult.data.refundStatus
+            );
+            billingStatus = refundOutcome.billingStatus;
+            billingAction = refundOutcome.billingAction;
+            releasedCredits =
+              refundOutcome.billingAction === 'released'
+                ? refundedCredits
+                : undefined;
           } else {
             billingStatus = 'refund_failed';
+            billingAction = 'refund_failed';
             refundError = refundResult.error.message;
             console.error('[AI Credits Refund Error]', {
               usageId,
@@ -736,16 +732,18 @@ export async function POST(req: Request) {
           requestDurationMs: Date.now() - startTime,
           billingMode,
           billingStatus,
-          billingReference: getBillingReference({
+          billingReference: getAIChatBillingReference({
             usageId,
             reservationId: pendingReservationId,
             reservedCredits,
             estimatedCredits,
             settledCredits,
+            releasedCredits,
             refundedCredits,
             overageCredits,
             settlementError,
             refundError,
+            billingAction,
           }),
         }),
         id: usageId,
@@ -776,8 +774,10 @@ export async function POST(req: Request) {
             reservationId: pendingReservationId,
             reservedCredits,
             settledCredits,
+            releasedCredits,
             refundedCredits,
             overageCredits,
+            billingAction,
             finishReason: options.finishReason,
           },
         });
@@ -1013,6 +1013,15 @@ export async function POST(req: Request) {
         : undefined;
       const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
 
+      const billingOutcome = resolveAIChatRouteErrorBillingOutcome({
+        creditsBillingEnabled,
+        hasReservation: Boolean(pendingReservationId),
+        refundSucceeded: refundResult?.success,
+        refundStatus: refundResult?.success
+          ? refundResult.data.refundStatus
+          : undefined,
+      });
+
       await recordUsageAudit({
         ...createUsageAuditEntry(
           pendingRuntimeContext,
@@ -1028,19 +1037,24 @@ export async function POST(req: Request) {
             providerModelId: pendingResolvedModel.providerModelId,
             requestDurationMs: Date.now() - startTime,
             billingMode: getAIUsageBillingMode(creditsBillingEnabled),
-            billingStatus: pendingReservationId
-              ? refundResult?.success
-                ? 'no_charge'
-                : 'refund_failed'
-              : creditsBillingEnabled
-                ? 'no_charge'
-                : 'audit_only',
-            billingReference: getBillingReference({
+            billingStatus: billingOutcome.billingStatus,
+            billingReference: getAIChatBillingReference({
               usageId: pendingUsageId,
               reservationId: pendingReservationId,
+              releasedCredits:
+                billingOutcome.billingAction === 'released' &&
+                refundResult?.success
+                  ? refundResult.data.refundedCredits
+                  : undefined,
+              refundedCredits:
+                billingOutcome.billingAction === 'refunded' &&
+                refundResult?.success
+                  ? refundResult.data.refundedCredits
+                  : undefined,
               refundError: refundResult?.success
                 ? undefined
                 : refundResult?.error.message,
+              billingAction: billingOutcome.billingAction,
             }),
           }
         ),

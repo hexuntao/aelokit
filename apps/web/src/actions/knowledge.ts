@@ -26,6 +26,7 @@ export type ManageKnowledgeSourceResult = {
   success: boolean;
   source?: KnowledgeSourceRecord;
   deleted?: boolean;
+  cleanupFailed?: boolean;
   error?: string;
 };
 
@@ -152,15 +153,25 @@ export const deleteKnowledgeSourceAction = userActionClient
       const user = (ctx as { user: SessionUser }).user;
 
       try {
-        const deleted = await deleteKnowledgeSource(
+        const deleteResult = await deleteKnowledgeSource(
           parsedInput.sourceId as AIKnowledgeSourceId,
           user.id
         );
 
-        if (!deleted) {
+        if (deleteResult.status === 'not_found') {
           return {
             success: false,
             error: 'Knowledge source not found.',
+          };
+        }
+
+        if (deleteResult.status === 'archived_cleanup_failed') {
+          return {
+            success: true,
+            source: deleteResult.source,
+            deleted: false,
+            cleanupFailed: true,
+            error: deleteResult.error,
           };
         }
 

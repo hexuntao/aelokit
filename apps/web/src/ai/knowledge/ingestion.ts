@@ -53,6 +53,20 @@ export interface KnowledgeDocumentRecord {
   readonly createdAt: string;
 }
 
+export type DeleteKnowledgeSourceResult =
+  | {
+      readonly status: 'deleted';
+      readonly sourceId: AIKnowledgeSourceId;
+    }
+  | {
+      readonly status: 'archived_cleanup_failed';
+      readonly source: KnowledgeSourceRecord;
+      readonly error: string;
+    }
+  | {
+      readonly status: 'not_found';
+    };
+
 function toISOString(value: Date | string | null | undefined): string {
   if (!value) {
     return new Date(0).toISOString();
@@ -350,7 +364,7 @@ export async function archiveKnowledgeSource(
 export async function deleteKnowledgeSource(
   sourceId: AIKnowledgeSourceId,
   userId: string
-): Promise<boolean> {
+): Promise<DeleteKnowledgeSourceResult> {
   const db = await getDb();
   const [source] = await db
     .select()
@@ -361,18 +375,20 @@ export async function deleteKnowledgeSource(
     .limit(1);
 
   if (!source) {
-    return false;
+    return { status: 'not_found' };
   }
 
-  await db
+  const [archived] = await db
     .update(knowledgeSource)
     .set({
       status: 'archived',
+      errorMessage: null,
       updatedAt: new Date(),
     })
     .where(
       and(eq(knowledgeSource.id, sourceId), eq(knowledgeSource.userId, userId))
-    );
+    )
+    .returning();
 
   const chunkRows = await db
     .select({
@@ -390,11 +406,27 @@ export async function deleteKnowledgeSource(
       await deleteKnowledgeVectorsByIds(vectorStore, vectorIds);
     }
   } catch (error) {
-    throw new Error(
-      `Knowledge source was archived, but vector cleanup failed: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const [updated] = await db
+      .update(knowledgeSource)
+      .set({
+        status: 'archived',
+        errorMessage: `Vector cleanup failed during delete: ${errorMessage}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(knowledgeSource.id, sourceId),
+          eq(knowledgeSource.userId, userId)
+        )
+      )
+      .returning();
+
+    return {
+      status: 'archived_cleanup_failed',
+      source: toKnowledgeSourceRecord(updated ?? archived ?? source),
+      error: `Knowledge source was archived and removed from retrieval, but vector cleanup failed: ${errorMessage}`,
+    };
   }
 
   const deleted = await db
@@ -404,7 +436,9 @@ export async function deleteKnowledgeSource(
     )
     .returning({ id: knowledgeSource.id });
 
-  return deleted.length > 0;
+  return deleted.length > 0
+    ? { status: 'deleted', sourceId }
+    : { status: 'not_found' };
 }
 
 export const PARTIAL_UNTIL_WIRED = false;
