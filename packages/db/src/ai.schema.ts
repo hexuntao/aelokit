@@ -648,6 +648,9 @@ export const aiCreditReservation = pgTable(
     reservedCredits: integer('reserved_credits').notNull().default(0),
     settledCredits: integer('settled_credits'),
     refundedCredits: integer('refunded_credits'),
+    creditAllocations: jsonb('credit_allocations')
+      .notNull()
+      .default(emptyArray),
     failureReason: text('failure_reason'),
     expiresAt: timestamp('expires_at'),
     reservedAt: timestamp('reserved_at'),

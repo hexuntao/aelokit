@@ -1,0 +1,1 @@
+ALTER TABLE "ai_credit_reservation" ADD COLUMN "credit_allocations" jsonb DEFAULT '[]'::jsonb NOT NULL;

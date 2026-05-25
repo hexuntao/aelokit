@@ -5,7 +5,7 @@ import {
   creditTransaction,
   userCredit,
 } from '@repo/db/schema';
-import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { CREDIT_TRANSACTION_TYPE } from './types';
 
 const DEFAULT_RESERVATION_TTL_MS = 10 * 60 * 1000;
@@ -58,6 +58,7 @@ export interface AICreditReservationRecord {
   readonly reservedCredits: number;
   readonly settledCredits?: number;
   readonly refundedCredits?: number;
+  readonly creditAllocations: readonly AICreditAllocation[];
   readonly failureReason?: string;
   readonly expiresAt?: Date;
   readonly reservedAt?: Date;
@@ -65,6 +66,12 @@ export interface AICreditReservationRecord {
   readonly refundedAt?: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+}
+
+export interface AICreditAllocation {
+  readonly transactionId: string;
+  readonly amount: number;
+  readonly expirationDate?: Date;
 }
 
 export interface AICreditPreflightParams {
@@ -127,6 +134,11 @@ export interface AICreditBillingDependencies {
 }
 
 type DbReservation = typeof aiCreditReservation.$inferSelect;
+type DbCreditAllocation = {
+  readonly transactionId?: unknown;
+  readonly amount?: unknown;
+  readonly expirationDate?: unknown;
+};
 
 function billingError(
   code: AICreditBillingErrorCode,
@@ -163,6 +175,9 @@ function normalizeReservation(
     reservedCredits: reservation.reservedCredits,
     settledCredits: reservation.settledCredits ?? undefined,
     refundedCredits: reservation.refundedCredits ?? undefined,
+    creditAllocations: normalizeCreditAllocations(
+      reservation.creditAllocations
+    ),
     failureReason: reservation.failureReason ?? undefined,
     expiresAt: reservation.expiresAt ?? undefined,
     reservedAt: reservation.reservedAt ?? undefined,
@@ -171,6 +186,116 @@ function normalizeReservation(
     createdAt: reservation.createdAt,
     updatedAt: reservation.updatedAt,
   };
+}
+
+function normalizeCreditAllocations(
+  value: unknown
+): readonly AICreditAllocation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const allocations: AICreditAllocation[] = [];
+
+  for (const entry of value) {
+    const allocation = entry as DbCreditAllocation;
+    if (
+      typeof allocation?.transactionId !== 'string' ||
+      typeof allocation?.amount !== 'number'
+    ) {
+      continue;
+    }
+
+    const expirationDate =
+      allocation.expirationDate instanceof Date
+        ? allocation.expirationDate
+        : typeof allocation.expirationDate === 'string'
+          ? new Date(allocation.expirationDate)
+          : undefined;
+
+    allocations.push({
+      transactionId: allocation.transactionId,
+      amount: allocation.amount,
+      expirationDate:
+        expirationDate && !Number.isNaN(expirationDate.getTime())
+          ? expirationDate
+          : undefined,
+    });
+  }
+
+  return allocations;
+}
+
+function serializeCreditAllocations(
+  allocations: readonly AICreditAllocation[]
+): ReadonlyArray<{
+  readonly transactionId: string;
+  readonly amount: number;
+  readonly expirationDate: string | null;
+}> {
+  return allocations.map((allocation) => ({
+    transactionId: allocation.transactionId,
+    amount: allocation.amount,
+    expirationDate: allocation.expirationDate?.toISOString() ?? null,
+  }));
+}
+
+function splitCreditAllocations(
+  allocations: readonly AICreditAllocation[],
+  settledCredits: number
+): {
+  readonly settled: readonly AICreditAllocation[];
+  readonly released: readonly AICreditAllocation[];
+} {
+  let remainingToSettle = Math.max(0, settledCredits);
+  const settled: AICreditAllocation[] = [];
+  const released: AICreditAllocation[] = [];
+
+  for (const allocation of allocations) {
+    if (remainingToSettle <= 0) {
+      released.push(allocation);
+      continue;
+    }
+
+    const settledAmount = Math.min(allocation.amount, remainingToSettle);
+    if (settledAmount > 0) {
+      settled.push({
+        ...allocation,
+        amount: settledAmount,
+      });
+    }
+
+    const releasedAmount = allocation.amount - settledAmount;
+    if (releasedAmount > 0) {
+      released.push({
+        ...allocation,
+        amount: releasedAmount,
+      });
+    }
+
+    remainingToSettle -= settledAmount;
+  }
+
+  return { settled, released };
+}
+
+function isExpiredAllocation(
+  allocation: AICreditAllocation,
+  now: Date
+): boolean {
+  return Boolean(
+    allocation.expirationDate &&
+      allocation.expirationDate.getTime() <= now.getTime()
+  );
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const errorLike = error as { code?: unknown; message?: unknown };
+  return (
+    errorLike?.code === '23505' ||
+    (typeof errorLike?.message === 'string' &&
+      errorLike.message.toLowerCase().includes('unique'))
+  );
 }
 
 async function getCurrentCredits(userId: string): Promise<number> {
@@ -221,11 +346,11 @@ async function createReservationRecord(
       sql`select id from ${userCredit} where ${userCredit.userId} = ${params.userId} for update`
     );
 
-    const ledgerError = await consumeReservedAICredits(tx, params, now);
-    if (ledgerError) {
+    const consumptionResult = await consumeReservedAICredits(tx, params, now);
+    if (consumptionResult.error) {
       return {
         success: false,
-        error: ledgerError,
+        error: consumptionResult.error,
       };
     }
 
@@ -241,6 +366,9 @@ async function createReservationRecord(
         reservedCredits: params.requiredCredits,
         settledCredits: null,
         refundedCredits: null,
+        creditAllocations: serializeCreditAllocations(
+          consumptionResult.allocations
+        ),
         failureReason: null,
         expiresAt: params.expiresAt,
         reservedAt: now,
@@ -263,7 +391,10 @@ async function consumeReservedAICredits(
     'usageId' | 'userId' | 'requiredCredits'
   >,
   now: Date
-): Promise<AICreditBillingError | null> {
+): Promise<{
+  readonly error: AICreditBillingError | null;
+  readonly allocations: readonly AICreditAllocation[];
+}> {
   const [creditRecord] = await tx
     .select({
       currentCredits: userCredit.currentCredits,
@@ -273,10 +404,13 @@ async function consumeReservedAICredits(
     .limit(1);
 
   if (!creditRecord || creditRecord.currentCredits < params.requiredCredits) {
-    return billingError(
-      'insufficient_credits',
-      'Insufficient credits during AI credits reservation.'
-    );
+    return {
+      error: billingError(
+        'insufficient_credits',
+        'Insufficient credits during AI credits reservation.'
+      ),
+      allocations: [],
+    };
   }
 
   const earnTransactions = await tx
@@ -298,6 +432,7 @@ async function consumeReservedAICredits(
     );
 
   let remainingToDeduct = params.requiredCredits;
+  const allocations: AICreditAllocation[] = [];
   for (const transaction of earnTransactions) {
     if (remainingToDeduct <= 0) break;
     const remainingAmount = transaction.remainingAmount ?? 0;
@@ -311,14 +446,25 @@ async function consumeReservedAICredits(
       })
       .where(eq(creditTransaction.id, transaction.id));
 
+    if (deductFromThis > 0) {
+      allocations.push({
+        transactionId: transaction.id,
+        amount: deductFromThis,
+        expirationDate: transaction.expirationDate ?? undefined,
+      });
+    }
+
     remainingToDeduct -= deductFromThis;
   }
 
   if (remainingToDeduct > 0) {
-    return billingError(
-      'ledger_mutation_failed',
-      'Credits balance and credit transaction remaining amounts are inconsistent.'
-    );
+    return {
+      error: billingError(
+        'ledger_mutation_failed',
+        'Credits balance and credit transaction remaining amounts are inconsistent.'
+      ),
+      allocations: [],
+    };
   }
 
   await tx
@@ -341,7 +487,134 @@ async function consumeReservedAICredits(
     updatedAt: now,
   });
 
-  return null;
+  return {
+    error: null,
+    allocations,
+  };
+}
+
+async function restoreCreditAllocations(
+  tx: any,
+  params: {
+    readonly userId: string;
+    readonly usageId: string;
+    readonly allocations: readonly AICreditAllocation[];
+    readonly now: Date;
+    readonly description: string;
+  }
+): Promise<
+  | {
+      readonly success: true;
+      readonly restoredCredits: number;
+    }
+  | {
+      readonly success: false;
+      readonly error: AICreditBillingError;
+    }
+> {
+  if (params.allocations.length === 0) {
+    return {
+      success: true,
+      restoredCredits: 0,
+    };
+  }
+
+  const allocationIds = Array.from(
+    new Set(params.allocations.map((allocation) => allocation.transactionId))
+  );
+
+  await tx.execute(
+    sql`select id from ${creditTransaction} where ${inArray(creditTransaction.id, allocationIds)} for update`
+  );
+
+  const transactions = (await tx
+    .select()
+    .from(creditTransaction)
+    .where(inArray(creditTransaction.id, allocationIds))) as Array<
+    typeof creditTransaction.$inferSelect
+  >;
+  const transactionById = new Map(
+    transactions.map((transaction: typeof creditTransaction.$inferSelect) => [
+      transaction.id,
+      transaction,
+    ])
+  );
+
+  let restoredCredits = 0;
+  for (const allocation of params.allocations) {
+    const transaction = transactionById.get(allocation.transactionId);
+    if (!transaction) {
+      return {
+        success: false,
+        error: billingError(
+          'ledger_mutation_failed',
+          `Reserved credit allocation transaction ${allocation.transactionId} was not found.`
+        ),
+      };
+    }
+
+    const remainingAmount = transaction.remainingAmount ?? 0;
+    await tx
+      .update(creditTransaction)
+      .set({
+        remainingAmount: remainingAmount + allocation.amount,
+        updatedAt: params.now,
+      })
+      .where(eq(creditTransaction.id, transaction.id));
+
+    if (!isExpiredAllocation(allocation, params.now)) {
+      restoredCredits += allocation.amount;
+    }
+  }
+
+  const [creditRecord] = await tx
+    .select({
+      id: userCredit.id,
+      currentCredits: userCredit.currentCredits,
+    })
+    .from(userCredit)
+    .where(eq(userCredit.userId, params.userId))
+    .limit(1);
+
+  if (restoredCredits > 0) {
+    if (creditRecord) {
+      await tx
+        .update(userCredit)
+        .set({
+          currentCredits: creditRecord.currentCredits + restoredCredits,
+          updatedAt: params.now,
+        })
+        .where(eq(userCredit.id, creditRecord.id));
+    } else {
+      await tx.insert(userCredit).values({
+        id: randomUUID(),
+        userId: params.userId,
+        currentCredits: restoredCredits,
+        createdAt: params.now,
+        updatedAt: params.now,
+      });
+    }
+  }
+
+  await tx.insert(creditTransaction).values({
+    id: randomUUID(),
+    userId: params.userId,
+    type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
+    amount: params.allocations.reduce(
+      (sum, allocation) => sum + allocation.amount,
+      0
+    ),
+    remainingAmount: null,
+    description: params.description,
+    paymentId: params.usageId,
+    createdAt: params.now,
+    updatedAt: params.now,
+  });
+
+  return {
+    success: true,
+    restoredCredits,
+  };
 }
 
 async function settleReservationRecord(
@@ -404,6 +677,20 @@ async function settleReservationRecord(
     }
 
     if (reservation.expiresAt && reservation.expiresAt < now) {
+      const restoreResult = await restoreCreditAllocations(tx, {
+        userId: params.userId,
+        usageId: params.usageId,
+        allocations: normalizeCreditAllocations(reservation.creditAllocations),
+        now,
+        description: `Released expired AI reservation for usage ${params.usageId}`,
+      });
+      if (!restoreResult.success) {
+        return {
+          success: false,
+          error: restoreResult.error,
+        };
+      }
+
       const [updated] = await tx
         .update(aiCreditReservation)
         .set({
@@ -418,37 +705,6 @@ async function settleReservationRecord(
         .where(eq(aiCreditReservation.id, params.reservationId))
         .returning();
 
-      await tx.insert(creditTransaction).values({
-        id: randomUUID(),
-        userId: params.userId,
-        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
-        amount: reservation.reservedCredits,
-        remainingAmount: reservation.reservedCredits,
-        description: `Released expired AI reservation for usage ${params.usageId}`,
-        paymentId: params.usageId,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const [creditRecord] = await tx
-        .select({
-          id: userCredit.id,
-          currentCredits: userCredit.currentCredits,
-        })
-        .from(userCredit)
-        .where(eq(userCredit.userId, params.userId))
-        .limit(1);
-
-      if (creditRecord) {
-        await tx
-          .update(userCredit)
-          .set({
-            currentCredits: creditRecord.currentCredits + reservation.reservedCredits,
-            updatedAt: now,
-          })
-          .where(eq(userCredit.id, creditRecord.id));
-      }
-
       return {
         success: false,
         error: billingError('reservation_expired', 'Reservation expired.'),
@@ -459,50 +715,29 @@ async function settleReservationRecord(
       params.settledCredits,
       reservation.reservedCredits
     );
-    const releasedCredits = Math.max(
-      0,
-      reservation.reservedCredits - settledCredits
+    const { released } = splitCreditAllocations(
+      normalizeCreditAllocations(reservation.creditAllocations),
+      settledCredits
+    );
+    const releasedCredits = released.reduce(
+      (sum, allocation) => sum + allocation.amount,
+      0
     );
 
     if (releasedCredits > 0) {
-      const [creditRecord] = await tx
-        .select({
-          id: userCredit.id,
-          currentCredits: userCredit.currentCredits,
-        })
-        .from(userCredit)
-        .where(eq(userCredit.userId, params.userId))
-        .limit(1);
-
-      if (creditRecord) {
-        await tx
-          .update(userCredit)
-          .set({
-            currentCredits: creditRecord.currentCredits + releasedCredits,
-            updatedAt: now,
-          })
-          .where(eq(userCredit.id, creditRecord.id));
-      } else {
-        await tx.insert(userCredit).values({
-          id: randomUUID(),
-          userId: params.userId,
-          currentCredits: releasedCredits,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-
-      await tx.insert(creditTransaction).values({
-        id: randomUUID(),
+      const restoreResult = await restoreCreditAllocations(tx, {
         userId: params.userId,
-        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
-        amount: releasedCredits,
-        remainingAmount: releasedCredits,
+        usageId: params.usageId,
+        allocations: released,
+        now,
         description: `Released unused AI reservation credits for usage ${params.usageId}`,
-        paymentId: params.usageId,
-        createdAt: now,
-        updatedAt: now,
       });
+      if (!restoreResult.success) {
+        return {
+          success: false,
+          error: restoreResult.error,
+        };
+      }
     }
 
     const [updated] = await tx
@@ -510,8 +745,13 @@ async function settleReservationRecord(
       .set({
         settlementStatus: 'settled',
         settledCredits,
-        refundStatus: releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
-        refundedCredits: releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
+        refundStatus:
+          releasedCredits > 0 ? 'refunded' : reservation.refundStatus,
+        refundedCredits:
+          releasedCredits > 0 ? releasedCredits : reservation.refundedCredits,
+        creditAllocations: serializeCreditAllocations(
+          normalizeCreditAllocations(reservation.creditAllocations)
+        ),
         refundedAt: releasedCredits > 0 ? now : reservation.refundedAt,
         failureReason: null,
         settledAt: now,
@@ -572,45 +812,26 @@ async function refundReservationRecord(
     }
 
     if (reservation.settlementStatus !== 'settled') {
-      const creditsToRelease = reservation.reservedCredits;
-      const [creditRecord] = await tx
-        .select({
-          id: userCredit.id,
-          currentCredits: userCredit.currentCredits,
-        })
-        .from(userCredit)
-        .where(eq(userCredit.userId, params.userId))
-        .limit(1);
-
-      if (creditRecord) {
-        await tx
-          .update(userCredit)
-          .set({
-            currentCredits: creditRecord.currentCredits + creditsToRelease,
-            updatedAt: now,
-          })
-          .where(eq(userCredit.id, creditRecord.id));
-      } else {
-        await tx.insert(userCredit).values({
-          id: randomUUID(),
-          userId: params.userId,
-          currentCredits: creditsToRelease,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-
-      await tx.insert(creditTransaction).values({
-        id: randomUUID(),
+      const allocations = normalizeCreditAllocations(
+        reservation.creditAllocations
+      );
+      const creditsToRelease = allocations.reduce(
+        (sum, allocation) => sum + allocation.amount,
+        0
+      );
+      const restoreResult = await restoreCreditAllocations(tx, {
         userId: params.userId,
-        type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
-        amount: creditsToRelease,
-        remainingAmount: creditsToRelease,
+        usageId: params.usageId,
+        allocations,
+        now,
         description: `Released AI reservation for usage ${params.usageId}: ${params.reason}`,
-        paymentId: params.usageId,
-        createdAt: now,
-        updatedAt: now,
       });
+      if (!restoreResult.success) {
+        return {
+          success: false,
+          error: restoreResult.error,
+        };
+      }
 
       const [updated] = await tx
         .update(aiCreditReservation)
@@ -632,8 +853,14 @@ async function refundReservationRecord(
       };
     }
 
-    const creditsToRefund =
-      reservation.settledCredits ?? reservation.reservedCredits;
+    const { settled } = splitCreditAllocations(
+      normalizeCreditAllocations(reservation.creditAllocations),
+      reservation.settledCredits ?? reservation.reservedCredits
+    );
+    const creditsToRefund = settled.reduce(
+      (sum, allocation) => sum + allocation.amount,
+      0
+    );
     if (creditsToRefund <= 0) {
       const [updated] = await tx
         .update(aiCreditReservation)
@@ -652,44 +879,19 @@ async function refundReservationRecord(
       };
     }
 
-    const [creditRecord] = await tx
-      .select({
-        id: userCredit.id,
-        currentCredits: userCredit.currentCredits,
-      })
-      .from(userCredit)
-      .where(eq(userCredit.userId, params.userId))
-      .limit(1);
-
-    if (creditRecord) {
-      await tx
-        .update(userCredit)
-        .set({
-          currentCredits: creditRecord.currentCredits + creditsToRefund,
-          updatedAt: now,
-        })
-        .where(eq(userCredit.id, creditRecord.id));
-    } else {
-      await tx.insert(userCredit).values({
-        id: randomUUID(),
-        userId: params.userId,
-        currentCredits: creditsToRefund,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    await tx.insert(creditTransaction).values({
-      id: randomUUID(),
+    const restoreResult = await restoreCreditAllocations(tx, {
       userId: params.userId,
-      type: CREDIT_TRANSACTION_TYPE.AI_USAGE_REFUND,
-      amount: creditsToRefund,
-      remainingAmount: creditsToRefund,
+      usageId: params.usageId,
+      allocations: settled,
+      now,
       description: `AI usage refund for usage ${params.usageId}: ${params.reason}`,
-      paymentId: params.usageId,
-      createdAt: now,
-      updatedAt: now,
     });
+    if (!restoreResult.success) {
+      return {
+        success: false,
+        error: restoreResult.error,
+      };
+    }
 
     const [updated] = await tx
       .update(aiCreditReservation)
@@ -758,6 +960,16 @@ export async function reserveAICredits(
   params: AICreditReservationParams,
   dependencies: AICreditBillingDependencies = createDatabaseDependencies()
 ): Promise<AICreditBillingResult<AICreditReservationRecord>> {
+  const existingReservation = await dependencies.findReservationByUsageId(
+    params.usageId
+  );
+  if (existingReservation) {
+    return {
+      success: true,
+      data: existingReservation,
+    };
+  }
+
   const preflight = await preflightAICredits(params, dependencies);
   if (!preflight.success) {
     return {
@@ -769,16 +981,6 @@ export async function reserveAICredits(
               'Insufficient credits for AI reservation.'
             )
           : preflight.error,
-    };
-  }
-
-  const existingReservation = await dependencies.findReservationByUsageId(
-    params.usageId
-  );
-  if (existingReservation) {
-    return {
-      success: true,
-      data: existingReservation,
     };
   }
 
@@ -796,6 +998,18 @@ export async function reserveAICredits(
 
     return reservation;
   } catch (error) {
+    if (isUniqueViolation(error)) {
+      const existingReservation = await dependencies.findReservationByUsageId(
+        params.usageId
+      );
+      if (existingReservation) {
+        return {
+          success: true,
+          data: existingReservation,
+        };
+      }
+    }
+
     return {
       success: false,
       error: billingError(
