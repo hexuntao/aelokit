@@ -13,6 +13,8 @@ export interface AIEntitlementRequest {
   readonly memoryEnabled: boolean;
   readonly toolsRequested: number;
   readonly toolsAllowed: boolean;
+  readonly memoryAvailable?: boolean;
+  readonly maxCreditsPerRequest?: number | null;
   readonly creditsBillingEnabled: boolean;
   readonly creditsRequired: number;
   readonly currentCredits?: number;
@@ -101,6 +103,13 @@ export const DefaultEntitlementPolicy: AIEntitlementPolicy = {
       return { allowed: true };
     }
 
+    if (request.memoryAvailable === false) {
+      return {
+        allowed: false,
+        reason: 'Memory is not enabled for this plan.',
+      };
+    }
+
     return { allowed: true };
   },
 
@@ -122,6 +131,17 @@ export const DefaultEntitlementPolicy: AIEntitlementPolicy = {
   canUseCredits: (_context, request): EntitlementCheckResult => {
     if (!request.creditsBillingEnabled) {
       return { allowed: true };
+    }
+
+    if (
+      request.maxCreditsPerRequest !== undefined &&
+      request.maxCreditsPerRequest !== null &&
+      request.creditsRequired > request.maxCreditsPerRequest
+    ) {
+      return {
+        allowed: false,
+        reason: `AI request requires ${request.creditsRequired} credits, above the plan limit of ${request.maxCreditsPerRequest}.`,
+      };
     }
 
     if (request.currentCredits === undefined) {

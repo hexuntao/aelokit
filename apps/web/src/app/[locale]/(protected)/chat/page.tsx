@@ -1,5 +1,5 @@
 import { getChatModelPreferenceState } from '@/ai/models';
-import { getDefaultAgent, getSelectableAgentOptions } from '@/ai/agents';
+import { getDefaultAgent, getRuntimeSelectableAgentOptions } from '@/ai/agents';
 import { getMessages, getThread, listThreads } from '@/ai/persistence';
 import { getAIWorkspaceStatus } from '@/ai/workspace-status';
 import type { AIWorkspaceStatus } from '@/ai/workspace-status-types';
@@ -69,7 +69,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   let initialWorkspaceStatus: AIWorkspaceStatus | undefined;
 
   if (session?.user?.id) {
-    initialAgentOptions = getSelectableAgentOptions();
+    initialAgentOptions = await getRuntimeSelectableAgentOptions();
     initialSelectedAgentId = getDefaultAgent().id;
     const modelPreferences = await getChatModelPreferenceState(session.user.id);
     initialModelOptions = modelPreferences.availableModels;

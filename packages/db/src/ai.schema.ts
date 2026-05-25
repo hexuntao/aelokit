@@ -185,6 +185,35 @@ export const aiAgent = pgTable(
   })
 );
 
+export const aiEntitlementPolicy = pgTable(
+  'ai_entitlement_policy',
+  {
+    id: text('id').primaryKey(),
+    planId: text('plan_id').notNull(),
+    status: text('status').notNull().default('enabled'),
+    allowedModelIds: jsonb('allowed_model_ids').notNull().default(emptyArray),
+    knowledgeEnabled: boolean('knowledge_enabled').notNull().default(true),
+    memoryEnabled: boolean('memory_enabled').notNull().default(true),
+    toolsEnabled: boolean('tools_enabled').notNull().default(false),
+    maxCreditsPerRequest: integer('max_credits_per_request'),
+    monthlyCredits: integer('monthly_credits'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    aiEntitlementPolicyPlanIdUidx: uniqueIndex(
+      'ai_entitlement_policy_plan_id_uidx'
+    ).on(table.planId),
+    aiEntitlementPolicyStatusIdx: index('ai_entitlement_policy_status_idx').on(
+      table.status
+    ),
+    aiEntitlementPolicyStatusCheck: check(
+      'ai_entitlement_policy_status_check',
+      sql`${table.status} in ('enabled', 'disabled')`
+    ),
+  })
+);
+
 export const aiThread = pgTable(
   'ai_thread',
   {

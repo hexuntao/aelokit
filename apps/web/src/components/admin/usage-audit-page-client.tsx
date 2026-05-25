@@ -4,6 +4,7 @@ import {
   UsageAuditTable,
   type UsageAuditFilters,
 } from '@/components/admin/usage-audit-table';
+import { AIProductControls } from '@/components/admin/ai-product-controls';
 import { useAIUsageAudit } from '@/hooks/use-ai-usage-audit';
 import {
   parseAsIndex,
@@ -95,27 +96,30 @@ export function UsageAuditPageClient() {
   });
 
   return (
-    <UsageAuditTable
-      data={data?.items || []}
-      total={data?.total || 0}
-      pageIndex={page}
-      pageSize={size}
-      filters={filters}
-      loading={isLoading}
-      error={error}
-      onFiltersChange={(nextFilters) =>
-        setQueryStates(
-          {
-            ...nextFilters,
-            page: 0,
-          },
-          { history: 'replace', shallow: true }
-        )
-      }
-      onPageChange={(nextPage) => setQueryStates({ page: nextPage })}
-      onPageSizeChange={(nextSize) =>
-        setQueryStates({ size: nextSize, page: 0 })
-      }
-    />
+    <div className="space-y-6">
+      <AIProductControls />
+      <UsageAuditTable
+        data={data?.items || []}
+        total={data?.total || 0}
+        pageIndex={page}
+        pageSize={size}
+        filters={filters}
+        loading={isLoading}
+        error={error}
+        onFiltersChange={(nextFilters) =>
+          setQueryStates(
+            {
+              ...nextFilters,
+              page: 0,
+            },
+            { history: 'replace', shallow: true }
+          )
+        }
+        onPageChange={(nextPage) => setQueryStates({ page: nextPage })}
+        onPageSizeChange={(nextSize) =>
+          setQueryStates({ size: nextSize, page: 0 })
+        }
+      />
+    </div>
   );
 }

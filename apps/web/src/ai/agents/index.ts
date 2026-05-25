@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { aiAgent } from '@repo/db/ai-schema';
 
@@ -97,10 +97,60 @@ export function getSelectableAgentOptions(): readonly AppLocalAgentOption[] {
   }));
 }
 
+export async function getRuntimeSelectableAgentOptions(): Promise<
+  readonly AppLocalAgentOption[]
+> {
+  await ensureAIAgentCatalog();
+
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: aiAgent.id,
+    })
+    .from(aiAgent)
+    .where(
+      and(
+        eq(aiAgent.status, 'enabled'),
+        inArray(aiAgent.visibility, ['system', 'public'])
+      )
+    );
+  const enabledAgentIds = new Set(rows.map((row) => row.id));
+
+  return APP_LOCAL_AGENTS.filter((agent) => enabledAgentIds.has(agent.id)).map(
+    (agent) => ({
+      id: agent.id,
+      slug: agent.slug,
+      label: agent.displayName,
+      description: agent.description,
+    })
+  );
+}
+
 export function resolveAgentSelection(options?: {
   readonly requestedAgentId?: string;
   readonly threadAgentId?: string;
 }): ResolvedAgentSelection {
+  return resolveAgentSelectionFromCatalog(getSelectableAgentOptions(), options);
+}
+
+export async function resolveRuntimeAgentSelection(options?: {
+  readonly requestedAgentId?: string;
+  readonly threadAgentId?: string;
+}): Promise<ResolvedAgentSelection> {
+  return resolveAgentSelectionFromCatalog(
+    await getRuntimeSelectableAgentOptions(),
+    options
+  );
+}
+
+function resolveAgentSelectionFromCatalog(
+  selectableAgents: readonly AppLocalAgentOption[],
+  options?: {
+    readonly requestedAgentId?: string;
+    readonly threadAgentId?: string;
+  }
+): ResolvedAgentSelection {
+  const selectableAgentIds = new Set(selectableAgents.map((agent) => agent.id));
   const candidateIds = [options?.requestedAgentId, options?.threadAgentId];
 
   for (const candidateId of candidateIds) {
@@ -109,7 +159,7 @@ export function resolveAgentSelection(options?: {
     }
 
     const matchedAgent = APP_LOCAL_AGENTS.find(
-      (agent) => agent.id === candidateId
+      (agent) => agent.id === candidateId && selectableAgentIds.has(agent.id)
     );
     if (matchedAgent) {
       return {
@@ -121,7 +171,9 @@ export function resolveAgentSelection(options?: {
   }
 
   return {
-    agent: getDefaultAgent(),
+    agent:
+      APP_LOCAL_AGENTS.find((agent) => selectableAgentIds.has(agent.id)) ??
+      getDefaultAgent(),
     requestedAgentId: options?.requestedAgentId,
     fallbackFromUnknown: Boolean(options?.requestedAgentId),
   };
@@ -162,8 +214,6 @@ export async function ensureAIAgentCatalog(): Promise<void> {
             systemPrompt: agent.instructions,
             features: agent.features,
           },
-          visibility: 'system',
-          status: 'enabled',
           defaultProviderId: 'openai',
           defaultModelId: agent.defaultModelId ?? null,
           toolIds: [...agent.allowedToolIds],

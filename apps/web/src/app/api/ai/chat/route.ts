@@ -16,7 +16,10 @@ import {
   validateRuntimeContext,
   type AIRuntimeContext,
 } from '@/ai/context';
-import { ensureAIAgentCatalog, resolveAgentSelection } from '@/ai/agents';
+import {
+  ensureAIAgentCatalog,
+  resolveRuntimeAgentSelection,
+} from '@/ai/agents';
 import {
   ensureAIModelCatalog,
   getUserDefaultModelReference,
@@ -41,6 +44,7 @@ import {
   recordUsageAudit,
 } from '@/ai/usage';
 import { enforceEntitlement } from '@/ai/entitlements';
+import { getAIEntitlementPolicyForUser } from '@/ai/entitlements/plan-policy';
 import { getAIUsageBillingMode } from '@/ai/billing-policy';
 import {
   createMessage,
@@ -327,7 +331,7 @@ export async function POST(req: Request) {
 
     await ensureAIModelCatalog();
     await ensureAIAgentCatalog();
-    const resolvedAgent = resolveAgentSelection({
+    const resolvedAgent = await resolveRuntimeAgentSelection({
       requestedAgentId,
     });
     const agentKnowledgeEnabled =
@@ -454,22 +458,35 @@ export async function POST(req: Request) {
     const selectableModelIds = getAppLocalModelCatalog()
       .filter(isSelectableModel)
       .map((model) => model.id);
+    const planPolicy = await getAIEntitlementPolicyForUser(context.userId);
+    const policyAllowedModelIds =
+      planPolicy.allowedModelIds.length > 0
+        ? selectableModelIds.filter((modelId) =>
+            planPolicy.allowedModelIds.includes(modelId)
+          )
+        : selectableModelIds;
     const currentCredits = creditsBillingEnabled
       ? await getUserCredits(context.userId)
       : undefined;
 
     const requestEntitlement = enforceEntitlement(runtimeContext, {
       requestedModelId: resolvedModel.reference.modelId,
-      allowedModelIds: selectableModelIds,
+      allowedModelIds:
+        planPolicy.status === 'enabled' ? policyAllowedModelIds : [],
       toolsRequested: requestedToolCount,
       knowledgeEnabled: knowledgeRequested,
       knowledgeAvailable:
         !knowledgeRequested ||
-        (knowledgeAvailable && resolvedAgent.agent.features.knowledge),
+        (knowledgeAvailable &&
+          resolvedAgent.agent.features.knowledge &&
+          planPolicy.knowledgeEnabled),
       memoryEnabled: agentMemoryEnabled,
-      toolsAllowed: resolvedAgent.agent.features.tools,
+      memoryAvailable: planPolicy.memoryEnabled,
+      toolsAllowed:
+        resolvedAgent.agent.features.tools && planPolicy.toolsEnabled,
       creditsBillingEnabled,
       creditsRequired: estimatedRequiredCredits,
+      maxCreditsPerRequest: planPolicy.maxCreditsPerRequest,
       currentCredits,
     });
 
