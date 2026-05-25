@@ -48,4 +48,18 @@ export async function ensureKnowledgeVectorIndex(
   }
 }
 
+export async function deleteKnowledgeVectorsByIds(
+  store: PgVector,
+  vectorIds: readonly string[]
+): Promise<void> {
+  if (vectorIds.length === 0) {
+    return;
+  }
+
+  await store.deleteVectors({
+    indexName: KNOWLEDGE_INDEX_NAME,
+    ids: [...vectorIds],
+  });
+}
+
 export const PARTIAL_UNTIL_WIRED = false;

@@ -46,7 +46,9 @@ export function KnowledgeSourceManager({
     startTransition(async () => {
       const result = await archiveKnowledgeSourceAction({ sourceId });
       if (!result.data?.success || !result.data.source) {
-        toast.error(result.data?.error ?? 'Failed to archive knowledge source.');
+        toast.error(
+          result.data?.error ?? 'Failed to archive knowledge source.'
+        );
         return;
       }
 
@@ -67,7 +69,9 @@ export function KnowledgeSourceManager({
         return;
       }
 
-      setSources((current) => current.filter((source) => source.id !== sourceId));
+      setSources((current) =>
+        current.filter((source) => source.id !== sourceId)
+      );
       toast.success('Knowledge source deleted.');
     });
   };
@@ -94,7 +98,8 @@ export function KnowledgeSourceManager({
         <CardHeader>
           <CardTitle>Knowledge Sources</CardTitle>
           <CardDescription>
-            Manual sources you can inspect, archive, delete, and reindex.
+            Manual sources you can inspect, archive, permanently delete, and
+            reindex.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -119,7 +124,9 @@ export function KnowledgeSourceManager({
                       <span>Visibility: {source.visibility}</span>
                       <span>Chunks: {source.chunkCount}</span>
                       <span>Vectors: {source.vectorCount}</span>
-                      <span>Created: {formatDate(new Date(source.createdAt))}</span>
+                      <span>
+                        Created: {formatDate(new Date(source.createdAt))}
+                      </span>
                       <span>
                         Indexed:{' '}
                         {source.indexedAt
@@ -155,7 +162,7 @@ export function KnowledgeSourceManager({
                       onClick={() => handleDelete(source.id)}
                       disabled={isPending}
                     >
-                      Delete
+                      Delete Permanently
                     </Button>
                   </div>
                 </div>

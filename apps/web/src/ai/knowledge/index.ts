@@ -10,6 +10,7 @@ export {
   createKnowledgeVectorStore,
   getKnowledgeVectorStore,
   ensureKnowledgeVectorIndex,
+  deleteKnowledgeVectorsByIds,
   KNOWLEDGE_INDEX_NAME,
 } from './vector';
 export {

@@ -25,7 +25,7 @@ import {
 import { chunkText } from './chunking';
 import { generateEmbeddings } from './embedding';
 import { getKnowledgeVectorStore, ensureKnowledgeVectorIndex } from './vector';
-import { KNOWLEDGE_INDEX_NAME } from './vector';
+import { deleteKnowledgeVectorsByIds, KNOWLEDGE_INDEX_NAME } from './vector';
 
 export interface KnowledgeSourceRecord {
   readonly id: AIKnowledgeSourceId;
@@ -352,6 +352,51 @@ export async function deleteKnowledgeSource(
   userId: string
 ): Promise<boolean> {
   const db = await getDb();
+  const [source] = await db
+    .select()
+    .from(knowledgeSource)
+    .where(
+      and(eq(knowledgeSource.id, sourceId), eq(knowledgeSource.userId, userId))
+    )
+    .limit(1);
+
+  if (!source) {
+    return false;
+  }
+
+  await db
+    .update(knowledgeSource)
+    .set({
+      status: 'archived',
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(knowledgeSource.id, sourceId), eq(knowledgeSource.userId, userId))
+    );
+
+  const chunkRows = await db
+    .select({
+      vectorId: knowledgeChunk.vectorId,
+    })
+    .from(knowledgeChunk)
+    .where(eq(knowledgeChunk.sourceId, sourceId));
+  const vectorIds = chunkRows
+    .map((row) => row.vectorId)
+    .filter((vectorId): vectorId is string => typeof vectorId === 'string');
+
+  try {
+    if (vectorIds.length > 0) {
+      const vectorStore = getKnowledgeVectorStore();
+      await deleteKnowledgeVectorsByIds(vectorStore, vectorIds);
+    }
+  } catch (error) {
+    throw new Error(
+      `Knowledge source was archived, but vector cleanup failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+
   const deleted = await db
     .delete(knowledgeSource)
     .where(
