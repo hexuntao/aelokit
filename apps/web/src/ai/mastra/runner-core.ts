@@ -26,6 +26,8 @@ export interface MastraChatRunnerOptions {
   readonly knowledgeEnabled: boolean;
   readonly abortSignal?: AbortSignal;
   readonly onAbort?: () => Promise<void> | void;
+  readonly onFinish?: (event: unknown) => Promise<void> | void;
+  readonly onError?: (event: unknown) => Promise<void> | void;
   readonly onToolCallStart?: (
     event: MastraToolCallStartEvent
   ) => Promise<void> | void;
@@ -277,6 +279,8 @@ export async function runMastraChat(
     tools,
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
+    onFinish: options.onFinish as never,
+    onError: options.onError as never,
     experimental_onToolCallStart: options.onToolCallStart,
     experimental_onToolCallFinish: options.onToolCallFinish,
   });

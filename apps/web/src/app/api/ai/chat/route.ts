@@ -16,10 +16,7 @@ import {
   validateRuntimeContext,
   type AIRuntimeContext,
 } from '@/ai/context';
-import {
-  ensureAIAgentCatalog,
-  resolveAgentSelection,
-} from '@/ai/agents';
+import { ensureAIAgentCatalog, resolveAgentSelection } from '@/ai/agents';
 import {
   ensureAIModelCatalog,
   getUserDefaultModelReference,
@@ -537,7 +534,11 @@ export async function POST(req: Request) {
     }
 
     // 6. Create and validate chat request
-    const chatRequest = createChatRuntimeRequest(messages, runtimeContext, resolvedModel);
+    const chatRequest = createChatRuntimeRequest(
+      messages,
+      runtimeContext,
+      resolvedModel
+    );
 
     const chatValidation = validateChatRequest(chatRequest);
     if (!chatValidation.valid) {
@@ -822,6 +823,30 @@ export async function POST(req: Request) {
           isAborted: true,
         });
       },
+      onFinish: async (event) => {
+        const finishEvent = event as {
+          finishReason?: string;
+          totalUsage?: unknown;
+          providerMetadata?: unknown;
+        };
+
+        await finalizeUsageOnce({
+          status: finishEvent.finishReason === 'stop' ? 'success' : 'error',
+          finishReason: finishEvent.finishReason,
+          totalUsage: finishEvent.totalUsage,
+          providerMetadata: finishEvent.providerMetadata,
+        });
+      },
+      onError: async (event) => {
+        const errorEvent = event as { error?: unknown };
+        const streamError = errorEvent.error;
+
+        await updateMessageStatus(assistantMessageId, 'error', new Date());
+        await finalizeUsageOnce({
+          status: getErrorStatus(streamError),
+          error: streamError,
+        });
+      },
       onToolCallStart: async ({ toolCall }) => {
         const toolId = getToolIdByName(toolRegistry, toolCall.toolName);
         toolAuditById.set(toolCall.toolCallId, {
@@ -878,7 +903,7 @@ export async function POST(req: Request) {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       generateMessageId: () => assistantMessageId,
-      consumeSseStream: ({ stream }) => consumeStream({ stream }),
+      consumeSseStream: consumeStream,
       headers: {
         'x-ai-thread-id': persistedThread.id,
         'x-ai-message-id': assistantMessageId,
@@ -919,29 +944,8 @@ export async function POST(req: Request) {
           modelId: resolvedModel.reference.modelId,
         });
         await updateMessageStatus(assistantMessageId, status, new Date());
-
-        const totalUsage = await result.totalUsage;
-        const providerMetadata = await result.providerMetadata;
-        await finalizeUsageOnce({
-          status: isAborted
-            ? 'error'
-            : finishReason === 'stop'
-              ? 'success'
-              : 'error',
-          finishReason,
-          isAborted,
-          totalUsage,
-          providerMetadata,
-        });
       },
-      onError: (streamError) => {
-        void updateMessageStatus(assistantMessageId, 'error', new Date());
-        void finalizeUsageOnce({
-          status: getErrorStatus(streamError),
-          error: streamError,
-        });
-        return 'AI response failed while streaming.';
-      },
+      onError: () => 'AI response failed while streaming.',
       messageMetadata: ({ part }) => {
         if (part.type === 'start') {
           return {

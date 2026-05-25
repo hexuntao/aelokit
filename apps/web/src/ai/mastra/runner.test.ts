@@ -164,3 +164,52 @@ test('runs the Mastra chat runner with resolved prompt and converted messages', 
   assert.equal(result.requestContext.get('memoryEnabled'), true);
   assert.equal(result.requestContext.get('knowledgeEnabled'), true);
 });
+
+test('passes abort, finish, and error callbacks through to streamText', async () => {
+  const request = createRuntimeRequest();
+  const callbacks: {
+    onAbort?: unknown;
+    onFinish?: unknown;
+    onError?: unknown;
+  } = {};
+
+  await runMastraChat({
+    request,
+    inputMessages: request.messages,
+    systemPrompt: 'System prompt',
+    memoryEnabled: false,
+    knowledgeEnabled: false,
+    onAbort: async () => {},
+    onFinish: async () => {},
+    onError: async () => {},
+    createAgentExecution: () => {
+      const requestContext = createMastraChatRequestContext(
+        request.context,
+        request.resolvedModel,
+        'System prompt',
+        false,
+        false
+      );
+
+      return {
+        agent: {
+          getInstructions: ({ requestContext: currentContext }) =>
+            currentContext.get('systemPrompt'),
+        },
+        requestContext,
+      };
+    },
+    executeStream: ((options) => {
+      callbacks.onAbort = options.onAbort;
+      callbacks.onFinish = options.onFinish;
+      callbacks.onError = options.onError;
+      return { mocked: true } as unknown as ReturnType<
+        typeof import('ai').streamText
+      >;
+    }) as typeof import('ai').streamText,
+  });
+
+  assert.equal(typeof callbacks.onAbort, 'function');
+  assert.equal(typeof callbacks.onFinish, 'function');
+  assert.equal(typeof callbacks.onError, 'function');
+});
