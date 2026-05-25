@@ -11,6 +11,10 @@ const SENSITIVE_KEY_PATTERNS = [
 
 const RAW_CONTENT_KEY_PATTERNS = [/content/i, /message/i, /prompt/i, /text/i];
 const MAX_METADATA_DEPTH = 5;
+const TOKEN_COUNT_KEY_PATTERNS = [
+  /(^|[_-])tokens?$/i,
+  /(^|[_-])(input|output|cached|reasoning|total)tokens?$/i,
+];
 
 export function canAccessAdminUsageAudit(
   user: { readonly role?: string | null } | undefined,
@@ -25,6 +29,10 @@ function isSensitiveMetadataKey(key: string): boolean {
 
 export function isRawMessageContentKey(key: string): boolean {
   return RAW_CONTENT_KEY_PATTERNS.some((pattern) => pattern.test(key));
+}
+
+function isTokenCountMetadataKey(key: string): boolean {
+  return TOKEN_COUNT_KEY_PATTERNS.some((pattern) => pattern.test(key));
 }
 
 export function sanitizeAuditMetadata(value: unknown, depth = 0): unknown {
@@ -44,7 +52,12 @@ export function sanitizeAuditMetadata(value: unknown, depth = 0): unknown {
   for (const [key, childValue] of Object.entries(
     value as Record<string, unknown>
   )) {
-    if (isSensitiveMetadataKey(key)) {
+    if (isRawMessageContentKey(key)) {
+      sanitized[key] = '[Redacted]';
+      continue;
+    }
+
+    if (isSensitiveMetadataKey(key) && !isTokenCountMetadataKey(key)) {
       sanitized[key] = '[Redacted]';
       continue;
     }

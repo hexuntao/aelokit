@@ -17,17 +17,27 @@ test('admin audit metadata sanitizer redacts sensitive fields', () => {
   const sanitized = sanitizeAuditMetadata({
     provider: 'openai',
     apiKey: 'secret-key',
+    prompt: 'show raw prompt',
     nested: {
       authorization: 'Bearer token',
+      content: 'raw content',
       visible: 'kept',
+    },
+    counters: {
+      totalTokens: 42,
     },
   }) as Record<string, unknown>;
 
   assert.equal(sanitized.provider, 'openai');
   assert.equal(sanitized.apiKey, '[Redacted]');
+  assert.equal(sanitized.prompt, '[Redacted]');
   assert.deepEqual(sanitized.nested, {
     authorization: '[Redacted]',
+    content: '[Redacted]',
     visible: 'kept',
+  });
+  assert.deepEqual(sanitized.counters, {
+    totalTokens: 42,
   });
 });
 
