@@ -67,7 +67,7 @@ async function generateEmbeddingsWithoutEncodingFormat(
   if (!config.embeddingApiKey) {
     throw new Error(
       'Embedding provider is not configured. ' +
-        'Set OPENAI_API_KEY environment variable.'
+        'Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.'
     );
   }
 
@@ -102,7 +102,9 @@ async function generateEmbeddingsWithoutEncodingFormat(
     throw new Error(
       `Embedding provider returned ${embeddings.length} embeddings for ${texts.length} input values. ` +
         `Expected OpenAI-compatible embeddings response with data[].embedding. ` +
-        `Response keys: ${responseKeys || 'none'}.`
+        `Response keys: ${responseKeys || 'none'}. ` +
+        'If chat uses a custom OpenAI-compatible gateway, configure ' +
+        'AI_EMBEDDING_BASE_URL and AI_EMBEDDING_API_KEY for a provider that supports embeddings.'
     );
   }
 
@@ -119,7 +121,7 @@ export function createEmbeddingModel() {
   if (!config.embeddingApiKey) {
     throw new Error(
       'Embedding provider is not configured. ' +
-        'Set OPENAI_API_KEY environment variable.'
+        'Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.'
     );
   }
 

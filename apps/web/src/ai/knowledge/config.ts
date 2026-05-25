@@ -14,8 +14,10 @@ export interface KnowledgeRuntimeConfig {
 export function resolveKnowledgeRuntimeConfig(): KnowledgeRuntimeConfig {
   const embeddingProvider = serverEnv.AI_EMBEDDING_PROVIDER;
   const embeddingModel = serverEnv.AI_EMBEDDING_MODEL;
-  const embeddingBaseUrl = serverEnv.OPENAI_BASE_URL;
-  const embeddingApiKey = serverEnv.OPENAI_API_KEY;
+  const embeddingBaseUrl =
+    serverEnv.AI_EMBEDDING_BASE_URL || serverEnv.OPENAI_BASE_URL;
+  const embeddingApiKey =
+    serverEnv.AI_EMBEDDING_API_KEY || serverEnv.OPENAI_API_KEY;
   const databaseUrl = serverEnv.DATABASE_URL;
 
   return {

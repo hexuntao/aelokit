@@ -48,7 +48,7 @@ export const createManualKnowledgeSourceAction = userActionClient
           success: false,
           error:
             'Embedding provider is not configured. ' +
-            'Please set OPENAI_API_KEY environment variable.',
+            'Please set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.',
         };
       }
 
@@ -83,7 +83,7 @@ export const checkEmbeddingProviderStatusAction = userActionClient.action(
       configured: isEmbeddingProviderConfigured(),
       message: isEmbeddingProviderConfigured()
         ? undefined
-        : 'Embedding provider is not configured. Set OPENAI_API_KEY.',
+        : 'Embedding provider is not configured. Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY.',
     };
   }
 );

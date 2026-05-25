@@ -297,6 +297,7 @@ export async function createThread(
         status: thread.status as ThreadStatus,
         createdAt: thread.createdAt,
         updatedAt: thread.updatedAt,
+        agentId: thread.agentId ?? undefined,
         providerId: thread.providerId ?? undefined,
         modelId: thread.modelId ?? undefined,
       },

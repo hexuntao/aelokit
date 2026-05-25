@@ -126,7 +126,7 @@ export async function ingestManualKnowledgeSource(
       status: 'failed',
       error:
         'Embedding provider is not configured. ' +
-        'Set OPENAI_API_KEY environment variable.',
+        'Set AI_EMBEDDING_API_KEY or OPENAI_API_KEY environment variable.',
       indexedAt: new Date().toISOString(),
     };
   }

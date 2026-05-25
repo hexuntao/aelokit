@@ -1,14 +1,14 @@
 import { listUserKnowledgeSources } from '@/ai/knowledge';
 import { KnowledgeSourceManager } from '@/components/ai/knowledge-source-manager';
 import { getSession } from '@/lib/server';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 
 export const metadata = {
   title: 'Knowledge - AeloKit',
 };
 
 export default async function KnowledgePage() {
-  const t = useTranslations('Dashboard');
+  const t = await getTranslations('Dashboard');
   const session = await getSession();
   const initialSources = session?.user?.id
     ? await listUserKnowledgeSources(session.user.id)

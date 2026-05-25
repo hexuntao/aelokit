@@ -49,6 +49,7 @@ import {
   createMessage,
   createToolCall,
   ensureThread,
+  getThread,
   saveMessageParts,
   updateMessageMetadata,
   updateMessageStatus,
@@ -330,10 +331,25 @@ export async function POST(req: Request) {
       return jsonError(error, 400);
     }
 
+    const existingThreadResult = threadId
+      ? await getThread(threadId, context.userId)
+      : { success: true as const, data: null };
+
+    if (!existingThreadResult.success) {
+      const error = RuntimeErrors.persistenceFailed(
+        existingThreadResult.error?.message ??
+          'Failed to load the existing chat thread.'
+      );
+      return jsonError(error, 500);
+    }
+
+    const persistedThreadConfig = existingThreadResult.data;
+    const requestedAgentId = agentId ?? persistedThreadConfig?.agentId;
+
     await ensureAIAgentCatalog();
     await ensureAIModelCatalog();
     const resolvedAgent = resolveAgentSelection({
-      requestedAgentId: agentId,
+      requestedAgentId,
     });
     const agentKnowledgeEnabled =
       knowledgeEnabled && resolvedAgent.agent.features.knowledge;
@@ -342,8 +358,20 @@ export async function POST(req: Request) {
 
     // 5. Resolve model with per-chat > user default > system default.
     let selectedModel: { providerId: 'openai'; modelId: string } | undefined;
-    const requestedModelId = modelId ?? resolvedAgent.agent.defaultModelId;
-    if (requestedModelId) {
+    const requestedModelId =
+      modelId ??
+      persistedThreadConfig?.modelId ??
+      resolvedAgent.agent.defaultModelId;
+    if (
+      !modelId &&
+      persistedThreadConfig?.providerId === 'openai' &&
+      persistedThreadConfig.modelId
+    ) {
+      selectedModel = {
+        providerId: persistedThreadConfig.providerId,
+        modelId: persistedThreadConfig.modelId,
+      };
+    } else if (requestedModelId) {
       selectedModel = {
         providerId: 'openai' as const,
         modelId: requestedModelId,
@@ -788,6 +816,11 @@ export async function POST(req: Request) {
       abortSignal: req.signal,
       onAbort: async () => {
         await updateMessageStatus(assistantMessageId, 'aborted', new Date());
+        await finalizeUsageOnce({
+          status: 'error',
+          finishReason: 'aborted',
+          isAborted: true,
+        });
       },
       onToolCallStart: async ({ toolCall }) => {
         const toolId = getToolIdByName(toolRegistry, toolCall.toolName);
