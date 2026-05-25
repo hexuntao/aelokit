@@ -5,6 +5,7 @@ import {
   type UsageAuditFilters,
 } from '@/components/admin/usage-audit-table';
 import { AIProductControls } from '@/components/admin/ai-product-controls';
+import { AIWorkflowObservabilityPanel } from '@/components/admin/ai-workflow-observability-panel';
 import { useAIUsageAudit } from '@/hooks/use-ai-usage-audit';
 import {
   parseAsIndex,
@@ -98,6 +99,7 @@ export function UsageAuditPageClient() {
   return (
     <div className="space-y-6">
       <AIProductControls />
+      <AIWorkflowObservabilityPanel />
       <UsageAuditTable
         data={data?.items || []}
         total={data?.total || 0}
