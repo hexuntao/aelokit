@@ -26,6 +26,10 @@ interface KnowledgeSourceFormProps {
 export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
+  const [sourceKind, setSourceKind] = useState<'manual-note' | 'uploaded-file'>(
+    'manual-note'
+  );
+  const [mimeType, setMimeType] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
@@ -53,7 +57,12 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
     setResult(null);
 
     try {
-      const response = await createManualKnowledgeSourceAction({ title, text });
+      const response = await createManualKnowledgeSourceAction({
+        title,
+        text,
+        sourceKind,
+        mimeType,
+      });
 
       if (response.data?.success && response.data.result) {
         setResult({
@@ -64,6 +73,8 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
         });
         setTitle('');
         setText('');
+        setSourceKind('manual-note');
+        setMimeType(undefined);
         onCreated?.();
       } else {
         setResult({
@@ -79,6 +90,19 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const content = await file.text();
+    setTitle((current) => current || file.name);
+    setText(content);
+    setSourceKind('uploaded-file');
+    setMimeType(file.type || 'text/plain');
   }
 
   if (!embeddingStatus.checked) {
@@ -127,8 +151,8 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
       <CardHeader>
         <CardTitle>Knowledge Source</CardTitle>
         <CardDescription>
-          Add a manual text source to your knowledge base. The text will be
-          chunked, embedded, and stored for retrieval.
+          Add a manual text source or upload a text/markdown file. The content
+          will be chunked, embedded, and stored for retrieval.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -146,6 +170,21 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="knowledge-file">Upload File</Label>
+            <Input
+              id="knowledge-file"
+              type="file"
+              accept=".txt,.md,.markdown,text/plain,text/markdown,text/x-markdown"
+              onChange={(event) => void handleFileChange(event)}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional. Text and markdown files are indexed as uploaded-file
+              knowledge sources.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="text">Text Content</Label>
             <Textarea
               id="text"
@@ -158,7 +197,7 @@ export function KnowledgeSourceForm({ onCreated }: KnowledgeSourceFormProps) {
               className="resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              {text.length} characters
+              {text.length} characters · Source kind: {sourceKind}
             </p>
           </div>
 

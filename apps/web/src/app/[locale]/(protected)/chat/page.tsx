@@ -1,9 +1,8 @@
 import { getChatModelPreferenceState } from '@/ai/models';
-import {
-  getDefaultAgent,
-  getSelectableAgentOptions,
-} from '@/ai/agents';
+import { getDefaultAgent, getSelectableAgentOptions } from '@/ai/agents';
 import { getMessages, getThread, listThreads } from '@/ai/persistence';
+import { getAIWorkspaceStatus } from '@/ai/workspace-status';
+import type { AIWorkspaceStatus } from '@/ai/workspace-status-types';
 import type {
   ChatAgentOption,
   ChatModelOption,
@@ -67,6 +66,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   let initialUserDefaultModelId: string | undefined;
   let initialSystemDefaultModelId = 'gpt-5.5';
   let initialSelectedModelId: string | undefined;
+  let initialWorkspaceStatus: AIWorkspaceStatus | undefined;
 
   if (session?.user?.id) {
     initialAgentOptions = getSelectableAgentOptions();
@@ -76,6 +76,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
     initialUserDefaultModelId = modelPreferences.userDefaultModelId;
     initialSystemDefaultModelId = modelPreferences.systemDefaultModelId;
     initialSelectedModelId = modelPreferences.initialSelectedModelId;
+    initialWorkspaceStatus = await getAIWorkspaceStatus(session.user.id);
 
     const threadsResult = await listThreads(session.user.id, {
       status: 'active',
@@ -117,6 +118,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             initialUserDefaultModelId={initialUserDefaultModelId}
             initialSystemDefaultModelId={initialSystemDefaultModelId}
             initialSelectedModelId={initialSelectedModelId}
+            initialWorkspaceStatus={initialWorkspaceStatus}
           />
         </div>
       </div>

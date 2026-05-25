@@ -150,6 +150,8 @@ export async function ingestManualKnowledgeSource(
   const now = new Date();
   const indexedAt = now.toISOString();
   const visibility = input.visibility ?? 'private';
+  const sourceKind = input.kind ?? 'manual-note';
+  const mimeType = input.mimeType ?? 'text/plain';
 
   try {
     const ingestionConfig = resolveKnowledgeIngestionConfig();
@@ -158,7 +160,7 @@ export async function ingestManualKnowledgeSource(
 
     await db.insert(knowledgeSource).values({
       id: sourceId,
-      kind: 'manual-note',
+      kind: sourceKind,
       title: input.title,
       userId: input.userId,
       visibility,
@@ -176,7 +178,7 @@ export async function ingestManualKnowledgeSource(
       sourceId,
       title: input.title,
       text: input.text,
-      mimeType: 'text/plain',
+      mimeType,
       charCount: input.text.length,
       createdAt: now,
     });
@@ -209,7 +211,7 @@ export async function ingestManualKnowledgeSource(
     const mutableVectors = embeddingsResult.embeddings.map((e) => [...e]);
     const chunkIds = chunks.map((chunk) => `${documentId}:${chunk.id}`);
     const vectorIds = chunkIds.map((chunkId) => `${sourceId}:${chunkId}`);
-    const provenance = `manual-note:${sourceId}`;
+    const provenance = `${sourceKind}:${sourceId}`;
 
     const upsertedVectorIds = await vectorStore.upsert({
       indexName: KNOWLEDGE_INDEX_NAME,

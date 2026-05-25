@@ -33,6 +33,8 @@ export type ManageKnowledgeSourceResult = {
 const createKnowledgeSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   text: z.string().min(1, 'Text content is required'),
+  sourceKind: z.enum(['manual-note', 'uploaded-file']).default('manual-note'),
+  mimeType: z.string().optional(),
 });
 const sourceIdSchema = z.object({
   sourceId: z.string().min(1),
@@ -58,6 +60,8 @@ export const createManualKnowledgeSourceAction = userActionClient
           title: parsedInput.title.trim(),
           text: parsedInput.text.trim(),
           userId: user.id,
+          kind: parsedInput.sourceKind,
+          mimeType: parsedInput.mimeType,
           visibility: 'private',
         });
 

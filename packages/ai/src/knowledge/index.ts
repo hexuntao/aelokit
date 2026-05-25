@@ -130,5 +130,10 @@ export interface AIKnowledgeManualSourceInput {
   readonly title: string;
   readonly text: string;
   readonly userId: string;
+  readonly kind?: Extract<
+    AIKnowledgeSourceKind,
+    'manual-note' | 'uploaded-file'
+  >;
+  readonly mimeType?: string;
   readonly visibility?: AIKnowledgeSourceVisibility;
 }

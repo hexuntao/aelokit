@@ -20,7 +20,9 @@ import {
   getUserChatThreadStateAction,
   getUserChatThreadsAction,
 } from '@/actions/chat-threads';
+import { getAIWorkspaceStatusAction } from '@/actions/ai-workspace-status';
 import { resolveSelectedModelId } from '@/ai/models/selection';
+import type { AIWorkspaceStatus } from '@/ai/workspace-status-types';
 import type { ChatErrorType } from './ChatErrorState';
 import { parseErrorType, getErrorMetadata } from './ChatErrorState';
 import { getThreadInsights } from './thread-insights';
@@ -50,6 +52,7 @@ interface ChatProviderProps {
   readonly initialUserDefaultModelId?: string;
   readonly initialSystemDefaultModelId?: string;
   readonly initialSelectedModelId?: string;
+  readonly initialWorkspaceStatus?: AIWorkspaceStatus;
 }
 
 interface ChatContextType {
@@ -82,6 +85,9 @@ interface ChatContextType {
   startNewThread: () => void;
   openThread: (threadId: string) => Promise<void>;
   refreshThreads: () => Promise<void>;
+  workspaceStatus?: AIWorkspaceStatus;
+  isWorkspaceStatusLoading: boolean;
+  refreshWorkspaceStatus: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -123,6 +129,7 @@ export function ChatProvider({
   initialUserDefaultModelId,
   initialSystemDefaultModelId = 'gpt-5.5',
   initialSelectedModelId,
+  initialWorkspaceStatus,
 }: ChatProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -163,6 +170,11 @@ export function ChatProvider({
     useState<readonly ChatThreadSummary[]>(initialThreads);
   const [isThreadListLoading, setIsThreadListLoading] = useState(false);
   const [isThreadLoading, setIsThreadLoading] = useState(false);
+  const [workspaceStatus, setWorkspaceStatus] = useState<
+    AIWorkspaceStatus | undefined
+  >(initialWorkspaceStatus);
+  const [isWorkspaceStatusLoading, setIsWorkspaceStatusLoading] =
+    useState(false);
   const threadIdRef = useRef<string | undefined>(initialThreadId);
   const selectedAgentIdRef = useRef(selectedAgentId);
   const selectedModelIdRef = useRef(selectedModelId);
@@ -296,6 +308,35 @@ export function ChatProvider({
     }
   }, []);
 
+  const refreshWorkspaceStatus = useCallback(async () => {
+    setIsWorkspaceStatusLoading(true);
+
+    try {
+      const result = await getAIWorkspaceStatusAction();
+
+      if (result.data?.success) {
+        setWorkspaceStatus(result.data.data);
+        return;
+      }
+
+      const message =
+        result.data?.error ?? 'Failed to load AI workspace status.';
+      setError(new Error(message));
+      setErrorType('unknown');
+      setErrorMetadata({});
+    } catch (statusError) {
+      const message =
+        statusError instanceof Error
+          ? statusError.message
+          : 'Failed to load AI workspace status.';
+      setError(new Error(message));
+      setErrorType('unknown');
+      setErrorMetadata({});
+    } finally {
+      setIsWorkspaceStatusLoading(false);
+    }
+  }, []);
+
   const runtime = useChatRuntime<ChatUIMessage>({
     transport,
     onFinish: ({ message }) => {
@@ -305,6 +346,7 @@ export function ChatProvider({
         threadIdRef.current = responseThreadId;
         syncThreadUrl(responseThreadId);
         void refreshThreads();
+        void refreshWorkspaceStatus();
       }
 
       const citations = message.metadata?.citations;
@@ -512,6 +554,9 @@ export function ChatProvider({
           startNewThread,
           openThread,
           refreshThreads,
+          workspaceStatus,
+          isWorkspaceStatusLoading,
+          refreshWorkspaceStatus,
         }}
       >
         {children}
