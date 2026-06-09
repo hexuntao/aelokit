@@ -336,9 +336,18 @@ export async function POST(req: Request) {
 
     await ensureAIModelCatalog();
     await ensureAIAgentCatalog();
-    const resolvedAgent = await resolveRuntimeAgentSelection({
+    const agentSelectionResult = await resolveRuntimeAgentSelection({
       requestedAgentId,
     });
+    if (!agentSelectionResult.success) {
+      const error = RuntimeErrors.forbidden(agentSelectionResult.error.message);
+      return jsonError(
+        error,
+        agentSelectionResult.error.code === 'no-agents-available' ? 503 : 403
+      );
+    }
+
+    const resolvedAgent = agentSelectionResult.data;
     const agentKnowledgeEnabled =
       knowledgeEnabled && resolvedAgent.agent.features.knowledge;
     const agentMemoryEnabled =

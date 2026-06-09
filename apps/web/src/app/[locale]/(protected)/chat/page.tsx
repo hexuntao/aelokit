@@ -1,5 +1,5 @@
 import { getChatModelPreferenceState } from '@/ai/models';
-import { getDefaultAgent, getRuntimeSelectableAgentOptions } from '@/ai/agents';
+import { getRuntimeSelectableAgentOptions } from '@/ai/agents';
 import { getMessages, getThread, listThreads } from '@/ai/persistence';
 import { getAIWorkspaceStatus } from '@/ai/workspace-status';
 import type { AIWorkspaceStatus } from '@/ai/workspace-status-types';
@@ -70,7 +70,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   if (session?.user?.id) {
     initialAgentOptions = await getRuntimeSelectableAgentOptions();
-    initialSelectedAgentId = getDefaultAgent().id;
+    initialSelectedAgentId = initialAgentOptions[0]?.id;
     const modelPreferences = await getChatModelPreferenceState(session.user.id);
     initialModelOptions = modelPreferences.availableModels;
     initialUserDefaultModelId = modelPreferences.userDefaultModelId;
@@ -91,12 +91,19 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
       if (threadResult.success && threadResult.data) {
         const messagesResult = await getMessages(requestedThreadId);
+        const threadAgentIsSelectable =
+          threadResult.data.agentId &&
+          initialAgentOptions.some(
+            (agent) => agent.id === threadResult.data?.agentId
+          );
 
         if (messagesResult.success) {
           initialThreadId = requestedThreadId;
           initialMessages = messagesResult.data as readonly ChatUIMessage[];
           initialSelectedAgentId =
-            threadResult.data.agentId ?? initialSelectedAgentId;
+            threadAgentIsSelectable && threadResult.data.agentId
+              ? threadResult.data.agentId
+              : initialSelectedAgentId;
           initialSelectedModelId =
             threadResult.data.modelId ?? initialSelectedModelId;
         }

@@ -30,6 +30,19 @@ export interface ResolvedAgentSelection {
   readonly fallbackFromUnknown: boolean;
 }
 
+export interface AgentSelectionError {
+  readonly code:
+    | 'agent-not-found'
+    | 'agent-unavailable'
+    | 'no-agents-available';
+  readonly message: string;
+  readonly agentId?: string;
+}
+
+export type AgentSelectionResult =
+  | { readonly success: true; readonly data: ResolvedAgentSelection }
+  | { readonly success: false; readonly error: AgentSelectionError };
+
 const APP_LOCAL_AGENTS: readonly AppLocalAgentDefinition[] = [
   {
     id: 'agent-default-chat',
@@ -129,27 +142,27 @@ export async function getRuntimeSelectableAgentOptions(): Promise<
 export function resolveAgentSelection(options?: {
   readonly requestedAgentId?: string;
   readonly threadAgentId?: string;
-}): ResolvedAgentSelection {
+}): AgentSelectionResult {
   return resolveAgentSelectionFromCatalog(getSelectableAgentOptions(), options);
 }
 
 export async function resolveRuntimeAgentSelection(options?: {
   readonly requestedAgentId?: string;
   readonly threadAgentId?: string;
-}): Promise<ResolvedAgentSelection> {
+}): Promise<AgentSelectionResult> {
   return resolveAgentSelectionFromCatalog(
     await getRuntimeSelectableAgentOptions(),
     options
   );
 }
 
-function resolveAgentSelectionFromCatalog(
+export function resolveAgentSelectionFromCatalog(
   selectableAgents: readonly AppLocalAgentOption[],
   options?: {
     readonly requestedAgentId?: string;
     readonly threadAgentId?: string;
   }
-): ResolvedAgentSelection {
+): AgentSelectionResult {
   const selectableAgentIds = new Set(selectableAgents.map((agent) => agent.id));
   const candidateIds = [options?.requestedAgentId, options?.threadAgentId];
 
@@ -158,24 +171,64 @@ function resolveAgentSelectionFromCatalog(
       continue;
     }
 
+    const catalogAgent = APP_LOCAL_AGENTS.find(
+      (agent) => agent.id === candidateId
+    );
+    if (!catalogAgent) {
+      return {
+        success: false,
+        error: {
+          code: 'agent-not-found',
+          message: `Agent "${candidateId}" is not available.`,
+          agentId: candidateId,
+        },
+      };
+    }
+
     const matchedAgent = APP_LOCAL_AGENTS.find(
       (agent) => agent.id === candidateId && selectableAgentIds.has(agent.id)
     );
     if (matchedAgent) {
       return {
-        agent: matchedAgent,
-        requestedAgentId: options?.requestedAgentId,
-        fallbackFromUnknown: false,
+        success: true,
+        data: {
+          agent: matchedAgent,
+          requestedAgentId: options?.requestedAgentId,
+          fallbackFromUnknown: false,
+        },
       };
     }
+
+    return {
+      success: false,
+      error: {
+        code: 'agent-unavailable',
+        message: `Agent "${candidateId}" is disabled or private.`,
+        agentId: candidateId,
+      },
+    };
+  }
+
+  const firstSelectableAgent = APP_LOCAL_AGENTS.find((agent) =>
+    selectableAgentIds.has(agent.id)
+  );
+  if (!firstSelectableAgent) {
+    return {
+      success: false,
+      error: {
+        code: 'no-agents-available',
+        message: 'No AI agent is currently available.',
+      },
+    };
   }
 
   return {
-    agent:
-      APP_LOCAL_AGENTS.find((agent) => selectableAgentIds.has(agent.id)) ??
-      getDefaultAgent(),
-    requestedAgentId: options?.requestedAgentId,
-    fallbackFromUnknown: Boolean(options?.requestedAgentId),
+    success: true,
+    data: {
+      agent: firstSelectableAgent,
+      requestedAgentId: options?.requestedAgentId,
+      fallbackFromUnknown: false,
+    },
   };
 }
 

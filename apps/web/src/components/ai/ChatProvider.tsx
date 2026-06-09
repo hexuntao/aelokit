@@ -467,11 +467,13 @@ export function ChatProvider({
       const initialThread = initialThreads.find(
         (thread) => thread.id === initialThreadId
       );
+      const threadAgentIsSelectable =
+        initialThread?.agentId &&
+        initialAgentOptions.some((agent) => agent.id === initialThread.agentId);
       setSelectedAgentId(
-        initialThread?.agentId ??
-          initialSelectedAgentId ??
-          initialAgentOptions[0]?.id ??
-          ''
+        threadAgentIsSelectable && initialThread?.agentId
+          ? initialThread.agentId
+          : (initialSelectedAgentId ?? initialAgentOptions[0]?.id ?? '')
       );
       setSelectedModelId(getPreferredModelId(initialThread?.modelId));
       return;
