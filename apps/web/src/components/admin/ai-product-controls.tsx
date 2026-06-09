@@ -102,7 +102,9 @@ export function AIProductControls() {
                     modelId,
                   });
                   if (!result.data?.success) {
-                    toast.error('Failed to update default model.');
+                    toast.error(
+                      result.data?.error ?? 'Failed to update default model.'
+                    );
                     return;
                   }
                   toast.success('Default model updated.');

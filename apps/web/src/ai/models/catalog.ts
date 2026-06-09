@@ -14,6 +14,17 @@ export interface AppLocalModelCatalogEntry {
   readonly sortOrder: number;
 }
 
+export interface DefaultModelCandidate {
+  readonly providerId: string;
+  readonly modelId: string;
+  readonly providerStatus: string;
+  readonly modelStatus: string;
+}
+
+export type DefaultModelCandidateValidation =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
 export const DEFAULT_PROVIDER_ID = 'openai' as const;
 export const DEFAULT_MODEL_ID = 'gpt-5.5' as const;
 
@@ -83,6 +94,37 @@ export function isSelectableModel(
   entry: Pick<AppLocalModelCatalogEntry, 'status'>
 ): boolean {
   return entry.status === 'enabled';
+}
+
+export function validateDefaultModelCandidate(
+  candidate: DefaultModelCandidate | null,
+  requested: {
+    readonly providerId: string;
+    readonly modelId: string;
+  }
+): DefaultModelCandidateValidation {
+  if (!candidate) {
+    return {
+      success: false,
+      error: `Model "${requested.modelId}" was not found for provider "${requested.providerId}".`,
+    };
+  }
+
+  if (candidate.providerStatus !== 'enabled') {
+    return {
+      success: false,
+      error: `Provider "${requested.providerId}" is not enabled.`,
+    };
+  }
+
+  if (candidate.modelStatus !== 'enabled') {
+    return {
+      success: false,
+      error: `Model "${requested.modelId}" is not selectable.`,
+    };
+  }
+
+  return { success: true };
 }
 
 export function toModelOption(

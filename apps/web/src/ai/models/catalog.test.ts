@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   getSelectableModelOptions,
   toModelOption,
+  validateDefaultModelCandidate,
   type AppLocalModelCatalogEntry,
 } from './catalog';
 
@@ -46,4 +47,73 @@ test('excludes disabled models from selectable options', () => {
     options.map((option) => option.modelId),
     ['gpt-5.5']
   );
+});
+
+test('rejects an invalid default model candidate', () => {
+  const result = validateDefaultModelCandidate(null, {
+    providerId: 'openai',
+    modelId: 'missing-model',
+  });
+
+  assert.deepEqual(result, {
+    success: false,
+    error: 'Model "missing-model" was not found for provider "openai".',
+  });
+});
+
+test('rejects a disabled provider default model candidate', () => {
+  const result = validateDefaultModelCandidate(
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+      providerStatus: 'disabled',
+      modelStatus: 'enabled',
+    },
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+    }
+  );
+
+  assert.deepEqual(result, {
+    success: false,
+    error: 'Provider "openai" is not enabled.',
+  });
+});
+
+test('rejects a disabled default model candidate', () => {
+  const result = validateDefaultModelCandidate(
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+      providerStatus: 'enabled',
+      modelStatus: 'disabled',
+    },
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+    }
+  );
+
+  assert.deepEqual(result, {
+    success: false,
+    error: 'Model "gpt-5.5" is not selectable.',
+  });
+});
+
+test('accepts an enabled default model candidate', () => {
+  const result = validateDefaultModelCandidate(
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+      providerStatus: 'enabled',
+      modelStatus: 'enabled',
+    },
+    {
+      providerId: 'openai',
+      modelId: 'gpt-5.5',
+    }
+  );
+
+  assert.deepEqual(result, { success: true });
 });

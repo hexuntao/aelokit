@@ -7,7 +7,11 @@ import {
   type AIPlanEntitlementPolicy,
 } from '@/ai/entitlements/plan-policy';
 import { ensureAIAgentCatalog } from '@/ai/agents';
-import { ensureAIModelCatalog, listSelectableModelOptions } from '@/ai/models';
+import {
+  ensureAIModelCatalog,
+  listSelectableModelOptions,
+  validateDefaultModelCandidate,
+} from '@/ai/models';
 import { getDb } from '@/db';
 import { aiAgent, aiModel, aiProvider } from '@repo/db/ai-schema';
 import { adminActionClient } from '@/lib/safe-action';
@@ -34,6 +38,9 @@ export interface AIProductControlState {
 type AIProductControlMutationResult =
   | { readonly success: true }
   | { readonly success: false; readonly error: string };
+
+const DEFAULT_MODEL_UPDATE_RACE_ERROR =
+  'Default model update failed because the target model changed before it could be selected.';
 
 const defaultModelSchema = z.object({
   providerId: z.string().min(1),
@@ -124,28 +131,73 @@ export const getAIProductControlStateAction = adminActionClient.action(
 
 export const updateDefaultAIModelAction = adminActionClient
   .inputSchema(defaultModelSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput }): Promise<AIProductControlMutationResult> => {
     const db = await getDb();
     const now = new Date();
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(aiModel)
-        .set({ isDefault: false, updatedAt: now })
-        .where(eq(aiModel.providerId, parsedInput.providerId));
-
-      await tx
-        .update(aiModel)
-        .set({ isDefault: true, updatedAt: now })
-        .where(
-          and(
-            eq(aiModel.providerId, parsedInput.providerId),
-            eq(aiModel.id, parsedInput.modelId)
+    try {
+      return await db.transaction(async (tx) => {
+        const [candidate] = await tx
+          .select({
+            providerId: aiModel.providerId,
+            modelId: aiModel.id,
+            providerStatus: aiProvider.status,
+            modelStatus: aiModel.status,
+          })
+          .from(aiModel)
+          .innerJoin(aiProvider, eq(aiProvider.id, aiModel.providerId))
+          .where(
+            and(
+              eq(aiModel.providerId, parsedInput.providerId),
+              eq(aiModel.id, parsedInput.modelId)
+            )
           )
+          .limit(1);
+        const validation = validateDefaultModelCandidate(
+          candidate ?? null,
+          parsedInput
         );
-    });
+        if (!validation.success) {
+          return validation;
+        }
 
-    return { success: true as const };
+        await tx
+          .update(aiModel)
+          .set({ isDefault: false, updatedAt: now })
+          .where(
+            and(
+              eq(aiModel.providerId, parsedInput.providerId),
+              eq(aiModel.isDefault, true)
+            )
+          );
+
+        const updatedRows = await tx
+          .update(aiModel)
+          .set({ isDefault: true, updatedAt: now })
+          .where(
+            and(
+              eq(aiModel.providerId, parsedInput.providerId),
+              eq(aiModel.id, parsedInput.modelId),
+              eq(aiModel.status, 'enabled')
+            )
+          )
+          .returning({ id: aiModel.id });
+
+        if (updatedRows.length === 0) {
+          throw new Error(DEFAULT_MODEL_UPDATE_RACE_ERROR);
+        }
+
+        return { success: true as const };
+      });
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update default model.',
+      };
+    }
   });
 
 export const updateAIAgentControlAction = adminActionClient

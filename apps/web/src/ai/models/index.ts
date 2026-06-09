@@ -484,4 +484,5 @@ export async function saveUserDefaultModelSelection(
   };
 }
 
+export { validateDefaultModelCandidate } from './catalog';
 export { getSystemDefaultModel, getDefaultModelForProvider };
