@@ -144,7 +144,7 @@ export function AIProductControls() {
                     value={agent.visibility}
                     onValueChange={(visibility) => {
                       startTransition(async () => {
-                        await updateAIAgentControlAction({
+                        const result = await updateAIAgentControlAction({
                           agentId: agent.id,
                           visibility: visibility as
                             | 'system'
@@ -155,6 +155,12 @@ export function AIProductControls() {
                             | 'disabled'
                             | 'deprecated',
                         });
+                        if (!result.data?.success) {
+                          toast.error(
+                            result.data?.error ?? 'Failed to update agent.'
+                          );
+                          return;
+                        }
                         refresh();
                       });
                     }}
@@ -172,7 +178,7 @@ export function AIProductControls() {
                     value={agent.status}
                     onValueChange={(status) => {
                       startTransition(async () => {
-                        await updateAIAgentControlAction({
+                        const result = await updateAIAgentControlAction({
                           agentId: agent.id,
                           visibility: agent.visibility as
                             | 'system'
@@ -183,6 +189,12 @@ export function AIProductControls() {
                             | 'disabled'
                             | 'deprecated',
                         });
+                        if (!result.data?.success) {
+                          toast.error(
+                            result.data?.error ?? 'Failed to update agent.'
+                          );
+                          return;
+                        }
                         refresh();
                       });
                     }}

@@ -31,6 +31,10 @@ export interface AIProductControlState {
   readonly policies: readonly AIPlanEntitlementPolicy[];
 }
 
+type AIProductControlMutationResult =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
 const defaultModelSchema = z.object({
   providerId: z.string().min(1),
   modelId: z.string().min(1),
@@ -146,17 +150,25 @@ export const updateDefaultAIModelAction = adminActionClient
 
 export const updateAIAgentControlAction = adminActionClient
   .inputSchema(agentControlSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput }): Promise<AIProductControlMutationResult> => {
     const db = await getDb();
 
-    await db
+    const updatedRows = await db
       .update(aiAgent)
       .set({
         visibility: parsedInput.visibility,
         status: parsedInput.status,
         updatedAt: new Date(),
       })
-      .where(eq(aiAgent.id, parsedInput.agentId));
+      .where(eq(aiAgent.id, parsedInput.agentId))
+      .returning({ id: aiAgent.id });
+
+    if (updatedRows.length === 0) {
+      return {
+        success: false,
+        error: `Agent "${parsedInput.agentId}" was not found.`,
+      };
+    }
 
     return { success: true as const };
   });
