@@ -7,30 +7,42 @@ import {
   KNOWLEDGE_INSPECTION_TOOL_ID,
   KNOWLEDGE_INSPECTION_TOOL_NAME,
 } from './knowledge-inspection';
+import { decideToolPermission } from './permissions';
+import type { AIPermissionDecision } from '@repo/ai/permissions';
 
 export interface CreateMastraToolRegistryOptions {
   readonly userId: string;
   readonly knowledgeEnabled: boolean;
+  readonly toolsAllowed: boolean;
   readonly allowedToolIds?: readonly string[];
 }
 
 export interface MastraToolRegistry {
   readonly tools: ToolSet;
   readonly definitions: readonly AIToolRegistryEntry[];
+  readonly permissionDecisions: readonly AIPermissionDecision[];
 }
 
 export function createMastraToolRegistry(
   options: CreateMastraToolRegistryOptions
 ): MastraToolRegistry {
+  const knowledgeToolPermission = decideToolPermission({
+    userId: options.userId,
+    toolId: KNOWLEDGE_INSPECTION_TOOL_ID,
+    toolsAllowed: options.knowledgeEnabled && options.toolsAllowed,
+    agentAllowedToolIds: options.allowedToolIds,
+    requiredScope: 'knowledge:read',
+    action: 'read',
+    resourceType: 'knowledge',
+  });
   const allowKnowledgeTool =
-    options.knowledgeEnabled &&
-    (options.allowedToolIds === undefined ||
-      options.allowedToolIds.includes(KNOWLEDGE_INSPECTION_TOOL_ID));
+    options.knowledgeEnabled && knowledgeToolPermission.outcome === 'allow';
 
   if (!allowKnowledgeTool) {
     return {
       tools: {},
       definitions: [],
+      permissionDecisions: [knowledgeToolPermission],
     };
   }
 
@@ -76,6 +88,7 @@ export function createMastraToolRegistry(
         },
       },
     ],
+    permissionDecisions: [knowledgeToolPermission],
   };
 }
 
@@ -85,4 +98,23 @@ export function getToolIdByName(
 ): string | undefined {
   return registry.definitions.find((definition) => definition.name === toolName)
     ?.id;
+}
+
+export function getToolDefinitionByName(
+  registry: MastraToolRegistry,
+  toolName: string
+): AIToolRegistryEntry | undefined {
+  return registry.definitions.find(
+    (definition) => definition.name === toolName
+  );
+}
+
+export function getToolPermissionDecisionByName(
+  registry: MastraToolRegistry,
+  toolName: string
+): AIPermissionDecision | undefined {
+  const toolId = getToolIdByName(registry, toolName);
+  return registry.permissionDecisions.find(
+    (decision) => decision.request.resource.id === toolId
+  );
 }

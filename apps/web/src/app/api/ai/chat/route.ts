@@ -66,7 +66,13 @@ import {
   isKnowledgeRetrievalEnabled,
   type SourceCitationMetadata,
 } from '@/ai/knowledge';
-import { createMastraToolRegistry, getToolIdByName } from '@/ai/tools';
+import {
+  createMastraToolRegistry,
+  getToolDefinitionByName,
+  getToolIdByName,
+  getToolPermissionDecisionByName,
+  toSafePermissionDecisionMetadata,
+} from '@/ai/tools';
 import { nanoid } from 'nanoid';
 import {
   getAIChatBillingReference,
@@ -209,6 +215,16 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function asToolOutputRecord(value: unknown): Record<string, unknown> {
   return asRecord(value) ?? { value: value ?? null };
+}
+
+function asToolInputAuditRecord(
+  value: unknown,
+  permissionDecision: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  return {
+    input: asRecord(value) ?? { value: value ?? null },
+    ...(permissionDecision ? { permissionDecision } : {}),
+  };
 }
 
 function getToolErrorMessage(error: unknown): string {
@@ -473,6 +489,8 @@ export async function POST(req: Request) {
       .filter(isSelectableModel)
       .map((model) => model.id);
     const planPolicy = await getAIEntitlementPolicyForUser(context.userId);
+    const toolsAllowed =
+      resolvedAgent.agent.features.tools && planPolicy.toolsEnabled;
     const policyAllowedModelIds =
       planPolicy.allowedModelIds.length > 0
         ? selectableModelIds.filter((modelId) =>
@@ -496,8 +514,7 @@ export async function POST(req: Request) {
           planPolicy.knowledgeEnabled),
       memoryEnabled: agentMemoryEnabled,
       memoryAvailable: planPolicy.memoryEnabled,
-      toolsAllowed:
-        resolvedAgent.agent.features.tools && planPolicy.toolsEnabled,
+      toolsAllowed,
       creditsBillingEnabled,
       creditsRequired: estimatedRequiredCredits,
       maxCreditsPerRequest: planPolicy.maxCreditsPerRequest,
@@ -834,6 +851,7 @@ export async function POST(req: Request) {
     const toolRegistry = createMastraToolRegistry({
       userId: context.userId,
       knowledgeEnabled: agentKnowledgeEnabled,
+      toolsAllowed,
       allowedToolIds: resolvedAgent.agent.allowedToolIds,
     });
 
@@ -932,10 +950,27 @@ export async function POST(req: Request) {
       },
       onToolCallStart: async ({ toolCall }) => {
         const toolId = getToolIdByName(toolRegistry, toolCall.toolName);
+        const toolDefinition = getToolDefinitionByName(
+          toolRegistry,
+          toolCall.toolName
+        );
+        const permissionDecision = toSafePermissionDecisionMetadata(
+          getToolPermissionDecisionByName(toolRegistry, toolCall.toolName)
+        );
+        const mcpMetadata = toolDefinition?.mcp.compatible
+          ? {
+              compatible: true,
+              name: toolDefinition.mcp.name,
+              serverName: toolDefinition.mcp.serverName,
+              transport: 'remote-read-only-reserve',
+            }
+          : undefined;
         toolAuditById.set(toolCall.toolCallId, {
           toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           toolId,
+          permissionDecision,
+          mcp: mcpMetadata,
           status: 'running',
           startedAt: new Date().toISOString(),
         });
@@ -946,17 +981,22 @@ export async function POST(req: Request) {
           toolName: toolCall.toolName,
           toolId,
           status: 'running',
-          input: asRecord(toolCall.input),
+          input: asToolInputAuditRecord(toolCall.input, permissionDecision),
           providerExecuted: Boolean(toolCall.providerExecuted),
         });
       },
       onToolCallFinish: async ({ toolCall, success, output, error }) => {
         const existingAudit = toolAuditById.get(toolCall.toolCallId) ?? {};
+        const permissionDecision =
+          toSafePermissionDecisionMetadata(
+            getToolPermissionDecisionByName(toolRegistry, toolCall.toolName)
+          ) ?? asRecord(existingAudit.permissionDecision);
         toolAuditById.set(toolCall.toolCallId, {
           ...existingAudit,
           toolCallId: toolCall.toolCallId,
           toolName: toolCall.toolName,
           toolId: getToolIdByName(toolRegistry, toolCall.toolName),
+          permissionDecision,
           status: success ? 'success' : 'error',
           completedAt: new Date().toISOString(),
         });
