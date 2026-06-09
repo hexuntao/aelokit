@@ -869,9 +869,7 @@ export async function POST(req: Request) {
           return {
             totalTokens: totalUsage ? totalUsage.totalTokens : undefined,
             inputTokens: totalUsage ? totalUsage.promptTokens : undefined,
-            outputTokens: totalUsage
-              ? totalUsage.completionTokens
-              : undefined,
+            outputTokens: totalUsage ? totalUsage.completionTokens : undefined,
             citations:
               knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
             knowledgeError: agentContext.knowledgeError,
