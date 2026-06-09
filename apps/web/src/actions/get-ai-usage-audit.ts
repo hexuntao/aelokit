@@ -70,6 +70,18 @@ export interface AIUsageAuditItem {
   readonly metadata: unknown;
   readonly toolCallCount: number;
   readonly toolNames: readonly string[];
+  readonly toolCalls: readonly {
+    readonly id: string;
+    readonly toolName: string;
+    readonly toolId: string | null;
+    readonly status: string;
+    readonly providerExecuted: boolean;
+    readonly input: unknown;
+    readonly output: unknown;
+    readonly errorCode: string | null;
+    readonly errorMessage: string | null;
+    readonly createdAt: Date;
+  }[];
   readonly knowledgeEnabled: boolean;
   readonly knowledgeChunkCount: number;
   readonly citationCount: number;
@@ -357,9 +369,17 @@ export const getAIUsageAuditAction = adminActionClient
         messageIds.length > 0
           ? db
               .select({
+                id: aiToolCall.id,
                 messageId: aiToolCall.messageId,
                 toolName: aiToolCall.toolName,
+                toolId: aiToolCall.toolId,
                 status: aiToolCall.status,
+                input: aiToolCall.input,
+                output: aiToolCall.output,
+                providerExecuted: aiToolCall.providerExecuted,
+                errorCode: aiToolCall.errorCode,
+                errorMessage: aiToolCall.errorMessage,
+                createdAt: aiToolCall.createdAt,
               })
               .from(aiToolCall)
               .where(inArray(aiToolCall.messageId, messageIds))
@@ -557,6 +577,18 @@ export const getAIUsageAuditAction = adminActionClient
           toolNames: Array.from(
             new Set(toolRowsForMessage.map((tool) => tool.toolName))
           ),
+          toolCalls: toolRowsForMessage.map((tool) => ({
+            id: tool.id,
+            toolName: tool.toolName,
+            toolId: tool.toolId,
+            status: tool.status,
+            providerExecuted: tool.providerExecuted,
+            input: sanitizeAuditMetadata(tool.input),
+            output: sanitizeAuditMetadata(tool.output),
+            errorCode: tool.errorCode,
+            errorMessage: tool.errorMessage,
+            createdAt: tool.createdAt,
+          })),
           knowledgeEnabled:
             messageMetadata.knowledgeEnabled === true || citations.length > 0,
           knowledgeChunkCount: getNumberMetadata(

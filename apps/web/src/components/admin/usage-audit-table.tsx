@@ -478,6 +478,14 @@ export function UsageAuditTable({
                                 </div>
                                 <div className="space-y-2">
                                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Tool Calls
+                                  </div>
+                                  <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+                                    {JSON.stringify(item.toolCalls, null, 2)}
+                                  </pre>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Audit Metadata
                                   </div>
                                   <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">

@@ -62,6 +62,7 @@ import {
   updateToolCall,
 } from '@/ai/persistence';
 import { isMemoryEnabledForRequest } from '@/ai/memory';
+import { recordAIObservabilityEvent } from '@/ai/observability';
 import {
   isKnowledgeRetrievalEnabled,
   type SourceCitationMetadata,
@@ -579,6 +580,24 @@ export async function POST(req: Request) {
 
     let reservedCredits: number | undefined;
     const toolAuditById = new Map<string, Record<string, unknown>>();
+    await recordAIObservabilityEvent({
+      eventType: 'ai.chat.started',
+      severity: 'info',
+      userId: context.userId,
+      usageId,
+      threadId: persistedThread.id,
+      messageId: assistantMessageId,
+      metadata: {
+        providerId: resolvedModel.reference.providerId,
+        modelId: resolvedModel.reference.modelId,
+        agentId: resolvedAgent.agent.id,
+        modelSelectionSource: resolvedModel.source,
+        memoryEnabled: agentMemoryEnabled,
+        knowledgeEnabled: agentKnowledgeEnabled,
+        toolsAllowed,
+        rawContentIncluded: false,
+      },
+    });
 
     if (creditsBillingEnabled) {
       reservedCredits = estimatedRequiredCredits;
@@ -830,6 +849,30 @@ export async function POST(req: Request) {
           },
         });
       }
+      await recordAIObservabilityEvent({
+        eventType:
+          options.status === 'success' && !options.isAborted
+            ? 'ai.chat.completed'
+            : 'ai.chat.failed',
+        severity:
+          options.status === 'success' && !options.isAborted ? 'info' : 'error',
+        userId: context.userId,
+        usageId,
+        threadId: persistedThread.id,
+        messageId: assistantMessageId,
+        metadata: {
+          status: options.status,
+          finishReason: options.finishReason,
+          billingMode,
+          billingStatus,
+          billingAction,
+          reservationId: pendingReservationId,
+          toolCallCount: toolAuditById.size,
+          knowledgeEnabled: agentKnowledgeEnabled,
+          knowledgeError: agentContext.knowledgeError,
+          rawContentIncluded: false,
+        },
+      });
     }
 
     const agentContext = await buildMastraAgentContext({
