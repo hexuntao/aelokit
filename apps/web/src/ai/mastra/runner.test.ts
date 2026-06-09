@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { UIMessage } from 'ai';
+import type { UIMessage, UIMessageChunk } from 'ai';
+import type { ChunkType, MastraModelOutput } from '@mastra/core/stream';
 import { createMastraChatRequestContext, runMastraChat } from './runner-core';
 import type { ChatRuntimeRequest } from '../runtime';
 
@@ -35,6 +36,20 @@ function createRuntimeRequest(): ChatRuntimeRequest {
       providerModelId: 'gpt-5.5',
     },
   };
+}
+
+function createMockMastraOutput(): MastraModelOutput<unknown> {
+  return {
+    mocked: true,
+  } as unknown as MastraModelOutput<unknown>;
+}
+
+function createMockUIStream(): ReadableStream<UIMessageChunk> {
+  return new ReadableStream<UIMessageChunk>({
+    start(controller) {
+      controller.close();
+    },
+  });
 }
 
 test('creates a Mastra request context with model source and feature flags', () => {
@@ -78,13 +93,12 @@ test('builds Mastra chat request context with request-context-backed instruction
   assert.equal(requestContext.get('knowledgeEnabled'), true);
 });
 
-test('runs the Mastra chat runner with resolved prompt and converted messages', async () => {
+test('runs the Mastra chat runner with resolved prompt and UI messages', async () => {
   const request = createRuntimeRequest();
   const captured: {
-    model?: unknown;
-    system?: string;
     messages?: unknown;
     abortSignal?: AbortSignal;
+    tools?: unknown;
   } = {};
 
   const result = await runMastraChat({
@@ -98,18 +112,12 @@ test('runs the Mastra chat runner with resolved prompt and converted messages', 
       } as UIMessage,
     ],
     systemPrompt: 'Base system prompt\n\nKnowledge context block',
+    serverTools: {
+      inspectKnowledge: {} as never,
+    },
     memoryEnabled: true,
     knowledgeEnabled: true,
     abortSignal: new AbortController().signal,
-    convertMessages: (messages) =>
-      messages.map((message) => ({
-        role: message.role,
-        content:
-          message.parts
-            ?.filter((part) => part.type === 'text')
-            .map((part) => part.text)
-            .join(' ') ?? '',
-      })) as never,
     createAgentExecution: () => {
       const requestContext = createMastraChatRequestContext(
         request.context,
@@ -123,49 +131,31 @@ test('runs the Mastra chat runner with resolved prompt and converted messages', 
         agent: {
           getInstructions: ({ requestContext: currentContext }) =>
             currentContext.get('systemPrompt'),
+          stream: async (messages, options) => {
+            captured.messages = messages;
+            captured.abortSignal = options.abortSignal;
+            return createMockMastraOutput();
+          },
         },
         requestContext,
       };
     },
-    executeStream: ((options) => {
-      captured.model = options.model;
-      captured.system =
-        typeof options.system === 'string'
-          ? options.system
-          : Array.isArray(options.system)
-            ? options.system
-                .map((message) =>
-                  typeof message.content === 'string' ? message.content : ''
-                )
-                .join('\n\n')
-            : typeof options.system?.content === 'string'
-              ? options.system.content
-              : '';
-      captured.messages = options.messages;
-      captured.abortSignal = options.abortSignal;
-      return { mocked: true } as unknown as ReturnType<
-        typeof import('ai').streamText
-      >;
-    }) as typeof import('ai').streamText,
+    convertStream: () => createMockUIStream(),
   });
 
-  assert.equal(captured.model, request.resolvedModel.model);
-  assert.equal(
-    captured.system,
-    'Base system prompt\n\nKnowledge context block'
-  );
   assert.ok(Array.isArray(captured.messages));
-  assert.equal((captured.messages as Array<{ role: string }>).length, 2);
+  assert.equal((captured.messages as UIMessage[]).length, 2);
   assert.equal(
     result.systemPrompt,
     'Base system prompt\n\nKnowledge context block'
   );
+  assert.ok(result.stream instanceof ReadableStream);
   assert.equal(result.requestContext.get('modelSelectionSource'), 'thread');
   assert.equal(result.requestContext.get('memoryEnabled'), true);
   assert.equal(result.requestContext.get('knowledgeEnabled'), true);
 });
 
-test('passes abort, finish, and error callbacks through to streamText', async () => {
+test('passes abort, finish, and error callbacks through to Mastra agent stream', async () => {
   const request = createRuntimeRequest();
   const callbacks: {
     onAbort?: unknown;
@@ -195,21 +185,88 @@ test('passes abort, finish, and error callbacks through to streamText', async ()
         agent: {
           getInstructions: ({ requestContext: currentContext }) =>
             currentContext.get('systemPrompt'),
+          stream: async (_messages, options) => {
+            callbacks.onAbort = options.onAbort;
+            callbacks.onFinish = options.onFinish;
+            callbacks.onError = options.onError;
+            return createMockMastraOutput();
+          },
         },
         requestContext,
       };
     },
-    executeStream: ((options) => {
-      callbacks.onAbort = options.onAbort;
-      callbacks.onFinish = options.onFinish;
-      callbacks.onError = options.onError;
-      return { mocked: true } as unknown as ReturnType<
-        typeof import('ai').streamText
-      >;
-    }) as typeof import('ai').streamText,
+    convertStream: () => createMockUIStream(),
   });
 
   assert.equal(typeof callbacks.onAbort, 'function');
   assert.equal(typeof callbacks.onFinish, 'function');
   assert.equal(typeof callbacks.onError, 'function');
+});
+
+test('maps Mastra tool chunks to existing tool audit callbacks', async () => {
+  const request = createRuntimeRequest();
+  const events: string[] = [];
+
+  await runMastraChat({
+    request,
+    inputMessages: request.messages,
+    systemPrompt: 'System prompt',
+    memoryEnabled: false,
+    knowledgeEnabled: false,
+    onToolCallStart: async ({ toolCall }) => {
+      events.push(`start:${toolCall.toolCallId}:${toolCall.toolName}`);
+    },
+    onToolCallFinish: async ({ toolCall, success, output }) => {
+      events.push(
+        `finish:${toolCall.toolCallId}:${toolCall.toolName}:${success}:${String(
+          output
+        )}`
+      );
+    },
+    createAgentExecution: () => {
+      const requestContext = createMastraChatRequestContext(
+        request.context,
+        request.resolvedModel,
+        'System prompt',
+        false,
+        false
+      );
+
+      return {
+        agent: {
+          getInstructions: ({ requestContext: currentContext }) =>
+            currentContext.get('systemPrompt'),
+          stream: async (_messages, options) => {
+            await options.onChunk?.({
+              type: 'tool-call',
+              payload: {
+                toolCallId: 'tool-call-1',
+                toolName: 'inspectKnowledge',
+                args: { limit: 1 },
+                providerExecuted: false,
+              },
+            } as unknown as ChunkType);
+            await options.onChunk?.({
+              type: 'tool-result',
+              payload: {
+                toolCallId: 'tool-call-1',
+                toolName: 'inspectKnowledge',
+                result: 'done',
+                isError: false,
+                providerExecuted: false,
+              },
+            } as unknown as ChunkType);
+            return createMockMastraOutput();
+          },
+        },
+        requestContext,
+      };
+    },
+    convertStream: () => createMockUIStream(),
+  });
+
+  assert.deepEqual(events, [
+    'start:tool-call-1:inspectKnowledge',
+    'finish:tool-call-1:inspectKnowledge:true:done',
+  ]);
 });

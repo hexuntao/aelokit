@@ -1,6 +1,11 @@
 import 'server-only';
 
-import { consumeStream, type UIMessage } from 'ai';
+import {
+  consumeStream,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type UIMessage,
+} from 'ai';
 import type { AIUsageBillingStatus, AIUsageTokenUsage } from '@repo/ai/usage';
 import { getUserCredits } from '@repo/credits';
 import {
@@ -832,6 +837,49 @@ export async function POST(req: Request) {
       memoryEnabled: agentMemoryEnabled,
       knowledgeEnabled: agentKnowledgeEnabled,
       abortSignal: req.signal,
+      messageMetadata: ({ part }) => {
+        if (
+          typeof part === 'object' &&
+          part !== null &&
+          'type' in part &&
+          part.type === 'start'
+        ) {
+          return {
+            threadId: persistedThread.id,
+            messageId: assistantMessageId,
+            providerId: resolvedModel.reference.providerId,
+            modelId: resolvedModel.reference.modelId,
+            agentId: resolvedAgent.agent.id,
+            modelSelectionSource: resolvedModel.source,
+            memoryEnabled: agentMemoryEnabled,
+            memoryContextCount: memoryContextMessages.length,
+            knowledgeEnabled: agentKnowledgeEnabled,
+            knowledgeChunkCount: knowledgeChunks.length,
+            knowledgeError: agentContext.knowledgeError,
+          };
+        }
+        if (
+          typeof part === 'object' &&
+          part !== null &&
+          'type' in part &&
+          part.type === 'finish'
+        ) {
+          const totalUsage =
+            'totalUsage' in part ? (part.totalUsage as any) : undefined;
+          return {
+            totalTokens: totalUsage ? totalUsage.totalTokens : undefined,
+            inputTokens: totalUsage ? totalUsage.promptTokens : undefined,
+            outputTokens: totalUsage
+              ? totalUsage.completionTokens
+              : undefined,
+            citations:
+              knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
+            knowledgeError: agentContext.knowledgeError,
+            knowledgeEnabled: agentKnowledgeEnabled,
+          };
+        }
+        return undefined;
+      },
       onAbort: async () => {
         await updateMessageStatus(assistantMessageId, 'aborted', new Date());
         await finalizeUsageOnce({
@@ -911,26 +959,17 @@ export async function POST(req: Request) {
         });
       },
     });
-    const { result } = runnerResult;
 
     // 8. Return UI message stream response
     const citationsJson =
       knowledgeCitations.length > 0 ? JSON.stringify(knowledgeCitations) : '';
-
-    return result.toUIMessageStreamResponse({
+    const stream = createUIMessageStream({
       originalMessages: messages,
-      generateMessageId: () => assistantMessageId,
-      consumeSseStream: consumeStream,
-      headers: {
-        'x-ai-thread-id': persistedThread.id,
-        'x-ai-message-id': assistantMessageId,
-        'x-ai-agent-id': resolvedAgent.agent.id,
-        'x-ai-memory-enabled': String(agentMemoryEnabled),
-        'x-ai-memory-context-count': String(memoryContextMessages.length),
-        'x-ai-knowledge-enabled': String(agentKnowledgeEnabled),
-        'x-ai-knowledge-chunk-count': String(knowledgeChunks.length),
-        ...(citationsJson ? { 'x-ai-knowledge-citations': citationsJson } : {}),
+      generateId: () => assistantMessageId,
+      execute: ({ writer }) => {
+        writer.merge(runnerResult.stream);
       },
+      onError: () => 'AI response failed while streaming.',
       onFinish: async ({ responseMessage, finishReason, isAborted }) => {
         const status = isAborted ? 'aborted' : 'complete';
         await saveMessageParts(
@@ -962,42 +1001,20 @@ export async function POST(req: Request) {
         });
         await updateMessageStatus(assistantMessageId, status, new Date());
       },
-      onError: () => 'AI response failed while streaming.',
-      messageMetadata: ({ part }) => {
-        if (part.type === 'start') {
-          return {
-            threadId: persistedThread.id,
-            messageId: assistantMessageId,
-            providerId: resolvedModel.reference.providerId,
-            modelId: resolvedModel.reference.modelId,
-            agentId: resolvedAgent.agent.id,
-            modelSelectionSource: resolvedModel.source,
-            memoryEnabled: agentMemoryEnabled,
-            memoryContextCount: memoryContextMessages.length,
-            knowledgeEnabled: agentKnowledgeEnabled,
-            knowledgeChunkCount: knowledgeChunks.length,
-            knowledgeError: agentContext.knowledgeError,
-          };
-        }
-        if (part.type === 'finish') {
-          const totalUsage = part.totalUsage;
-          return {
-            totalTokens: totalUsage
-              ? (totalUsage as any).totalTokens
-              : undefined,
-            inputTokens: totalUsage
-              ? (totalUsage as any).promptTokens
-              : undefined,
-            outputTokens: totalUsage
-              ? (totalUsage as any).completionTokens
-              : undefined,
-            citations:
-              knowledgeCitations.length > 0 ? knowledgeCitations : undefined,
-            knowledgeError: agentContext.knowledgeError,
-            knowledgeEnabled: agentKnowledgeEnabled,
-          };
-        }
-        return undefined;
+    });
+
+    return createUIMessageStreamResponse({
+      stream,
+      consumeSseStream: consumeStream,
+      headers: {
+        'x-ai-thread-id': persistedThread.id,
+        'x-ai-message-id': assistantMessageId,
+        'x-ai-agent-id': resolvedAgent.agent.id,
+        'x-ai-memory-enabled': String(agentMemoryEnabled),
+        'x-ai-memory-context-count': String(memoryContextMessages.length),
+        'x-ai-knowledge-enabled': String(agentKnowledgeEnabled),
+        'x-ai-knowledge-chunk-count': String(knowledgeChunks.length),
+        ...(citationsJson ? { 'x-ai-knowledge-citations': citationsJson } : {}),
       },
     });
   } catch (error) {

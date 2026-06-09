@@ -1,4 +1,6 @@
-import type { ModelMessage, ToolSet, UIMessage } from 'ai';
+import { toAISdkStream } from '@mastra/ai-sdk';
+import type { ToolSet, UIMessage, UIMessageChunk } from 'ai';
+import type { ChunkType, MastraModelOutput } from '@mastra/core/stream';
 import type { AIRuntimeContext } from '../context';
 import type { ResolvedModel } from '../models';
 import type { ChatRuntimeRequest } from '../runtime';
@@ -28,22 +30,33 @@ export interface MastraChatRunnerOptions {
   readonly onAbort?: () => Promise<void> | void;
   readonly onFinish?: (event: unknown) => Promise<void> | void;
   readonly onError?: (event: unknown) => Promise<void> | void;
+  readonly onChunk?: (chunk: ChunkType) => Promise<void> | void;
   readonly onToolCallStart?: (
     event: MastraToolCallStartEvent
   ) => Promise<void> | void;
   readonly onToolCallFinish?: (
     event: MastraToolCallFinishEvent
   ) => Promise<void> | void;
-  readonly executeStream?: typeof import('ai').streamText;
-  readonly convertMessages?: (
-    messages: readonly UIMessage[]
-  ) => Promise<ModelMessage[]> | ModelMessage[];
+  readonly messageMetadata?: (options: {
+    part: unknown;
+  }) => Record<string, unknown> | undefined;
+  readonly convertStream?: (
+    output: MastraModelOutput<unknown>,
+    options: {
+      messageMetadata?: MastraChatRunnerOptions['messageMetadata'];
+    }
+  ) => ReadableStream<UIMessageChunk>;
   readonly createAgentExecution?: (
-    options: Pick<
-      MastraChatRunnerOptions,
-      'request' | 'systemPrompt' | 'memoryEnabled' | 'knowledgeEnabled'
-    >
+    options: MastraChatAgentExecutionOptions
   ) => Promise<MastraChatAgentExecution> | MastraChatAgentExecution;
+}
+
+export interface MastraChatAgentExecutionOptions {
+  readonly request: ChatRuntimeRequest;
+  readonly systemPrompt: string;
+  readonly tools: ToolSet;
+  readonly memoryEnabled: boolean;
+  readonly knowledgeEnabled: boolean;
 }
 
 export interface MastraRequestContextLike<TShape extends Record<string, any>> {
@@ -55,6 +68,17 @@ export interface MastraChatAgentLike {
   getInstructions(options: {
     requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
   }): Promise<unknown> | unknown;
+  stream(
+    messages: readonly UIMessage[],
+    options: {
+      requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
+      abortSignal?: AbortSignal;
+      onAbort?: () => Promise<void> | void;
+      onFinish?: (event: unknown) => Promise<void> | void;
+      onError?: (event: unknown) => Promise<void> | void;
+      onChunk?: (chunk: ChunkType) => Promise<void> | void;
+    }
+  ): Promise<MastraModelOutput<unknown>>;
 }
 
 export interface MastraChatAgentExecution {
@@ -64,7 +88,8 @@ export interface MastraChatAgentExecution {
 
 export interface MastraChatRunnerResult extends MastraChatAgentExecution {
   readonly systemPrompt: string;
-  readonly result: ReturnType<typeof import('ai').streamText>;
+  readonly stream: ReadableStream<UIMessageChunk>;
+  readonly output: MastraModelOutput<unknown>;
 }
 
 export interface MastraToolCallEventBase {
@@ -153,7 +178,8 @@ export function createMastraChatRequestContext(
 }
 
 export async function createDefaultMastraChatAgent(
-  resolvedModel: ResolvedModel
+  resolvedModel: ResolvedModel,
+  tools: ToolSet
 ): Promise<MastraChatAgent> {
   const { Agent } = await import('@mastra/core/agent');
 
@@ -165,6 +191,7 @@ export async function createDefaultMastraChatAgent(
     // Mastra accepts AI SDK-compatible models, but its public type surface is
     // broader than the concrete resolved model type we keep in app wiring.
     model: resolvedModel.model as never,
+    tools: tools as never,
   }) as unknown as MastraChatAgent;
 }
 
@@ -193,29 +220,6 @@ function normalizeAgentInstructions(
   return typeof content === 'string' ? content : '';
 }
 
-async function resolveStreamText(
-  executeStream?: typeof import('ai').streamText
-) {
-  if (executeStream) {
-    return executeStream;
-  }
-
-  const { streamText } = await import('ai');
-  return streamText;
-}
-
-async function resolveModelMessages(
-  inputMessages: readonly UIMessage[],
-  convertMessages?: MastraChatRunnerOptions['convertMessages']
-): Promise<ModelMessage[]> {
-  if (convertMessages) {
-    return convertMessages(inputMessages);
-  }
-
-  const { convertToModelMessages } = await import('ai');
-  return (await convertToModelMessages([...inputMessages])) as ModelMessage[];
-}
-
 async function resolveTools(
   tools: Record<string, unknown> | undefined,
   serverTools: ToolSet | undefined
@@ -236,10 +240,7 @@ async function resolveTools(
 }
 
 export async function createMastraChatAgentExecution(
-  options: Pick<
-    MastraChatRunnerOptions,
-    'request' | 'systemPrompt' | 'memoryEnabled' | 'knowledgeEnabled'
-  >
+  options: MastraChatAgentExecutionOptions
 ): Promise<MastraChatAgentExecution> {
   const requestContext = createMastraChatRequestContext(
     options.request.context,
@@ -250,44 +251,106 @@ export async function createMastraChatAgentExecution(
   );
 
   return {
-    agent: await createDefaultMastraChatAgent(options.request.resolvedModel),
+    agent: await createDefaultMastraChatAgent(
+      options.request.resolvedModel,
+      options.tools
+    ),
     requestContext,
   };
+}
+
+async function handleMastraToolChunk(
+  chunk: ChunkType,
+  options: Pick<
+    MastraChatRunnerOptions,
+    'onToolCallStart' | 'onToolCallFinish'
+  >
+): Promise<void> {
+  if (chunk.type === 'tool-call') {
+    await options.onToolCallStart?.({
+      toolCall: {
+        toolCallId: chunk.payload.toolCallId,
+        toolName: chunk.payload.toolName,
+        input: chunk.payload.args,
+        providerExecuted: chunk.payload.providerExecuted,
+      },
+    });
+    return;
+  }
+
+  if (chunk.type === 'tool-result') {
+    await options.onToolCallFinish?.({
+      toolCall: {
+        toolCallId: chunk.payload.toolCallId,
+        toolName: chunk.payload.toolName,
+        input: chunk.payload.args,
+        providerExecuted: chunk.payload.providerExecuted,
+      },
+      success: !chunk.payload.isError,
+      output: chunk.payload.result,
+    });
+    return;
+  }
+
+  if (chunk.type === 'tool-error') {
+    await options.onToolCallFinish?.({
+      toolCall: {
+        toolCallId: chunk.payload.toolCallId,
+        toolName: chunk.payload.toolName,
+        input: chunk.payload.args,
+        providerExecuted: chunk.payload.providerExecuted,
+      },
+      success: false,
+      error: chunk.payload.error,
+    });
+  }
 }
 
 export async function runMastraChat(
   options: MastraChatRunnerOptions
 ): Promise<MastraChatRunnerResult> {
-  const execution = await (options.createAgentExecution?.(options) ??
-    createMastraChatAgentExecution(options));
+  const tools = await resolveTools(options.tools, options.serverTools);
+  const executionOptions: MastraChatAgentExecutionOptions = {
+    request: options.request,
+    systemPrompt: options.systemPrompt,
+    tools,
+    memoryEnabled: options.memoryEnabled,
+    knowledgeEnabled: options.knowledgeEnabled,
+  };
+  const execution = await (options.createAgentExecution?.(executionOptions) ??
+    createMastraChatAgentExecution(executionOptions));
   const systemPrompt = normalizeAgentInstructions(
     await execution.agent.getInstructions({
       requestContext: execution.requestContext,
     })
   );
-  const executeStream = await resolveStreamText(options.executeStream);
-  const modelMessages = await resolveModelMessages(
-    options.inputMessages,
-    options.convertMessages
-  );
-  const tools = await resolveTools(options.tools, options.serverTools);
 
-  const result = executeStream({
-    model: options.request.resolvedModel.model,
-    system: systemPrompt,
-    messages: modelMessages,
-    tools,
+  const output = await execution.agent.stream(options.inputMessages, {
+    requestContext: execution.requestContext,
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
-    onFinish: options.onFinish as never,
-    onError: options.onError as never,
-    experimental_onToolCallStart: options.onToolCallStart,
-    experimental_onToolCallFinish: options.onToolCallFinish,
+    onFinish: options.onFinish,
+    onError: options.onError,
+    onChunk: async (chunk) => {
+      await options.onChunk?.(chunk);
+      await handleMastraToolChunk(chunk, options);
+    },
   });
+  const stream =
+    options.convertStream?.(output, {
+      messageMetadata: options.messageMetadata,
+    }) ??
+    toAISdkStream(output, {
+      from: 'agent',
+      version: 'v6',
+      messageMetadata: options.messageMetadata,
+      onError: () => 'AI response failed while streaming.',
+    });
 
   return {
     ...execution,
     systemPrompt,
-    result,
+    stream,
+    output,
   };
 }

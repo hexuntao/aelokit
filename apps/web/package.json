@@ -38,6 +38,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
     "@marsidev/react-turnstile": "^1.4.1",
+    "@mastra/ai-sdk": "^1.4.4",
     "@mastra/core": "^1.35.0",
     "@mastra/memory": "^1.18.2",
     "@mastra/pg": "^1.11.0",
