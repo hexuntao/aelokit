@@ -64,9 +64,16 @@ test('creates a Mastra request context with model source and feature flags', () 
 
   assert.equal(requestContext.get('userId'), 'user-1');
   assert.equal(requestContext.get('threadId'), 'thread-1');
+  assert.equal(requestContext.get('memoryResourceId'), 'user-1');
+  assert.equal(
+    requestContext.get('memoryRecallPolicy'),
+    'confirmed-user-memory'
+  );
   assert.equal(requestContext.get('modelSelectionSource'), 'thread');
   assert.equal(requestContext.get('memoryEnabled'), true);
   assert.equal(requestContext.get('knowledgeEnabled'), false);
+  assert.equal(requestContext.get('knowledgeChunkCount'), 0);
+  assert.equal(requestContext.get('knowledgeCitationCount'), 0);
   assert.equal(requestContext.get('systemPrompt'), 'System prompt');
 });
 
@@ -99,6 +106,8 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
     messages?: unknown;
     abortSignal?: AbortSignal;
     tools?: unknown;
+    resourceId?: string;
+    threadId?: string;
   } = {};
 
   const result = await runMastraChat({
@@ -116,15 +125,30 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
       inspectKnowledge: {} as never,
     },
     memoryEnabled: true,
+    memoryResourceId: 'user-1',
+    memoryThreadIds: ['memory-thread-1'],
+    memoryRecallPolicy: 'confirmed-user-memory',
     knowledgeEnabled: true,
+    knowledgeRetrievalProvider: 'mastra-pgvector',
+    knowledgeChunkCount: 1,
+    knowledgeCitationCount: 1,
     abortSignal: new AbortController().signal,
-    createAgentExecution: () => {
+    createAgentExecution: (executionOptions) => {
       const requestContext = createMastraChatRequestContext(
         request.context,
         request.resolvedModel,
         'Base system prompt\n\nKnowledge context block',
         true,
-        true
+        true,
+        {
+          memoryResourceId: executionOptions.memoryResourceId,
+          memoryThreadIds: executionOptions.memoryThreadIds,
+          memoryRecallPolicy: executionOptions.memoryRecallPolicy,
+          knowledgeRetrievalProvider:
+            executionOptions.knowledgeRetrievalProvider,
+          knowledgeChunkCount: executionOptions.knowledgeChunkCount,
+          knowledgeCitationCount: executionOptions.knowledgeCitationCount,
+        }
       );
 
       return {
@@ -134,6 +158,8 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
           stream: async (messages, options) => {
             captured.messages = messages;
             captured.abortSignal = options.abortSignal;
+            captured.resourceId = options.resourceId;
+            captured.threadId = options.threadId;
             return createMockMastraOutput();
           },
         },
@@ -145,6 +171,8 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
 
   assert.ok(Array.isArray(captured.messages));
   assert.equal((captured.messages as UIMessage[]).length, 2);
+  assert.equal(captured.resourceId, 'user-1');
+  assert.equal(captured.threadId, 'thread-1');
   assert.equal(
     result.systemPrompt,
     'Base system prompt\n\nKnowledge context block'
@@ -152,7 +180,16 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
   assert.ok(result.stream instanceof ReadableStream);
   assert.equal(result.requestContext.get('modelSelectionSource'), 'thread');
   assert.equal(result.requestContext.get('memoryEnabled'), true);
+  assert.deepEqual(result.requestContext.get('memoryThreadIds'), [
+    'memory-thread-1',
+  ]);
   assert.equal(result.requestContext.get('knowledgeEnabled'), true);
+  assert.equal(
+    result.requestContext.get('knowledgeRetrievalProvider'),
+    'mastra-pgvector'
+  );
+  assert.equal(result.requestContext.get('knowledgeChunkCount'), 1);
+  assert.equal(result.requestContext.get('knowledgeCitationCount'), 1);
 });
 
 test('passes abort, finish, and error callbacks through to Mastra agent stream', async () => {

@@ -827,6 +827,7 @@ export async function POST(req: Request) {
 
     const messagesForModel = [...agentContext.inputMessages];
     const memoryContextMessages = [...agentContext.memoryMessages];
+    const memoryThreadIds = [...agentContext.memoryThreadIds];
     const knowledgeCitations = agentContext.knowledgeCitations;
     const knowledgeChunks = agentContext.knowledgeChunks;
     const systemPrompt = agentContext.systemPrompt;
@@ -844,7 +845,13 @@ export async function POST(req: Request) {
       tools,
       serverTools: toolRegistry.tools,
       memoryEnabled: agentMemoryEnabled,
+      memoryResourceId: agentContext.memoryResourceId,
+      memoryThreadIds,
+      memoryRecallPolicy: agentContext.memoryRecallPolicy,
       knowledgeEnabled: agentKnowledgeEnabled,
+      knowledgeRetrievalProvider: agentContext.knowledgeRetrievalProvider,
+      knowledgeChunkCount: knowledgeChunks.length,
+      knowledgeCitationCount: knowledgeCitations.length,
       abortSignal: req.signal,
       messageMetadata: ({ part }) => {
         if (
@@ -862,8 +869,12 @@ export async function POST(req: Request) {
             modelSelectionSource: resolvedModel.source,
             memoryEnabled: agentMemoryEnabled,
             memoryContextCount: memoryContextMessages.length,
+            memoryThreadCount: memoryThreadIds.length,
+            memoryRecallPolicy: agentContext.memoryRecallPolicy,
             knowledgeEnabled: agentKnowledgeEnabled,
             knowledgeChunkCount: knowledgeChunks.length,
+            knowledgeCitationCount: knowledgeCitations.length,
+            knowledgeRetrievalProvider: agentContext.knowledgeRetrievalProvider,
             knowledgeError: agentContext.knowledgeError,
           };
         }
@@ -995,8 +1006,12 @@ export async function POST(req: Request) {
           isAborted,
           memoryEnabled: agentMemoryEnabled,
           memoryContextCount: memoryContextMessages.length,
+          memoryThreadCount: memoryThreadIds.length,
+          memoryRecallPolicy: agentContext.memoryRecallPolicy,
           knowledgeEnabled: agentKnowledgeEnabled,
           knowledgeChunkCount: knowledgeChunks.length,
+          knowledgeCitationCount: knowledgeCitations.length,
+          knowledgeRetrievalProvider: agentContext.knowledgeRetrievalProvider,
           citations: knowledgeCitations,
           knowledgeError: agentContext.knowledgeError,
           agentId: resolvedAgent.agent.id,

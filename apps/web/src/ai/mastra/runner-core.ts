@@ -9,12 +9,18 @@ export interface MastraChatRequestContextShape {
   readonly userId: string;
   readonly threadId: string;
   readonly messageId: string;
+  readonly memoryResourceId: string;
+  readonly memoryThreadIds: readonly string[];
+  readonly memoryRecallPolicy: string;
   readonly providerId: string;
   readonly modelId: string;
   readonly providerModelId: string;
   readonly modelSelectionSource: string;
   readonly memoryEnabled: boolean;
   readonly knowledgeEnabled: boolean;
+  readonly knowledgeRetrievalProvider?: string;
+  readonly knowledgeChunkCount: number;
+  readonly knowledgeCitationCount: number;
   readonly systemPrompt: string;
 }
 
@@ -25,7 +31,13 @@ export interface MastraChatRunnerOptions {
   readonly tools?: Record<string, unknown>;
   readonly serverTools?: ToolSet;
   readonly memoryEnabled: boolean;
+  readonly memoryResourceId?: string;
+  readonly memoryThreadIds?: readonly string[];
+  readonly memoryRecallPolicy?: string;
   readonly knowledgeEnabled: boolean;
+  readonly knowledgeRetrievalProvider?: string;
+  readonly knowledgeChunkCount?: number;
+  readonly knowledgeCitationCount?: number;
   readonly abortSignal?: AbortSignal;
   readonly onAbort?: () => Promise<void> | void;
   readonly onFinish?: (event: unknown) => Promise<void> | void;
@@ -56,7 +68,13 @@ export interface MastraChatAgentExecutionOptions {
   readonly systemPrompt: string;
   readonly tools: ToolSet;
   readonly memoryEnabled: boolean;
+  readonly memoryResourceId?: string;
+  readonly memoryThreadIds?: readonly string[];
+  readonly memoryRecallPolicy?: string;
   readonly knowledgeEnabled: boolean;
+  readonly knowledgeRetrievalProvider?: string;
+  readonly knowledgeChunkCount?: number;
+  readonly knowledgeCitationCount?: number;
 }
 
 export interface MastraRequestContextLike<TShape extends Record<string, any>> {
@@ -72,6 +90,8 @@ export interface MastraChatAgentLike {
     messages: readonly UIMessage[],
     options: {
       requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
+      resourceId?: string;
+      threadId?: string;
       abortSignal?: AbortSignal;
       onAbort?: () => Promise<void> | void;
       onFinish?: (event: unknown) => Promise<void> | void;
@@ -131,18 +151,32 @@ function createMastraChatRequestContextValue(
   resolvedModel: ResolvedModel,
   systemPrompt: string,
   memoryEnabled: boolean,
-  knowledgeEnabled: boolean
+  knowledgeEnabled: boolean,
+  metadata: {
+    readonly memoryResourceId?: string;
+    readonly memoryThreadIds?: readonly string[];
+    readonly memoryRecallPolicy?: string;
+    readonly knowledgeRetrievalProvider?: string;
+    readonly knowledgeChunkCount?: number;
+    readonly knowledgeCitationCount?: number;
+  } = {}
 ): MastraChatRequestContextShape {
   return {
     userId: runtimeContext.userId,
     threadId: runtimeContext.threadId ?? '',
     messageId: runtimeContext.messageId ?? '',
+    memoryResourceId: metadata.memoryResourceId ?? runtimeContext.userId,
+    memoryThreadIds: metadata.memoryThreadIds ?? [],
+    memoryRecallPolicy: metadata.memoryRecallPolicy ?? 'confirmed-user-memory',
     providerId: resolvedModel.reference.providerId,
     modelId: resolvedModel.reference.modelId,
     providerModelId: resolvedModel.providerModelId,
     modelSelectionSource: resolvedModel.source,
     memoryEnabled,
     knowledgeEnabled,
+    knowledgeRetrievalProvider: metadata.knowledgeRetrievalProvider,
+    knowledgeChunkCount: metadata.knowledgeChunkCount ?? 0,
+    knowledgeCitationCount: metadata.knowledgeCitationCount ?? 0,
     systemPrompt,
   };
 }
@@ -152,14 +186,16 @@ export function createMastraChatRequestContext(
   resolvedModel: ResolvedModel,
   systemPrompt: string,
   memoryEnabled: boolean,
-  knowledgeEnabled: boolean
+  knowledgeEnabled: boolean,
+  metadata: Parameters<typeof createMastraChatRequestContextValue>[5] = {}
 ): MastraRequestContextLike<MastraChatRequestContextShape> {
   const value = createMastraChatRequestContextValue(
     runtimeContext,
     resolvedModel,
     systemPrompt,
     memoryEnabled,
-    knowledgeEnabled
+    knowledgeEnabled,
+    metadata
   );
 
   const requestContext =
@@ -167,12 +203,21 @@ export function createMastraChatRequestContext(
   requestContext.set('userId', value.userId);
   requestContext.set('threadId', value.threadId);
   requestContext.set('messageId', value.messageId);
+  requestContext.set('memoryResourceId', value.memoryResourceId);
+  requestContext.set('memoryThreadIds', value.memoryThreadIds);
+  requestContext.set('memoryRecallPolicy', value.memoryRecallPolicy);
   requestContext.set('providerId', value.providerId);
   requestContext.set('modelId', value.modelId);
   requestContext.set('providerModelId', value.providerModelId);
   requestContext.set('modelSelectionSource', value.modelSelectionSource);
   requestContext.set('memoryEnabled', value.memoryEnabled);
   requestContext.set('knowledgeEnabled', value.knowledgeEnabled);
+  requestContext.set(
+    'knowledgeRetrievalProvider',
+    value.knowledgeRetrievalProvider
+  );
+  requestContext.set('knowledgeChunkCount', value.knowledgeChunkCount);
+  requestContext.set('knowledgeCitationCount', value.knowledgeCitationCount);
   requestContext.set('systemPrompt', value.systemPrompt);
   return requestContext;
 }
@@ -247,7 +292,16 @@ export async function createMastraChatAgentExecution(
     options.request.resolvedModel,
     options.systemPrompt,
     options.memoryEnabled,
-    options.knowledgeEnabled
+    options.knowledgeEnabled,
+    {
+      memoryResourceId:
+        options.memoryResourceId ?? options.request.context.userId,
+      memoryThreadIds: options.memoryThreadIds ?? [],
+      memoryRecallPolicy: options.memoryRecallPolicy ?? 'confirmed-user-memory',
+      knowledgeRetrievalProvider: options.knowledgeRetrievalProvider,
+      knowledgeChunkCount: options.knowledgeChunkCount,
+      knowledgeCitationCount: options.knowledgeCitationCount,
+    }
   );
 
   return {
@@ -261,10 +315,7 @@ export async function createMastraChatAgentExecution(
 
 async function handleMastraToolChunk(
   chunk: ChunkType,
-  options: Pick<
-    MastraChatRunnerOptions,
-    'onToolCallStart' | 'onToolCallFinish'
-  >
+  options: Pick<MastraChatRunnerOptions, 'onToolCallStart' | 'onToolCallFinish'>
 ): Promise<void> {
   if (chunk.type === 'tool-call') {
     await options.onToolCallStart?.({
@@ -315,7 +366,13 @@ export async function runMastraChat(
     systemPrompt: options.systemPrompt,
     tools,
     memoryEnabled: options.memoryEnabled,
+    memoryResourceId: options.memoryResourceId,
+    memoryThreadIds: options.memoryThreadIds,
+    memoryRecallPolicy: options.memoryRecallPolicy,
     knowledgeEnabled: options.knowledgeEnabled,
+    knowledgeRetrievalProvider: options.knowledgeRetrievalProvider,
+    knowledgeChunkCount: options.knowledgeChunkCount,
+    knowledgeCitationCount: options.knowledgeCitationCount,
   };
   const execution = await (options.createAgentExecution?.(executionOptions) ??
     createMastraChatAgentExecution(executionOptions));
@@ -327,6 +384,8 @@ export async function runMastraChat(
 
   const output = await execution.agent.stream(options.inputMessages, {
     requestContext: execution.requestContext,
+    resourceId: execution.requestContext.get('memoryResourceId'),
+    threadId: execution.requestContext.get('threadId'),
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
     onFinish: options.onFinish,
