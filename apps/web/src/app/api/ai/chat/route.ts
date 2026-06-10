@@ -234,30 +234,33 @@ function getToolErrorMessage(error: unknown): string {
 
 function withToolAuditMetadata(
   providerMetadata: unknown,
-  toolCalls: readonly Record<string, unknown>[]
+  toolCalls: readonly Record<string, unknown>[],
+  permissionDecisions: readonly Record<string, unknown>[] = []
 ): unknown {
-  if (toolCalls.length === 0) {
+  if (toolCalls.length === 0 && permissionDecisions.length === 0) {
     return providerMetadata;
   }
 
   const providerMetadataRecord = asRecord(providerMetadata);
   const aelokitMetadata = asRecord(providerMetadataRecord?.aelokit);
+  const aelokitToolMetadata = {
+    ...(toolCalls.length > 0 ? { toolCalls } : {}),
+    ...(permissionDecisions.length > 0 ? { permissionDecisions } : {}),
+  };
 
   if (providerMetadataRecord) {
     return {
       ...providerMetadataRecord,
       aelokit: {
         ...(aelokitMetadata ?? {}),
-        toolCalls,
+        ...aelokitToolMetadata,
       },
     };
   }
 
   return {
     providerMetadata: providerMetadata ?? null,
-    aelokit: {
-      toolCalls,
-    },
+    aelokit: aelokitToolMetadata,
   };
 }
 
@@ -485,13 +488,26 @@ export async function POST(req: Request) {
     const creditsBillingEnabled = serverEnv.AI_CREDITS_BILLING_ENABLED;
     const billingMode = getAIUsageBillingMode(creditsBillingEnabled);
     const estimatedRequiredCredits = estimateInitialAICredits(messages);
-    const requestedToolCount = Object.keys(tools ?? {}).length;
+    const requestedClientToolIds = Object.keys(tools ?? {}).sort();
+    const requestedToolCount = requestedClientToolIds.length;
     const selectableModelIds = getAppLocalModelCatalog()
       .filter(isSelectableModel)
       .map((model) => model.id);
     const planPolicy = await getAIEntitlementPolicyForUser(context.userId);
     const toolsAllowed =
       resolvedAgent.agent.features.tools && planPolicy.toolsEnabled;
+    const toolRegistry = createMastraToolRegistry({
+      userId: context.userId,
+      knowledgeEnabled: agentKnowledgeEnabled,
+      toolsAllowed,
+      allowedToolIds: resolvedAgent.agent.allowedToolIds,
+      requestedClientToolIds,
+    });
+    const toolPermissionDecisionMetadata =
+      toolRegistry.permissionDecisions.flatMap((decision) => {
+        const metadata = toSafePermissionDecisionMetadata(decision);
+        return metadata ? [metadata] : [];
+      });
     const policyAllowedModelIds =
       planPolicy.allowedModelIds.length > 0
         ? selectableModelIds.filter((modelId) =>
@@ -531,6 +547,11 @@ export async function POST(req: Request) {
           completedAt: new Date(),
           failureReason: requestEntitlement.error?.code,
           errorMessage: requestEntitlement.error?.message,
+          providerMetadata: withToolAuditMetadata(
+            undefined,
+            [],
+            toolPermissionDecisionMetadata
+          ),
           providerModelId: resolvedModel.providerModelId,
           requestDurationMs: Date.now() - startTime,
           billingMode,
@@ -595,6 +616,12 @@ export async function POST(req: Request) {
         memoryEnabled: agentMemoryEnabled,
         knowledgeEnabled: agentKnowledgeEnabled,
         toolsAllowed,
+        requestedClientToolCount: requestedClientToolIds.length,
+        deniedClientToolCount: toolRegistry.permissionDecisions.filter(
+          (decision) =>
+            requestedClientToolIds.includes(decision.request.resource.id) &&
+            decision.outcome === 'deny'
+        ).length,
         rawContentIncluded: false,
       },
     });
@@ -616,6 +643,11 @@ export async function POST(req: Request) {
             completedAt: new Date(),
             failureReason: preflightResult.error.code,
             errorMessage: preflightResult.error.message,
+            providerMetadata: withToolAuditMetadata(
+              undefined,
+              [],
+              toolPermissionDecisionMetadata
+            ),
             providerModelId: resolvedModel.providerModelId,
             requestDurationMs: Date.now() - startTime,
             billingMode,
@@ -653,6 +685,11 @@ export async function POST(req: Request) {
             completedAt: new Date(),
             failureReason: reservationResult.error.code,
             errorMessage: reservationResult.error.message,
+            providerMetadata: withToolAuditMetadata(
+              undefined,
+              [],
+              toolPermissionDecisionMetadata
+            ),
             providerModelId: resolvedModel.providerModelId,
             requestDurationMs: Date.now() - startTime,
             billingMode,
@@ -793,7 +830,8 @@ export async function POST(req: Request) {
           rawUsage: options.totalUsage,
           providerMetadata: withToolAuditMetadata(
             options.providerMetadata,
-            Array.from(toolAuditById.values())
+            Array.from(toolAuditById.values()),
+            toolPermissionDecisionMetadata
           ),
           providerModelId: resolvedModel.providerModelId,
           requestDurationMs: Date.now() - startTime,
@@ -868,6 +906,12 @@ export async function POST(req: Request) {
           billingAction,
           reservationId: pendingReservationId,
           toolCallCount: toolAuditById.size,
+          requestedClientToolCount: requestedClientToolIds.length,
+          deniedClientToolCount: toolRegistry.permissionDecisions.filter(
+            (decision) =>
+              requestedClientToolIds.includes(decision.request.resource.id) &&
+              decision.outcome === 'deny'
+          ).length,
           knowledgeEnabled: agentKnowledgeEnabled,
           knowledgeError: agentContext.knowledgeError,
           rawContentIncluded: false,
@@ -891,13 +935,6 @@ export async function POST(req: Request) {
     const knowledgeCitations = agentContext.knowledgeCitations;
     const knowledgeChunks = agentContext.knowledgeChunks;
     const systemPrompt = agentContext.systemPrompt;
-    const toolRegistry = createMastraToolRegistry({
-      userId: context.userId,
-      knowledgeEnabled: agentKnowledgeEnabled,
-      toolsAllowed,
-      allowedToolIds: resolvedAgent.agent.allowedToolIds,
-    });
-
     // 7. Stream text from the model
     const runnerResult = await runMastraChat({
       request: chatRequest,

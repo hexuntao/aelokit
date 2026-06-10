@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  denyUnregisteredClientTool,
   decideToolPermission,
   toSafePermissionDecisionMetadata,
 } from './permissions';
@@ -73,4 +74,18 @@ test('serializes permission decisions without raw inputs or credentials', () => 
     'resourceType',
     'subjectType',
   ]);
+});
+
+test('denies unregistered client tools with audit-safe metadata', () => {
+  const decision = denyUnregisteredClientTool({
+    userId: 'user-1',
+    toolId: 'clientWriteTool',
+  });
+  const metadata = toSafePermissionDecisionMetadata(decision);
+
+  assert.equal(decision.outcome, 'deny');
+  assert.equal(decision.reason.code, 'policy-not-configured');
+  assert.equal(metadata?.resourceId, 'clientWriteTool');
+  assert.equal(JSON.stringify(metadata).includes('secret'), false);
+  assert.equal(JSON.stringify(metadata).includes('credential'), false);
 });

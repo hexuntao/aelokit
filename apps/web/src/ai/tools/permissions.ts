@@ -13,6 +13,11 @@ export interface ToolPermissionDecisionInput {
   readonly resourceType?: 'knowledge' | 'tool' | 'mcp-tool';
 }
 
+export interface ClientToolPermissionDecisionInput {
+  readonly userId: string;
+  readonly toolId: string;
+}
+
 function createDecisionId(toolId: string, userId: string): string {
   return `tool-permission:${toolId}:${userId}`;
 }
@@ -78,6 +83,31 @@ export function decideToolPermission(
     reason: createReason(
       'allowed-by-policy',
       `Allowed by app-local ${input.requiredScope} policy.`
+    ),
+    decidedAt: new Date().toISOString(),
+  };
+}
+
+export function denyUnregisteredClientTool(
+  input: ClientToolPermissionDecisionInput
+): AIPermissionDecision {
+  return {
+    id: createDecisionId(input.toolId, input.userId),
+    outcome: 'deny',
+    request: {
+      subject: {
+        type: 'user',
+        id: input.userId,
+      },
+      resource: {
+        type: 'tool',
+        id: input.toolId,
+      },
+      action: 'execute',
+    },
+    reason: createReason(
+      'policy-not-configured',
+      'Client-provided tools are ignored unless registered in the app-local tool registry.'
     ),
     decidedAt: new Date().toISOString(),
   };

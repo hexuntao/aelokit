@@ -12,6 +12,8 @@ export interface MastraChatRequestContextShape {
   readonly memoryResourceId: string;
   readonly memoryThreadIds: readonly string[];
   readonly memoryRecallPolicy: string;
+  readonly memoryMode: 'confirmed-context-only';
+  readonly memoryFallbackReason?: string;
   readonly providerId: string;
   readonly modelId: string;
   readonly providerModelId: string;
@@ -90,8 +92,6 @@ export interface MastraChatAgentLike {
     messages: readonly UIMessage[],
     options: {
       requestContext: MastraRequestContextLike<MastraChatRequestContextShape>;
-      resourceId?: string;
-      threadId?: string;
       abortSignal?: AbortSignal;
       onAbort?: () => Promise<void> | void;
       onFinish?: (event: unknown) => Promise<void> | void;
@@ -132,6 +132,9 @@ export interface MastraToolCallFinishEvent extends MastraToolCallEventBase {
 
 type MastraChatAgent = MastraChatAgentExecution['agent'];
 
+const MASTRA_CONVERSATION_MEMORY_FALLBACK_REASON =
+  'AeloKit keeps UI thread/message persistence in the app DB and only injects confirmed user memory; Mastra conversation auto-persistence is disabled to avoid unconfirmed memory recall, double writes, and client full-history ordering bugs.';
+
 class AeloKitMastraRequestContext<TShape extends Record<string, any>>
   implements MastraRequestContextLike<TShape>
 {
@@ -168,6 +171,10 @@ function createMastraChatRequestContextValue(
     memoryResourceId: metadata.memoryResourceId ?? runtimeContext.userId,
     memoryThreadIds: metadata.memoryThreadIds ?? [],
     memoryRecallPolicy: metadata.memoryRecallPolicy ?? 'confirmed-user-memory',
+    memoryMode: 'confirmed-context-only',
+    memoryFallbackReason: memoryEnabled
+      ? MASTRA_CONVERSATION_MEMORY_FALLBACK_REASON
+      : undefined,
     providerId: resolvedModel.reference.providerId,
     modelId: resolvedModel.reference.modelId,
     providerModelId: resolvedModel.providerModelId,
@@ -206,6 +213,8 @@ export function createMastraChatRequestContext(
   requestContext.set('memoryResourceId', value.memoryResourceId);
   requestContext.set('memoryThreadIds', value.memoryThreadIds);
   requestContext.set('memoryRecallPolicy', value.memoryRecallPolicy);
+  requestContext.set('memoryMode', value.memoryMode);
+  requestContext.set('memoryFallbackReason', value.memoryFallbackReason);
   requestContext.set('providerId', value.providerId);
   requestContext.set('modelId', value.modelId);
   requestContext.set('providerModelId', value.providerModelId);
@@ -266,22 +275,10 @@ function normalizeAgentInstructions(
 }
 
 async function resolveTools(
-  tools: Record<string, unknown> | undefined,
+  _tools: Record<string, unknown> | undefined,
   serverTools: ToolSet | undefined
 ): Promise<ToolSet> {
-  let frontendToolSet: ToolSet = {};
-
-  if (tools && Object.keys(tools).length > 0) {
-    const { frontendTools } = await import('@assistant-ui/react-ai-sdk');
-    frontendToolSet = frontendTools(
-      tools as Parameters<typeof frontendTools>[0]
-    );
-  }
-
-  return {
-    ...frontendToolSet,
-    ...(serverTools ?? {}),
-  };
+  return serverTools ?? {};
 }
 
 export async function createMastraChatAgentExecution(
@@ -384,8 +381,11 @@ export async function runMastraChat(
 
   const output = await execution.agent.stream(options.inputMessages, {
     requestContext: execution.requestContext,
-    resourceId: execution.requestContext.get('memoryResourceId'),
-    threadId: execution.requestContext.get('threadId'),
+    // Do not pass Mastra conversation memory here yet. The current assistant-ui
+    // transport sends full messages, while AeloKit separately persists UI/audit
+    // messages in the app DB. Confirmed user memory is injected into the system
+    // prompt by context-core until the client/server flow can safely send only
+    // the latest message for Mastra-managed conversation history.
     abortSignal: options.abortSignal,
     onAbort: options.onAbort,
     onFinish: options.onFinish,

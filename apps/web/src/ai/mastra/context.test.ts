@@ -63,12 +63,13 @@ test('does not recall memory when memory is disabled', async () => {
 
   assert.equal(recallCalled, false);
   assert.equal(result.memoryMessages.length, 0);
+  assert.equal(result.memoryContextText, '');
   assert.equal(result.memoryThreadIds.length, 0);
   assert.equal(result.memoryResourceId, 'user-1');
   assert.equal(result.memoryRecallPolicy, 'confirmed-user-memory');
 });
 
-test('includes confirmed memory recall messages when memory is enabled', async () => {
+test('adds confirmed memory to system context without duplicating input messages', async () => {
   const result = await buildMastraAgentContextCore(
     {
       userId: 'user-1',
@@ -98,8 +99,45 @@ test('includes confirmed memory recall messages when memory is enabled', async (
   );
 
   assert.equal(result.memoryMessages.length, 1);
-  assert.equal(result.inputMessages.length, 2);
+  assert.equal(result.inputMessages.length, 1);
+  assert.equal(result.inputMessages[0]?.id, userMessage.id);
+  assert.match(result.memoryContextText, /Confirmed durable memory/);
+  assert.match(result.systemPrompt, /Confirmed User Memory/);
   assert.deepEqual(result.memoryThreadIds, ['memory-thread-1']);
+});
+
+test('keeps user memory isolated by user resource id', async () => {
+  const result = await buildMastraAgentContextCore(
+    {
+      userId: 'user-2',
+      threadId: 'thread-2',
+      messages: [userMessage],
+      lastUserMessage: userMessage,
+      baseSystemPrompt: 'Base prompt',
+      memoryEnabled: true,
+      knowledgeEnabled: false,
+      recallMemory: async (userId, threadId) => {
+        assert.equal(userId, 'user-2');
+        assert.equal(threadId, 'thread-2');
+        return {
+          success: true,
+          threadIds: ['user-2-memory-thread'],
+          messages: [
+            {
+              id: 'memory-2',
+              role: 'user',
+              content: 'Only user 2 should see this memory.',
+            },
+          ],
+        };
+      },
+    },
+    defaultContextDependencies
+  );
+
+  assert.equal(result.memoryResourceId, 'user-2');
+  assert.deepEqual(result.memoryThreadIds, ['user-2-memory-thread']);
+  assert.match(result.systemPrompt, /Only user 2 should see this memory/);
 });
 
 test('does not convert failed knowledge retrieval into citations', async () => {

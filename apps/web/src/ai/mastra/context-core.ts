@@ -10,6 +10,7 @@ export interface MastraAgentContextResult {
   readonly inputMessages: readonly UIMessage[];
   readonly systemPrompt: string;
   readonly memoryMessages: readonly UIMessage[];
+  readonly memoryContextText: string;
   readonly memoryResourceId: string;
   readonly memoryThreadIds: readonly string[];
   readonly memoryRecallPolicy: 'confirmed-user-memory';
@@ -130,6 +131,27 @@ function toMemoryContextMessages(
   });
 }
 
+function toMemoryContextText(messages: readonly UIMessage[]): string {
+  if (messages.length === 0) {
+    return '';
+  }
+
+  const lines = messages
+    .map((message) => {
+      const text = getTextFromMessage(message).trim();
+      if (!text) {
+        return '';
+      }
+
+      return `- ${message.role}: ${text}`;
+    })
+    .filter(Boolean);
+
+  return lines.length > 0
+    ? `## Confirmed User Memory\n\n${lines.join('\n')}`
+    : '';
+}
+
 export async function buildMastraAgentContextCore(
   options: BuildMastraAgentContextOptions,
   defaults: BuildMastraAgentContextDefaults
@@ -146,8 +168,9 @@ export async function buildMastraAgentContextCore(
         threadIds: [],
       };
   const memoryMessages = toMemoryContextMessages(memoryResult);
+  const memoryContextText = toMemoryContextText(memoryMessages);
   const memoryThreadIds = memoryResult.threadIds ?? [];
-  const inputMessages = [...memoryMessages, ...options.messages];
+  const inputMessages = [...options.messages];
 
   let knowledgeContextText = '';
   let knowledgeCitations: readonly SourceCitationMetadata[] = [];
@@ -177,12 +200,18 @@ export async function buildMastraAgentContextCore(
     }
   }
 
+  const contextBlocks = [memoryContextText, knowledgeContextText].filter(
+    Boolean
+  );
+
   return {
     inputMessages,
-    systemPrompt: knowledgeContextText
-      ? `${options.baseSystemPrompt}\n\n${knowledgeContextText}`
-      : options.baseSystemPrompt,
+    systemPrompt:
+      contextBlocks.length > 0
+        ? `${options.baseSystemPrompt}\n\n${contextBlocks.join('\n\n')}`
+        : options.baseSystemPrompt,
     memoryMessages,
+    memoryContextText,
     memoryResourceId: options.userId,
     memoryThreadIds,
     memoryRecallPolicy: 'confirmed-user-memory',

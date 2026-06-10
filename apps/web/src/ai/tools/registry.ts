@@ -7,7 +7,10 @@ import {
   KNOWLEDGE_INSPECTION_TOOL_ID,
   KNOWLEDGE_INSPECTION_TOOL_NAME,
 } from './knowledge-inspection';
-import { decideToolPermission } from './permissions';
+import {
+  decideToolPermission,
+  denyUnregisteredClientTool,
+} from './permissions';
 import type { AIPermissionDecision } from '@repo/ai/permissions';
 
 export interface CreateMastraToolRegistryOptions {
@@ -15,6 +18,7 @@ export interface CreateMastraToolRegistryOptions {
   readonly knowledgeEnabled: boolean;
   readonly toolsAllowed: boolean;
   readonly allowedToolIds?: readonly string[];
+  readonly requestedClientToolIds?: readonly string[];
 }
 
 export interface MastraToolRegistry {
@@ -26,6 +30,14 @@ export interface MastraToolRegistry {
 export function createMastraToolRegistry(
   options: CreateMastraToolRegistryOptions
 ): MastraToolRegistry {
+  const clientToolPermissionDecisions = (
+    options.requestedClientToolIds ?? []
+  ).map((toolId) =>
+    denyUnregisteredClientTool({
+      userId: options.userId,
+      toolId,
+    })
+  );
   const knowledgeToolPermission = decideToolPermission({
     userId: options.userId,
     toolId: KNOWLEDGE_INSPECTION_TOOL_ID,
@@ -42,7 +54,10 @@ export function createMastraToolRegistry(
     return {
       tools: {},
       definitions: [],
-      permissionDecisions: [knowledgeToolPermission],
+      permissionDecisions: [
+        knowledgeToolPermission,
+        ...clientToolPermissionDecisions,
+      ],
     };
   }
 
@@ -88,7 +103,10 @@ export function createMastraToolRegistry(
         },
       },
     ],
-    permissionDecisions: [knowledgeToolPermission],
+    permissionDecisions: [
+      knowledgeToolPermission,
+      ...clientToolPermissionDecisions,
+    ],
   };
 }
 

@@ -69,6 +69,8 @@ test('creates a Mastra request context with model source and feature flags', () 
     requestContext.get('memoryRecallPolicy'),
     'confirmed-user-memory'
   );
+  assert.equal(requestContext.get('memoryMode'), 'confirmed-context-only');
+  assert.equal(typeof requestContext.get('memoryFallbackReason'), 'string');
   assert.equal(requestContext.get('modelSelectionSource'), 'thread');
   assert.equal(requestContext.get('memoryEnabled'), true);
   assert.equal(requestContext.get('knowledgeEnabled'), false);
@@ -106,8 +108,6 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
     messages?: unknown;
     abortSignal?: AbortSignal;
     tools?: unknown;
-    resourceId?: string;
-    threadId?: string;
   } = {};
 
   const result = await runMastraChat({
@@ -158,8 +158,6 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
           stream: async (messages, options) => {
             captured.messages = messages;
             captured.abortSignal = options.abortSignal;
-            captured.resourceId = options.resourceId;
-            captured.threadId = options.threadId;
             return createMockMastraOutput();
           },
         },
@@ -171,8 +169,6 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
 
   assert.ok(Array.isArray(captured.messages));
   assert.equal((captured.messages as UIMessage[]).length, 2);
-  assert.equal(captured.resourceId, 'user-1');
-  assert.equal(captured.threadId, 'thread-1');
   assert.equal(
     result.systemPrompt,
     'Base system prompt\n\nKnowledge context block'
@@ -180,6 +176,14 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
   assert.ok(result.stream instanceof ReadableStream);
   assert.equal(result.requestContext.get('modelSelectionSource'), 'thread');
   assert.equal(result.requestContext.get('memoryEnabled'), true);
+  assert.equal(
+    result.requestContext.get('memoryMode'),
+    'confirmed-context-only'
+  );
+  assert.match(
+    result.requestContext.get('memoryFallbackReason') ?? '',
+    /auto-persistence/
+  );
   assert.deepEqual(result.requestContext.get('memoryThreadIds'), [
     'memory-thread-1',
   ]);
@@ -190,6 +194,93 @@ test('runs the Mastra chat runner with resolved prompt and UI messages', async (
   );
   assert.equal(result.requestContext.get('knowledgeChunkCount'), 1);
   assert.equal(result.requestContext.get('knowledgeCitationCount'), 1);
+});
+
+test('ignores unregistered client tools and only passes registry tools to Agent', async () => {
+  const request = createRuntimeRequest();
+  const captured: {
+    toolNames?: readonly string[];
+  } = {};
+
+  await runMastraChat({
+    request,
+    inputMessages: request.messages,
+    systemPrompt: 'System prompt',
+    tools: {
+      clientWriteTool: {
+        description: 'A client supplied tool that must not reach the agent.',
+      },
+    },
+    serverTools: {
+      inspectKnowledge: {} as never,
+    },
+    memoryEnabled: false,
+    knowledgeEnabled: true,
+    createAgentExecution: (executionOptions) => {
+      captured.toolNames = Object.keys(executionOptions.tools);
+      const requestContext = createMastraChatRequestContext(
+        request.context,
+        request.resolvedModel,
+        'System prompt',
+        false,
+        true
+      );
+
+      return {
+        agent: {
+          getInstructions: ({ requestContext: currentContext }) =>
+            currentContext.get('systemPrompt'),
+          stream: async () => createMockMastraOutput(),
+        },
+        requestContext,
+      };
+    },
+    convertStream: () => createMockUIStream(),
+  });
+
+  assert.deepEqual(captured.toolNames, ['inspectKnowledge']);
+});
+
+test('passes no tools to Agent when only client tools were requested', async () => {
+  const request = createRuntimeRequest();
+  const captured: {
+    toolNames?: readonly string[];
+  } = {};
+
+  await runMastraChat({
+    request,
+    inputMessages: request.messages,
+    systemPrompt: 'System prompt',
+    tools: {
+      clientOnlyTool: {
+        description: 'This client tool is not registered.',
+      },
+    },
+    memoryEnabled: false,
+    knowledgeEnabled: false,
+    createAgentExecution: (executionOptions) => {
+      captured.toolNames = Object.keys(executionOptions.tools);
+      const requestContext = createMastraChatRequestContext(
+        request.context,
+        request.resolvedModel,
+        'System prompt',
+        false,
+        false
+      );
+
+      return {
+        agent: {
+          getInstructions: ({ requestContext: currentContext }) =>
+            currentContext.get('systemPrompt'),
+          stream: async () => createMockMastraOutput(),
+        },
+        requestContext,
+      };
+    },
+    convertStream: () => createMockUIStream(),
+  });
+
+  assert.deepEqual(captured.toolNames, []);
 });
 
 test('passes abort, finish, and error callbacks through to Mastra agent stream', async () => {
