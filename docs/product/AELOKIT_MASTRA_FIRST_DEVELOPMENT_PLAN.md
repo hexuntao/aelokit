@@ -445,8 +445,9 @@ Runtime smoke 独立处理：
 
 - `thread.modelId` 表示最近一次使用的模型。暂不追踪创建时模型；如果后续需要该能力，
   应新增显式字段，而不是复用 `modelId`。
-- Phase 1 条件允许新增 `@mastra/ai-sdk`。前提是先刷新 Mastra 官方文档，并确认它是
-  官方推荐且必要的 Mastra-to-AI-SDK streaming bridge；除此之外不新增其他依赖。
+- `@mastra/ai-sdk` 已安装，当前用于 Mastra-to-AI-SDK v6 stream bridge
+  (`toAISdkStream(..., { from: 'agent', version: 'v6' })`)；authenticated runtime
+  smoke 仍未验证。
 - Phase 1 不做 authenticated browser smoke。完成后如需真实运行时验收，单独创建
   validation goal。
 - 第一个真实 tool 选择 read-only knowledge inspection。它只读取当前用户有权限的
