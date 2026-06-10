@@ -271,6 +271,10 @@ export async function POST(req: Request) {
   let pendingReservationId: string | undefined;
   let pendingRuntimeContext: AIRuntimeContext | undefined;
   let pendingResolvedModel: ResolvedModel | undefined;
+  let pendingToolPermissionDecisionMetadata: readonly Record<
+    string,
+    unknown
+  >[] = [];
   let usageFinalized = false;
 
   try {
@@ -508,6 +512,7 @@ export async function POST(req: Request) {
         const metadata = toSafePermissionDecisionMetadata(decision);
         return metadata ? [metadata] : [];
       });
+    pendingToolPermissionDecisionMetadata = toolPermissionDecisionMetadata;
     const policyAllowedModelIds =
       planPolicy.allowedModelIds.length > 0
         ? selectableModelIds.filter((modelId) =>
@@ -1210,6 +1215,11 @@ export async function POST(req: Request) {
               error instanceof Error ? error.message : String(error),
             errorMessage:
               error instanceof Error ? error.message : String(error),
+            providerMetadata: withToolAuditMetadata(
+              undefined,
+              [],
+              pendingToolPermissionDecisionMetadata
+            ),
             providerModelId: pendingResolvedModel.providerModelId,
             requestDurationMs: Date.now() - startTime,
             billingMode: getAIUsageBillingMode(creditsBillingEnabled),
